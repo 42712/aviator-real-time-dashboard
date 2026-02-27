@@ -11,12 +11,23 @@ Painel em tempo real para visualizar os multiplicadores do jogo Aviator.
 
 ## Estrutura do Projeto
 
-aviator-real-time-dashboard/
+aviator-real-time-dashboard
 │
-├── server/ ← Backend Node.js + Socket.io
-├── client/ ← Painel HTML
-├── extension/ ← Extensão Chrome
-└── README.md
+├── server
+│   ├── server.js
+│   └── package.json
+│
+├── client
+│   └── index.html
+│
+├── extension
+│   ├── manifest.json
+│   └── content.js
+│
+├── README.md
+├── LICENSE
+└── .gitignore
+
 
 
 ## Como usar
