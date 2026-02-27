@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aviator Panel — Resultados em Tempo Real</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<!-- SOCKET.IO do servidor online -->
+<script src="https://aviator-real-time-dashboard.onrender.com/socket.io/socket.io.js"></script>
+<style>
+  :root {
+    --bg:        #07090f;
+    --surface:   #0e1420;
+    --surface2:  #111c2e;
+    --border:    #1c2a40;
+    --text:      #c0d8f0;
+    --text-dim:  #415870;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-disp: 'Orbitron', sans-serif;
+    --lh: 200; --ls: 100%; --ll: 55%;
+    --live:      hsl(var(--lh), var(--ls), var(--ll));
+    --live-dim:  hsl(var(--lh), 60%, 28%);
+    --live-glow: hsl(var(--lh), 100%, 68%);
+  }
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background-color 1.2s;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #atm { position:fixed; inset:0; pointer-events:none; z-index:0; }
+  #atm::before {
+    content:''; position:absolute; inset:0;
+    background: radial-gradient(ellipse 75% 55% at 50% -5%, hsl(var(--lh),80%,10%) 0%, transparent 68%);
+    transition: background 1.2s;
+  }
+  #atm::after {
+    content:''; position:absolute; inset:0;
+    background-image:
+      linear-gradient(hsl(var(--lh),50%,18%,.022) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--lh),50%,18%,.022) 1px, transparent 1px);
+    background-size: 50px 50px;
+    transition: background 1.2s;
+  }
+
+  #ptcl { position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden; }
+  .pt {
+    position:absolute; border-radius:50%; opacity:0; bottom:-10px;
+    width:var(--sz,4px); height:var(--sz,4px); left:var(--x,50%);
+    background:var(--live-glow); box-shadow:0 0 8px var(--live-glow);
+    animation:floatUp var(--d,4s) ease-in var(--dl,0s) 1 forwards;
+  }
+  @keyframes floatUp {
+    0%  { opacity:0;   transform:translateY(0) scale(.5); }
+    15% { opacity:.75; }
+    80% { opacity:.25; }
+    100%{ opacity:0;   transform:translateY(-65vh) scale(.15); }
+  }
+
+  #loginScreen {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(7,9,15,0.97);
+    backdrop-filter: blur(20px);
+    transition: opacity .6s, visibility .6s;
+  }
+  #loginScreen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 36px 32px;
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 80px rgba(0,200,255,0.08);
+  }
+  .login-box::before {
+    content:'';
+    position: absolute; inset:0;
+    background: radial-gradient(circle at 50% 0%, rgba(0,200,255,0.07) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .login-logo { font-family: var(--font-disp); font-size: 1.3rem; font-weight: 900; letter-spacing: 5px; text-transform: uppercase; color: #fff; margin-bottom: 6px; }
+  .login-logo em { font-style:normal; color: var(--live); }
+  .login-sub { font-size: .62rem; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 32px; }
+  .inp-group { text-align: left; margin-bottom: 16px; }
+  .inp-group label { display: block; font-size: .58rem; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 7px; }
+  .inp-group input { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; font-family: var(--font-mono); font-size: .85rem; color: var(--text); outline: none; transition: border-color .3s, box-shadow .3s; }
+  .inp-group input:focus { border-color: var(--live); box-shadow: 0 0 0 3px hsl(var(--lh),80%,50%,.15); }
+  .inp-group input::placeholder { color: var(--text-dim); }
+  .btn-login { width: 100%; margin-top: 8px; background: var(--live); border: none; border-radius: 12px; padding: 14px 20px; font-family: var(--font-disp); font-size: .8rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #07090f; cursor: pointer; transition: opacity .2s, transform .2s, box-shadow .3s; box-shadow: 0 0 20px hsl(var(--lh),80%,50%,.35); }
+  .btn-login:hover  { opacity:.88; transform: translateY(-1px); }
+  .btn-login:active { transform: translateY(0); }
+  .btn-login:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+  .login-status { margin-top: 18px; font-size: .65rem; letter-spacing: 1px; color: var(--text-dim); min-height: 22px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .ls-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 8px var(--live); display: none; animation: blink 1s infinite; }
+  .login-status.loading .ls-dot { display: block; }
+  .login-status.ok  { color: #00ff9f; }
+  .login-status.err { color: #ff3358; }
+  .login-hint { margin-top: 22px; font-size: .55rem; color: var(--text-dim); letter-spacing: 1px; line-height: 1.8; }
+  .login-hint a { color: var(--live); text-decoration: none; }
+
+  header { position:sticky; top:0; z-index:100; height:58px; padding:0 24px; display:flex; align-items:center; justify-content:space-between; background:rgba(7,9,15,.93); border-bottom:1px solid hsl(var(--lh),40%,15%); backdrop-filter:blur(14px); transition:border-color 1.2s; }
+  .logo { font-family:var(--font-disp); font-size:1rem; font-weight:900; letter-spacing:5px; text-transform:uppercase; color:#fff; }
+  .logo em { font-style:normal; color:var(--live); transition:color .8s; }
+  .hdr-r { display:flex; align-items:center; gap:14px; }
+  .badge { display:flex; align-items:center; gap:7px; background:hsl(var(--lh),70%,9%); border:1px solid hsl(var(--lh),60%,20%); color:var(--live-glow); border-radius:20px; padding:4px 14px; font-size:.6rem; letter-spacing:2px; text-transform:uppercase; transition:background 1.2s, border-color 1.2s, color .8s; }
+  .bdot { width:7px; height:7px; border-radius:50%; background:var(--live-glow); box-shadow:0 0 8px var(--live-glow); animation:blink 1.4s infinite; transition:background .8s, box-shadow .8s; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+  #clk { font-family:var(--font-disp); font-size:.68rem; color:var(--live); letter-spacing:2px; transition:color .8s; }
+  #userBadge { font-size:.58rem; color:var(--text-dim); letter-spacing:1px; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:20px; padding:4px 12px; display:none; align-items:center; gap:6px; }
+  #userBadge.show { display:flex; }
+  #userBadge span { color:var(--live); font-size:.6rem; }
+
+  .wrap { position:relative; z-index:5; max-width:1200px; margin:0 auto; padding:26px 18px 30px; flex:1; width:100%; }
+  .apibar { display:flex; align-items:center; gap:10px; font-size:.6rem; letter-spacing:1px; color:var(--text-dim); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:9px 16px; margin-bottom:22px; }
+  .apin { width:7px; height:7px; border-radius:50%; flex-shrink:0; transition:background .5s,box-shadow .5s; }
+  .apin.sim  { background:#f0c040; box-shadow:0 0 6px #f0c040; }
+  .apin.live { background:#00ff9f; box-shadow:0 0 6px #00ff9f; }
+
+  .hero-row { display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:14px; margin-bottom:22px; }
+  .hcard { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:22px 16px 18px; text-align:center; position:relative; overflow:hidden; transition:border-color 1s, box-shadow 1s, background 1s; }
+  .hcard.main { border-color:hsl(var(--lh),60%,25%); box-shadow:0 0 55px hsl(var(--lh),80%,12%), inset 0 1px 0 rgba(255,255,255,.04); background:hsl(var(--lh),30%,6%); }
+  .hcard.main::before { content:''; position:absolute; inset:0; background:radial-gradient(circle at 50% -10%, hsl(var(--lh),80%,18%,.28) 0%, transparent 65%); transition:background 1s; pointer-events:none; }
+  .ctag { font-size:.55rem; letter-spacing:2.5px; text-transform:uppercase; color:var(--text-dim); margin-bottom:12px; display:block; }
+  .hval { font-family:var(--font-disp); font-size:2.7rem; font-weight:900; line-height:1; margin-bottom:10px; transition:color .5s,text-shadow .5s; }
+  .hcard.main .hval { font-size:3.6rem; }
+  .htim { font-size:.7rem; color:var(--text-dim); letter-spacing:2px; margin-bottom:7px; }
+  .hsum { font-size:1.15rem; font-weight:700; font-family:var(--font-disp); letter-spacing:2px; opacity:.95; transition:color .5s; }
+  .hform{ font-size:.56rem; color:var(--text-dim); margin-top:4px; }
+
+  .stats-row { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:24px; }
+  .sbox { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:13px 10px; text-align:center; }
+  .slbl { font-size:.54rem; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:5px; display:block; }
+  .sval { font-family:var(--font-disp); font-size:1.05rem; font-weight:700; color:#fff; }
+
+  .sechdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .sectit { font-family:var(--font-disp); font-size:.6rem; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim); display:flex; align-items:center; gap:8px; }
+  .sectit::before { content:''; display:inline-block; width:3px; height:13px; background:var(--live); border-radius:2px; transition:background .8s; }
+  .seccnt { font-size:.58rem; color:var(--text-dim); }
+
+  .cgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(95px,1fr)); gap:9px; margin-bottom:30px; }
+  .cc { --cclr:var(--live); background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:13px 9px 11px; text-align:center; position:relative; overflow:hidden; cursor:default; transition:transform .2s, border-color .25s, box-shadow .25s; animation:popIn .35s cubic-bezier(.34,1.56,.64,1); }
+  .cc:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(0,0,0,.4); }
+  .cc.nw { border-color:var(--cclr); box-shadow:0 0 22px hsl(var(--lh),80%,12%); }
+  .cc::after { content:''; position:absolute; left:0; top:18%; bottom:18%; width:3px; border-radius:0 2px 2px 0; background:var(--cclr); opacity:.55; }
+  @keyframes popIn { from{opacity:0;transform:scale(.85) translateY(-10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+  .ccv { font-family:var(--font-disp); font-size:1.1rem; font-weight:700; display:block; margin-bottom:6px; line-height:1; }
+  .cct { font-size:.55rem; color:var(--text-dim); display:block; margin-bottom:4px; letter-spacing:1px; }
+  .ccs { font-size:.88rem; font-weight:700; font-family:var(--font-disp); display:block; opacity:.9; }
+  .ccf { font-size:.52rem; color:var(--text-dim); display:block; margin-top:3px; }
+
+  #toast { position:fixed; bottom:80px; right:22px; background:var(--surface2); border:1px solid hsl(var(--lh),60%,22%); border-left:3px solid var(--live); border-radius:10px; padding:13px 18px; font-size:.68rem; letter-spacing:.5px; max-width:280px; z-index:999; opacity:0; transform:translateY(14px); transition:opacity .3s, transform .3s, border-color .5s, border-left-color .5s; pointer-events:none; }
+  #toast.on { opacity:1; transform:translateY(0); }
+  #ttit { font-family:var(--font-disp); font-size:.55rem; letter-spacing:2px; color:var(--live); display:block; margin-bottom:4px; transition:color .5s; }
+
+  @keyframes mpulse { 0% { box-shadow:0 0 0 0 hsl(var(--lh),80%,50%,.65); } 70% { box-shadow:0 0 0 24px hsl(var(--lh),80%,50%,0); } 100%{ box-shadow:0 0 0 0 hsl(var(--lh),80%,50%,0); } }
+  .do-pulse { animation:mpulse .9s ease !important; }
+
+  footer { position:relative; z-index:5; border-top:1px solid hsl(var(--lh),30%,12%); background:rgba(7,9,15,.95); padding:16px 24px; text-align:center; transition:border-color 1.2s; }
+  .footer-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
+  .footer-brand { font-family:var(--font-disp); font-size:.65rem; font-weight:700; letter-spacing:3px; color:var(--live); text-transform:uppercase; transition:color .8s; }
+  .footer-sep { color:var(--text-dim); font-size:.7rem; }
+  .footer-rights { font-size:.58rem; color:var(--text-dim); letter-spacing:1px; opacity:.7; }
+  .footer-year { font-size:.58rem; color:var(--text-dim); opacity:.5; }
+
+  @media(max-width:900px){ .hero-row { grid-template-columns:1fr 1fr; } }
+  @media(max-width:600px){ .hero-row { grid-template-columns:1fr; } .stats-row { grid-template-columns:repeat(3,1fr); } }
+  @media(max-width:400px){ .stats-row { grid-template-columns:repeat(2,1fr); } #clk { display:none; } }
+  ::-webkit-scrollbar { width:5px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+</style>
+</head>
+<body>
+
+<div id="atm"></div>
+<div id="ptcl"></div>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">Aviator<em>.</em>Panel</div>
+    <div class="login-sub">Sortenabet — Resultados em Tempo Real</div>
+    <div class="inp-group">
+      <label for="inp-email">📧 &nbsp;Email da Sortenabet</label>
+      <input type="email" id="inp-email" placeholder="seu@email.com" autocomplete="email" />
+    </div>
+    <div class="inp-group">
+      <label for="inp-pass">🔒 &nbsp;Senha</label>
+      <input type="password" id="inp-pass" placeholder="••••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn-login" id="btnLogin" onclick="doLogin()">ENTRAR &amp; CONECTAR</button>
+    <div class="login-status" id="loginStatus">
+      <span class="ls-dot"></span>
+      <span id="loginMsg">Digite suas credenciais da Sortenabet</span>
+    </div>
+    <div class="login-hint">
+      Suas credenciais são usadas apenas para conectar ao Aviator.<br>
+      Não armazenamos seus dados. &nbsp;•&nbsp;
+      <a href="https://sortenabet.bet.br" target="_blank">Criar conta</a>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">Aviator<em>.</em>Panel</div>
+  <div class="hdr-r">
+    <div id="userBadge"><span>●</span><span id="userEmail">—</span></div>
+    <div class="badge"><span class="bdot"></span>Ao vivo</div>
+    <span id="clk">00:00:00</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="apibar">
+    <div class="apin sim" id="apiDot"></div>
+    <span id="apiTxt">Aguardando login…</span>
+  </div>
+  <div class="hero-row">
+    <div class="hcard main" id="hc0">
+      <span class="ctag">✦ Última vela</span>
+      <div class="hval" id="h0v">—</div>
+      <div class="htim" id="h0t">--:--:--</div>
+      <div class="hsum" id="h0s">Soma: —</div>
+      <div class="hform" id="h0f">—</div>
+    </div>
+    <div class="hcard" id="hc1">
+      <span class="ctag">Penúltima</span>
+      <div class="hval" id="h1v">—</div>
+      <div class="htim" id="h1t">--:--:--</div>
+      <div class="hsum" id="h1s">Soma: —</div>
+      <div class="hform" id="h1f">—</div>
+    </div>
+    <div class="hcard" id="hc2">
+      <span class="ctag">Antepenúltima</span>
+      <div class="hval" id="h2v">—</div>
+      <div class="htim" id="h2t">--:--:--</div>
+      <div class="hsum" id="h2s">Soma: —</div>
+      <div class="hform" id="h2f">—</div>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="sbox"><span class="slbl">Rodadas</span><span class="sval" id="sT">0</span></div>
+    <div class="sbox"><span class="slbl">Maior</span><span class="sval" id="sM" style="color:var(--live)">—</span></div>
+    <div class="sbox"><span class="slbl">Média</span><span class="sval" id="sA">—</span></div>
+    <div class="sbox"><span class="slbl">≥ 2x</span><span class="sval" id="sU" style="color:#00ff9f">—</span></div>
+    <div class="sbox"><span class="slbl">&lt; 1.5x</span><span class="sval" id="sL" style="color:#ff3358">—</span></div>
+  </div>
+  <div class="sechdr">
+    <div class="sectit">Histórico de Resultados</div>
+    <span class="seccnt" id="seccnt">0 velas</span>
+  </div>
+  <div class="cgrid" id="grid"></div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <span class="footer-brand">Marcos Duarte</span>
+    <span class="footer-sep">•</span>
+    <span class="footer-rights">Todos os Direitos Reservados</span>
+    <span class="footer-sep">•</span>
+    <span class="footer-year" id="footerYear">2025</span>
+  </div>
+</footer>
+
+<div id="toast"><span id="ttit">NOVA VELA</span><span id="tmsg">—</span></div>
+
+<script>
+const PAL = {
+  red:    { h:350, s:100, l:58, hex:'#ff3358' },
+  orange: { h: 25, s:100, l:58, hex:'#ff7a2a' },
+  pink:   { h:330, s:100, l:67, hex:'#ff5fad' },
+  green:  { h:152, s:100, l:50, hex:'#00ff9f' },
+  blue:   { h:200, s:100, l:55, hex:'#00c8ff' },
+  purple: { h:270, s: 80, l:65, hex:'#b06ef3' },
+  gold:   { h: 45, s:100, l:55, hex:'#ffd700' },
+};
+function getColor(v) {
+  if (v <  1.5) return 'red';
+  if (v <  2.0) return 'orange';
+  if (v <  3.0) return 'pink';
+  if (v <  6.0) return 'green';
+  if (v < 15.0) return 'blue';
+  if (v < 60.0) return 'purple';
+  return 'gold';
+}
+function calcSum(d) {
+  const digs = d.replace(',','.').replace('x','').replace('.','').split('').map(Number);
+  return { total: digs.reduce((a,b)=>a+b,0), formula: digs.join('+') };
+}
+const pad  = n => String(n).padStart(2,'0');
+const fmtV = v => v.toFixed(2).replace('.',',') + 'x';
+const fmtT = d => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+setInterval(() => { document.getElementById('clk').textContent = fmtT(new Date()); }, 1000);
+document.getElementById('clk').textContent = fmtT(new Date());
+document.getElementById('footerYear').textContent = new Date().getFullYear();
+let curTheme = 'blue';
+const root = document.documentElement;
+function applyTheme(name) {
+  if (name === curTheme) return;
+  curTheme = name;
+  const p = PAL[name];
+  root.style.setProperty('--lh', p.h);
+  root.style.setProperty('--ls', p.s + '%');
+  root.style.setProperty('--ll', p.l + '%');
+  spawnParticles(p);
+}
+function spawnParticles(p) {
+  const box = document.getElementById('ptcl');
+  box.innerHTML = '';
+  for (let i = 0; i < 24; i++) {
+    const el = document.createElement('div');
+    el.className = 'pt';
+    const sz = 3 + Math.random()*6, dur = 3.5 + Math.random()*4, dl = Math.random()*2;
+    el.style.cssText = `--sz:${sz}px;--x:${Math.random()*100}%;--d:${dur}s;--dl:${dl}s;background:hsl(${p.h},${p.s}%,${p.l+15}%);box-shadow:0 0 ${sz+4}px hsl(${p.h},${p.s}%,${p.l+15}%);`;
+    box.appendChild(el);
+    setTimeout(() => el.remove(), (dur+dl)*1000+300);
+  }
+}
+const STATE = { candles:[], max:120, apiMode:'sim' };
+function renderHero() {
+  const [c0,c1,c2] = STATE.candles;
+  if (c0) setHero('0', c0, true);
+  if (c1) setHero('1', c1, false);
+  if (c2) setHero('2', c2, false);
+}
+function setHero(i, c, isMain) {
+  const hex = PAL[c.color].hex;
+  const glo = hex + '90';
+  document.getElementById(`h${i}v`).textContent = c.display;
+  document.getElementById(`h${i}v`).style.color = hex;
+  document.getElementById(`h${i}v`).style.textShadow = `0 0 38px ${glo}`;
+  document.getElementById(`h${i}t`).textContent = c.time;
+  document.getElementById(`h${i}s`).textContent = `Soma: ${c.sum.total}`;
+  document.getElementById(`h${i}s`).style.color = hex;
+  document.getElementById(`h${i}f`).textContent = `${c.sum.formula} = ${c.sum.total}`;
+  if (isMain) {
+    applyTheme(c.color);
+    const card = document.getElementById('hc0');
+    card.classList.remove('do-pulse'); void card.offsetWidth; card.classList.add('do-pulse');
+  }
+}
+function makeCard(c, isNew) {
+  const hex = PAL[c.color].hex;
+  const el = document.createElement('div');
+  el.className = 'cc' + (isNew ? ' nw' : '');
+  el.style.setProperty('--cclr', hex);
+  el.innerHTML = `
+    <span class="ccv" style="color:${hex};text-shadow:0 0 20px ${hex}88">${c.display}</span>
+    <span class="cct">${c.time}</span>
+    <span class="ccs" style="color:${hex}">Σ ${c.sum.total}</span>
+    <span class="ccf">${c.sum.formula}=${c.sum.total}</span>
+  `;
+  if (isNew) setTimeout(() => el.classList.remove('nw'), 3000);
+  return el;
+}
+function pushGrid(c) {
+  const g = document.getElementById('grid');
+  g.insertBefore(makeCard(c, true), g.firstChild);
+  if (g.children.length > 100) g.removeChild(g.lastChild);
+}
+function updateStats() {
+  const cs = STATE.candles; if (!cs.length) return;
+  const vs = cs.map(c=>c.value), n = vs.length;
+  document.getElementById('sT').textContent = n;
+  document.getElementById('sM').textContent = fmtV(Math.max(...vs));
+  document.getElementById('sA').textContent = fmtV(vs.reduce((a,b)=>a+b,0)/n);
+  const u = vs.filter(v=>v>=2).length, l = vs.filter(v=>v<1.5).length;
+  document.getElementById('sU').textContent = `${u} (${Math.round(u/n*100)}%)`;
+  document.getElementById('sL').textContent = `${l} (${Math.round(l/n*100)}%)`;
+  document.getElementById('seccnt').textContent = n + ' velas';
+}
+const toastEl = document.getElementById('toast');
+function showToast(c) {
+  const hex = PAL[c.color].hex;
+  document.getElementById('tmsg').textContent = `${c.display}  •  Soma: ${c.sum.formula} = ${c.sum.total}`;
+  toastEl.style.borderLeftColor = hex;
+  document.getElementById('ttit').style.color = hex;
+  toastEl.classList.remove('on'); void toastEl.offsetWidth; toastEl.classList.add('on');
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(() => toastEl.classList.remove('on'), 4000);
+}
+function addCandle(raw, ts) {
+  const date = ts ? new Date(ts) : new Date();
+  const display = fmtV(raw), color = getColor(raw), sum = calcSum(display), time = fmtT(date);
+  const c = { value:raw, display, color, sum, time, date };
+  STATE.candles.unshift(c);
+  if (STATE.candles.length > STATE.max) STATE.candles.pop();
+  renderHero(); pushGrid(c); updateStats(); showToast(c);
+}
+function setApi(mode, src) {
+  STATE.apiMode = mode;
+  document.getElementById('apiDot').className = 'apin ' + (mode==='live'?'live':'sim');
+  document.getElementById('apiTxt').textContent = mode === 'live'
+    ? `✓ Conectado — ${src} — velas em tempo real`
+    : `⏳ ${src}`;
+}
+
+// ═══ LOGIN — chama /api/login no servidor online ═══
+function setLoginStatus(type, msg) {
+  const el = document.getElementById('loginStatus');
+  const msgEl = document.getElementById('loginMsg');
+  el.className = 'login-status ' + type;
+  msgEl.textContent = msg;
+}
+async function doLogin() {
+  const email = document.getElementById('inp-email').value.trim();
+  const pass  = document.getElementById('inp-pass').value.trim();
+  if (!email || !pass) { setLoginStatus('err', 'Preencha email e senha.'); return; }
+  const btn = document.getElementById('btnLogin');
+  btn.disabled = true;
+  setLoginStatus('loading', 'Conectando...');
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass }),
+    });
+    const data = await res.json();
+    if (!data.ok) { setLoginStatus('err', data.msg || 'Login falhou.'); btn.disabled = false; return; }
+    setLoginStatus('ok', '✓ ' + (data.msg || 'Conectado!'));
+    document.getElementById('userEmail').textContent = email.split('@')[0];
+    document.getElementById('userBadge').classList.add('show');
+    setTimeout(() => { document.getElementById('loginScreen').classList.add('hidden'); }, 1800);
+  } catch(e) {
+    setLoginStatus('err', 'Servidor offline.');
+    btn.disabled = false;
+  }
+}
+document.getElementById('inp-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('inp-email').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inp-pass').focus(); });
+
+// ═══ SOCKET.IO — conecta ao servidor online ═══
+let historyLoaded = false;
+let simTimer = null;
+function simResult() {
+  const r = Math.random();
+  if (r < .28) return 1.00 + Math.random()*.49;
+  if (r < .55) return 1.50 + Math.random()*.49;
+  if (r < .68) return 2.00 + Math.random()*.99;
+  if (r < .80) return 3.00 + Math.random()*2.99;
+  if (r < .90) return 6.00 + Math.random()*8.99;
+  if (r < .96) return 15.0 + Math.random()*44.9;
+  return 60.0 + Math.random()*440;
+}
+function startSim() {
+  if (simTimer) return;
+  simTimer = setInterval(() => addCandle(simResult()), 28000);
+}
+
+const RENDER_URL = 'https://aviator-real-time-dashboard.onrender.com';
+const sock = io(RENDER_URL, { transports:['websocket','polling'], reconnection:true, reconnectionDelay:5000 });
+
+sock.on('connect', () => {
+  clearInterval(simTimer); simTimer = null;
+  setApi('live', 'Servidor Render Online');
+});
+sock.on('history', (items) => {
+  if (historyLoaded || !items?.length) return;
+  historyLoaded = true;
+  document.getElementById('grid').innerHTML = '';
+  STATE.candles = [];
+  [...items].reverse().forEach(item => {
+    const val = parseFloat(item.multiplier);
+    if (!isNaN(val) && val >= 1) {
+      const date = new Date(item.timestamp || item.time);
+      const display = fmtV(val), color = getColor(val), sum = calcSum(display);
+      const c = { value:val, display, color, sum, time:fmtT(date), date };
+      STATE.candles.push(c);
+      pushGrid(c);
+    }
+  });
+  STATE.candles.reverse();
+  renderHero(); updateStats();
+  if (STATE.candles[0]) applyTheme(STATE.candles[0].color);
+});
+sock.on('candle', (item) => {
+  const val = parseFloat(item.multiplier);
+  if (!isNaN(val) && val >= 1) addCandle(val, item.timestamp || item.time);
+});
+sock.on('status', (s) => {
+  if (s.connected) setApi('live', s.source || 'Aviator Online');
+});
+sock.on('disconnect', () => {
+  setApi('sim', 'Reconectando...');
+  startSim();
+});
+sock.on('connect_error', () => { startSim(); });
+
+function initSimHistory() {
+  const now = Date.now();
+  for (let i = 20; i >= 1; i--) {
+    const val = simResult(), disp = fmtV(val), col = getColor(val), sum = calcSum(disp);
+    const date = new Date(now - i*28000);
+    STATE.candles.push({ value:val, display:disp, color:col, sum, time:fmtT(date), date });
+    pushGrid({ value:val, display:disp, color:col, sum, time:fmtT(date), date });
+  }
+  renderHero(); updateStats();
+  if (STATE.candles[0]) applyTheme(STATE.candles[0].color);
+}
+initSimHistory();
+setApi('sim', 'Faça login para conectar ao Aviator em tempo real');
+</script>
+</body>
+</html>
