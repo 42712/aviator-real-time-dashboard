@@ -1,4 +1,4 @@
-const SERVER_URL = "https://SEU-DOMINIO-RENDER.onrender.com"; // trocar depois
+const SERVER_URL = "https://aviator-real-time-dashboard.onrender.com"; // trocar depois
 
 let lastValue = null;
 
