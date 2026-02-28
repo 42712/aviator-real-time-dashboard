@@ -879,11 +879,13 @@ let proxyOk       = false;
 let simTimer      = null;
 let historyLoaded = false;
 
+const RENDER_URL = 'https://aviator-real-time-dashboard.onrender.com';
+
 function connectProxy() {
   // Carrega Socket.IO client do proxy local
   if (!window.io) {
     const script = document.createElement('script');
-    script.src = 'http://localhost:3333/socket.io/socket.io.js';
+    script.src = RENDER_URL + '/socket.io/socket.io.js';
     script.onload  = () => initSocket();
     script.onerror = () => {
       log('Proxy offline — modo simulação');
@@ -901,7 +903,7 @@ function log(msg) {
 
 function initSocket() {
   try {
-    proxySocket = window.io('http://localhost:3333', {
+    proxySocket = window.io(RENDER_URL, {
       transports:       ['websocket','polling'],
       reconnection:     true,
       reconnectionDelay:5000,
@@ -1006,7 +1008,7 @@ function stopSim() {
 // ══════════════════════════════════════════════════
 async function init() {
   setApi('sim', '');
-  document.getElementById('apiTxt').textContent = 'Conectando ao proxy local (localhost:3333)…';
+  document.getElementById('apiTxt').textContent = 'Conectando ao servidor Render…';
 
   // Histórico inicial simulado (substituído pelo real ao conectar)
   const now = Date.now();
@@ -1032,6 +1034,51 @@ async function init() {
 }
 
 init();
+
+// ══════════════════════════════════════════════════
+//  ANTI-SLEEP — evita pausa do navegador
+// ══════════════════════════════════════════════════
+
+// 1) Wake Lock — mantém tela acordada (funciona no celular também)
+const wakeLock = async () => {
+  try {
+    if ('wakeLock' in navigator) {
+      await navigator.wakeLock.request('screen');
+    }
+  } catch(e) {}
+};
+wakeLock();
+
+// 2) Reconecta automaticamente ao voltar para a aba
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    log('Aba voltou ao foco — verificando conexão...');
+    // Reconecta o socket se caiu
+    if (typeof proxySocket !== 'undefined' && proxySocket && !proxySocket.connected) {
+      log('Reconectando socket...');
+      proxySocket.connect();
+    }
+    // Se estava no modo simulação, tenta proxy novamente
+    if (!proxyOk) {
+      connectProxy();
+    }
+  }
+});
+
+// 3) Ping a cada 20 segundos para manter conexão viva
+setInterval(() => {
+  if (typeof proxySocket !== 'undefined' && proxySocket && proxySocket.connected) {
+    proxySocket.emit('ping');
+  }
+}, 20000);
+
+// 4) Verifica conexão a cada 30 segundos e reconecta se necessário
+setInterval(() => {
+  if (!proxyOk) {
+    log('Conexão perdida — tentando reconectar...');
+    connectProxy();
+  }
+}, 30000);
 </script>
 </body>
 </html>
