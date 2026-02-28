@@ -7,7 +7,6 @@ import { fileURLToPath } from "url";
 
 const app = express();
 const server = http.createServer(app);
-
 const io = new Server(server, {
   cors: { origin: "*" }
 });
@@ -15,37 +14,44 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-// Serve o painel HTML
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "../client")));
 
 let history = [];
 
-// Recebe multiplicador da extensão
+// ── PING — evita o Render.com "dormir" ──
+app.get("/api/ping", (req, res) => {
+  res.json({ ok: true, ts: Date.now() });
+});
+
+// ── CANDLE — recebe multiplicador + cor RGB da extensão ──
 app.post("/api/candle", (req, res) => {
-  const { multiplier } = req.body;
+  const { multiplier, color_rgb } = req.body;
   if (!multiplier) return res.sendStatus(400);
 
-  const candle = { multiplier, timestamp: Date.now() };
+  const candle = {
+    multiplier,
+    color_rgb: color_rgb || null, // ex: "52,180,255" ou null
+    timestamp: Date.now()
+  };
+
   history.unshift(candle);
   if (history.length > 200) history.pop();
-
   io.emit("candle", candle);
   res.sendStatus(200);
 });
 
-// Rota de login (valida e responde ok)
+// ── LOGIN ──
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.json({ ok: false, msg: "Preencha email e senha." });
   }
-  // Aqui apenas confirma login — a extensão que captura os dados reais
   res.json({ ok: true, msg: "Conectado! Aguardando velas do Aviator..." });
 });
 
-// Envia histórico ao conectar
+// ── SOCKET.IO — envia histórico ao conectar ──
 io.on("connection", (socket) => {
   socket.emit("history", history);
   socket.emit("status", { connected: true, source: "Aviator — Sortenabet" });
