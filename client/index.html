@@ -4,9 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AviatorPanel — Resultados em Tempo Real</title>
+<title>Aviator Panel — Resultados em Tempo Real</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<!-- SOCKET.IO do servidor online -->
+<script src="https://aviator-real-time-dashboard.onrender.com/socket.io/socket.io.js"></script>
 <style>
   :root {
     --bg:        #07090f;
@@ -22,10 +24,8 @@
     --live-dim:  hsl(var(--lh), 60%, 28%);
     --live-glow: hsl(var(--lh), 100%, 68%);
   }
-
   *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
   html { scroll-behavior:smooth; }
-
   body {
     background-color: var(--bg);
     color: var(--text);
@@ -37,21 +37,14 @@
     flex-direction: column;
   }
 
-  /* ── ATMOSFERA ── */
-  #atm {
-    position: fixed; inset: 0;
-    pointer-events: none; z-index: 0;
-  }
+  #atm { position:fixed; inset:0; pointer-events:none; z-index:0; }
   #atm::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: radial-gradient(ellipse 75% 55% at 50% -5%,
-      hsl(var(--lh), 80%, 10%) 0%, transparent 68%);
+    content:''; position:absolute; inset:0;
+    background: radial-gradient(ellipse 75% 55% at 50% -5%, hsl(var(--lh),80%,10%) 0%, transparent 68%);
     transition: background 1.2s;
   }
   #atm::after {
-    content: '';
-    position: absolute; inset: 0;
+    content:''; position:absolute; inset:0;
     background-image:
       linear-gradient(hsl(var(--lh),50%,18%,.022) 1px, transparent 1px),
       linear-gradient(90deg, hsl(var(--lh),50%,18%,.022) 1px, transparent 1px);
@@ -59,7 +52,6 @@
     transition: background 1.2s;
   }
 
-  /* ── PARTÍCULAS ── */
   #ptcl { position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden; }
   .pt {
     position:absolute; border-radius:50%; opacity:0; bottom:-10px;
@@ -74,341 +66,123 @@
     100%{ opacity:0;   transform:translateY(-65vh) scale(.15); }
   }
 
-  /* ── HEADER ── */
-  header {
-    position:sticky; top:0; z-index:100;
-    min-height:90px; padding:0 28px;
-    display:flex; align-items:center; justify-content:space-between;
-    background:rgba(7,9,15,.95);
-    border-bottom:1px solid hsl(var(--lh),40%,15%);
-    backdrop-filter:blur(14px);
-    transition:border-color 1.2s;
-    gap:16px;
+  #loginScreen {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(7,9,15,0.97);
+    backdrop-filter: blur(20px);
+    transition: opacity .6s, visibility .6s;
   }
-  .logo {
-    font-family:var(--font-disp); font-size:1.1rem;
-    font-weight:900; letter-spacing:5px; text-transform:uppercase; color:#fff;
+  #loginScreen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 36px 32px;
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 80px rgba(0,200,255,0.08);
   }
+  .login-box::before {
+    content:'';
+    position: absolute; inset:0;
+    background: radial-gradient(circle at 50% 0%, rgba(0,200,255,0.07) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .login-logo { font-family: var(--font-disp); font-size: 1.3rem; font-weight: 900; letter-spacing: 5px; text-transform: uppercase; color: #fff; margin-bottom: 6px; }
+  .login-logo em { font-style:normal; color: var(--live); }
+  .login-sub { font-size: .62rem; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 32px; }
+  .inp-group { text-align: left; margin-bottom: 16px; }
+  .inp-group label { display: block; font-size: .58rem; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 7px; }
+  .inp-group input { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; font-family: var(--font-mono); font-size: .85rem; color: var(--text); outline: none; transition: border-color .3s, box-shadow .3s; }
+  .inp-group input:focus { border-color: var(--live); box-shadow: 0 0 0 3px hsl(var(--lh),80%,50%,.15); }
+  .inp-group input::placeholder { color: var(--text-dim); }
+  .btn-login { width: 100%; margin-top: 8px; background: var(--live); border: none; border-radius: 12px; padding: 14px 20px; font-family: var(--font-disp); font-size: .8rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #07090f; cursor: pointer; transition: opacity .2s, transform .2s, box-shadow .3s; box-shadow: 0 0 20px hsl(var(--lh),80%,50%,.35); }
+  .btn-login:hover  { opacity:.88; transform: translateY(-1px); }
+  .btn-login:active { transform: translateY(0); }
+  .btn-login:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+  .login-status { margin-top: 18px; font-size: .65rem; letter-spacing: 1px; color: var(--text-dim); min-height: 22px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .ls-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 8px var(--live); display: none; animation: blink 1s infinite; }
+  .login-status.loading .ls-dot { display: block; }
+  .login-status.ok  { color: #00ff9f; }
+  .login-status.err { color: #ff3358; }
+  .login-hint { margin-top: 22px; font-size: .55rem; color: var(--text-dim); letter-spacing: 1px; line-height: 1.8; }
+  .login-hint a { color: var(--live); text-decoration: none; }
+
+  header { position:sticky; top:0; z-index:100; height:58px; padding:0 24px; display:flex; align-items:center; justify-content:space-between; background:rgba(7,9,15,.93); border-bottom:1px solid hsl(var(--lh),40%,15%); backdrop-filter:blur(14px); transition:border-color 1.2s; }
+  .logo { font-family:var(--font-disp); font-size:1rem; font-weight:900; letter-spacing:5px; text-transform:uppercase; color:#fff; }
   .logo em { font-style:normal; color:var(--live); transition:color .8s; }
-  .hdr-r { display:flex; align-items:center; gap:16px; }
-  .badge {
-    display:flex; align-items:center; gap:7px;
-    background:hsl(var(--lh),70%,9%);
-    border:1px solid hsl(var(--lh),60%,20%);
-    color:var(--live-glow); border-radius:20px; padding:4px 14px;
-    font-size:.6rem; letter-spacing:2px; text-transform:uppercase;
-    transition:background 1.2s, border-color 1.2s, color .8s;
-  }
-  .bdot {
-    width:7px; height:7px; border-radius:50%;
-    background:var(--live-glow); box-shadow:0 0 8px var(--live-glow);
-    animation:blink 1.4s infinite;
-    transition:background .8s, box-shadow .8s;
-  }
+  .hdr-r { display:flex; align-items:center; gap:14px; }
+  .badge { display:flex; align-items:center; gap:7px; background:hsl(var(--lh),70%,9%); border:1px solid hsl(var(--lh),60%,20%); color:var(--live-glow); border-radius:20px; padding:4px 14px; font-size:.6rem; letter-spacing:2px; text-transform:uppercase; transition:background 1.2s, border-color 1.2s, color .8s; }
+  .bdot { width:7px; height:7px; border-radius:50%; background:var(--live-glow); box-shadow:0 0 8px var(--live-glow); animation:blink 1.4s infinite; transition:background .8s, box-shadow .8s; }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
-  #clk { font-family:var(--font-disp); font-size:2.2rem; font-weight:900; color:var(--live); letter-spacing:4px; transition:color .8s; white-space:nowrap; }
-  .hdr-r { display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:flex-end; }
-  /* ── BADGE ROSA (padrão neutro, fica rosa só quando tendência for rosa) ── */
-  .badge-pink {
-    display:flex; align-items:center; gap:12px;
-    background: rgba(255,255,255,0.04);
-    border: 2px solid rgba(255,255,255,0.12);
-    color: var(--text-dim);
-    border-radius:18px; padding:12px 32px;
-    font-size:1.25rem; letter-spacing:2px; text-transform:uppercase;
-    font-family: var(--font-disp); font-weight:700;
-    transition: background .5s, border-color .5s, box-shadow .5s, color .5s;
-    white-space:nowrap;
-  }
-  .badge-pink.active {
-    background: rgba(255,95,173,0.18);
-    border-color: #ff5fad;
-    color: #ff5fad;
-    box-shadow: 0 0 30px rgba(255,95,173,0.55), 0 0 70px rgba(255,95,173,0.18);
-  }
-  .pdot {
-    width:16px; height:16px; border-radius:50%;
-    background: var(--text-dim);
-    box-shadow: none;
-    flex-shrink:0;
-    transition: background .5s, box-shadow .5s;
-  }
-  .badge-pink.active .pdot {
-    background: #ff5fad;
-    box-shadow: 0 0 14px #ff5fad;
-    animation: blink 1.4s infinite;
-  }
-  .badge-pink.active.fast .pdot { animation: blink .28s infinite; }
+  #clk { font-family:var(--font-disp); font-size:.68rem; color:var(--live); letter-spacing:2px; transition:color .8s; }
+  #userBadge { font-size:.58rem; color:var(--text-dim); letter-spacing:1px; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:20px; padding:4px 12px; display:none; align-items:center; gap:6px; }
+  #userBadge.show { display:flex; }
+  #userBadge span { color:var(--live); font-size:.6rem; }
 
-  /* ── BADGE STATUS (pagando/recolhendo) ── */
-  .badge-status {
-    display:flex; align-items:center; gap:12px;
-    border-radius:18px; padding:12px 32px;
-    font-size:1.25rem; letter-spacing:2px; text-transform:uppercase;
-    font-family: var(--font-disp); font-weight:700;
-    border: 2px solid;
-    white-space:nowrap;
-    transition: background .6s, border-color .6s, color .6s, box-shadow .6s;
-  }
-  .sdot {
-    width:16px; height:16px; border-radius:50%; flex-shrink:0;
-    transition: background .5s, box-shadow .5s;
-  }
-  .badge-status.paying {
-    background: rgba(0,255,159,0.10);
-    border-color: rgba(0,255,159,0.5);
-    color: #00ff9f;
-    box-shadow: 0 0 24px rgba(0,255,159,0.22), 0 0 60px rgba(0,255,159,0.08);
-  }
-  .badge-status.paying .sdot { background:#00ff9f; box-shadow:0 0 14px #00ff9f; animation:blink 1.4s infinite; }
-  .badge-status.warning {
-    background: rgba(255,215,0,0.10);
-    border-color: rgba(255,215,0,0.5);
-    color: #ffd700;
-    box-shadow: 0 0 24px rgba(255,215,0,0.20), 0 0 60px rgba(255,215,0,0.07);
-  }
-  .badge-status.warning .sdot { background:#ffd700; box-shadow:0 0 14px #ffd700; animation:blink 1.8s infinite; }
-  .badge-status.retracting {
-    background: rgba(255,51,88,0.10);
-    border-color: rgba(255,51,88,0.5);
-    color: #ff3358;
-    box-shadow: 0 0 24px rgba(255,51,88,0.25), 0 0 60px rgba(255,51,88,0.09);
-  }
-  .badge-status.retracting .sdot { background:#ff3358; box-shadow:0 0 14px #ff3358; animation:blink .5s infinite; }
-
-  /* ── WRAP ── */
   .wrap { position:relative; z-index:5; max-width:1200px; margin:0 auto; padding:26px 18px 30px; flex:1; width:100%; }
-
-  /* ── API BAR ── */
-  .apibar {
-    display:flex; align-items:center; gap:10px;
-    font-size:.6rem; letter-spacing:1px; color:var(--text-dim);
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:8px; padding:9px 16px; margin-bottom:22px;
-    transition:border-color .8s;
-  }
+  .apibar { display:flex; align-items:center; gap:10px; font-size:.6rem; letter-spacing:1px; color:var(--text-dim); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:9px 16px; margin-bottom:22px; }
   .apin { width:7px; height:7px; border-radius:50%; flex-shrink:0; transition:background .5s,box-shadow .5s; }
   .apin.sim  { background:#f0c040; box-shadow:0 0 6px #f0c040; }
   .apin.live { background:#00ff9f; box-shadow:0 0 6px #00ff9f; }
 
-  /* ════════════════════════════════════
-     HERO ROW — 4 cards: última | penúltima | antepenúltima | próxima
-     ════════════════════════════════════ */
-  .hero-row {
-    display:grid;
-    grid-template-columns: 1.25fr 1fr 1fr;
-    gap:14px;
-    margin-bottom:22px;
-  }
-
-  /* Card base */
-  .hcard {
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:14px; padding:22px 16px 18px;
-    text-align:center; position:relative; overflow:hidden;
-    transition:border-color 1s, box-shadow 1s, background 1s;
-  }
-
-  /* Card da ÚLTIMA (maior destaque) */
-  .hcard.main {
-    border-color:hsl(var(--lh),60%,25%);
-    box-shadow:0 0 55px hsl(var(--lh),80%,12%), inset 0 1px 0 rgba(255,255,255,.04);
-    background:hsl(var(--lh),30%,6%);
-  }
-  .hcard.main::before {
-    content:''; position:absolute; inset:0;
-    background:radial-gradient(circle at 50% -10%, hsl(var(--lh),80%,18%,.28) 0%, transparent 65%);
-    transition:background 1s; pointer-events:none;
-  }
-
-
-
-  .ctag {
-    font-size:.55rem; letter-spacing:2.5px; text-transform:uppercase;
-    color:var(--text-dim); margin-bottom:12px; display:block;
-  }
-
-  /* Valor da vela */
-  .hval {
-    font-family:var(--font-disp); font-size:2.7rem;
-    font-weight:900; line-height:1; margin-bottom:10px;
-    transition:color .5s, text-shadow .5s;
-  }
+  .hero-row { display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:14px; margin-bottom:22px; }
+  .hcard { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:22px 16px 18px; text-align:center; position:relative; overflow:hidden; transition:border-color 1s, box-shadow 1s, background 1s; }
+  .hcard.main { border-color:hsl(var(--lh),60%,25%); box-shadow:0 0 55px hsl(var(--lh),80%,12%), inset 0 1px 0 rgba(255,255,255,.04); background:hsl(var(--lh),30%,6%); }
+  .hcard.main::before { content:''; position:absolute; inset:0; background:radial-gradient(circle at 50% -10%, hsl(var(--lh),80%,18%,.28) 0%, transparent 65%); transition:background 1s; pointer-events:none; }
+  .ctag { font-size:.55rem; letter-spacing:2.5px; text-transform:uppercase; color:var(--text-dim); margin-bottom:12px; display:block; }
+  .hval { font-family:var(--font-disp); font-size:2.7rem; font-weight:900; line-height:1; margin-bottom:10px; transition:color .5s,text-shadow .5s; }
   .hcard.main .hval { font-size:3.6rem; }
-
   .htim { font-size:.7rem; color:var(--text-dim); letter-spacing:2px; margin-bottom:7px; }
   .hsum { font-size:1.15rem; font-weight:700; font-family:var(--font-disp); letter-spacing:2px; opacity:.95; transition:color .5s; }
   .hform{ font-size:.56rem; color:var(--text-dim); margin-top:4px; }
 
-
-
-  /* ── STATS ── */
   .stats-row { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:24px; }
   .sbox { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:13px 10px; text-align:center; }
   .slbl { font-size:.54rem; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:5px; display:block; }
   .sval { font-family:var(--font-disp); font-size:1.05rem; font-weight:700; color:#fff; }
 
-  /* ── SEC HEADER ── */
   .sechdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .sectit {
-    font-family:var(--font-disp); font-size:.6rem; letter-spacing:3px;
-    text-transform:uppercase; color:var(--text-dim);
-    display:flex; align-items:center; gap:8px;
-  }
-  .sectit::before {
-    content:''; display:inline-block; width:3px; height:13px;
-    background:var(--live); border-radius:2px; transition:background .8s;
-  }
+  .sectit { font-family:var(--font-disp); font-size:.6rem; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim); display:flex; align-items:center; gap:8px; }
+  .sectit::before { content:''; display:inline-block; width:3px; height:13px; background:var(--live); border-radius:2px; transition:background .8s; }
   .seccnt { font-size:.58rem; color:var(--text-dim); }
 
-  /* ── GRID VELAS ── */
   .cgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(95px,1fr)); gap:9px; margin-bottom:30px; }
-  .cc {
-    --cclr:var(--live);
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:10px; padding:13px 9px 11px; text-align:center;
-    position:relative; overflow:hidden; cursor:default;
-    transition:transform .2s, border-color .25s, box-shadow .25s;
-    animation:popIn .35s cubic-bezier(.34,1.56,.64,1);
-  }
+  .cc { --cclr:var(--live); background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:13px 9px 11px; text-align:center; position:relative; overflow:hidden; cursor:default; transition:transform .2s, border-color .25s, box-shadow .25s; animation:popIn .35s cubic-bezier(.34,1.56,.64,1); }
   .cc:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(0,0,0,.4); }
   .cc.nw { border-color:var(--cclr); box-shadow:0 0 22px hsl(var(--lh),80%,12%); }
-  .cc::after {
-    content:''; position:absolute; left:0; top:18%; bottom:18%;
-    width:3px; border-radius:0 2px 2px 0;
-    background:var(--cclr); opacity:.55;
-  }
-  @keyframes popIn {
-    from { opacity:0; transform:scale(.85) translateY(-10px); }
-    to   { opacity:1; transform:scale(1) translateY(0); }
-  }
+  .cc::after { content:''; position:absolute; left:0; top:18%; bottom:18%; width:3px; border-radius:0 2px 2px 0; background:var(--cclr); opacity:.55; }
+  @keyframes popIn { from{opacity:0;transform:scale(.85) translateY(-10px)} to{opacity:1;transform:scale(1) translateY(0)} }
   .ccv { font-family:var(--font-disp); font-size:1.1rem; font-weight:700; display:block; margin-bottom:6px; line-height:1; }
   .cct { font-size:.55rem; color:var(--text-dim); display:block; margin-bottom:4px; letter-spacing:1px; }
-  .ccd { font-size:.52rem; color:var(--text-dim); display:block; margin-bottom:2px; letter-spacing:1px; opacity:.7; }
   .ccs { font-size:.88rem; font-weight:700; font-family:var(--font-disp); display:block; opacity:.9; }
   .ccf { font-size:.52rem; color:var(--text-dim); display:block; margin-top:3px; }
 
-  /* ── TOAST ── */
-  #toast {
-    position:fixed; bottom:80px; right:22px;
-    background:var(--surface2);
-    border:1px solid hsl(var(--lh),60%,22%);
-    border-left:3px solid var(--live);
-    border-radius:10px; padding:13px 18px;
-    font-size:.68rem; letter-spacing:.5px; max-width:280px;
-    z-index:999; opacity:0; transform:translateY(14px);
-    transition:opacity .3s, transform .3s, border-color .5s, border-left-color .5s;
-    pointer-events:none;
-  }
+  #toast { position:fixed; bottom:80px; right:22px; background:var(--surface2); border:1px solid hsl(var(--lh),60%,22%); border-left:3px solid var(--live); border-radius:10px; padding:13px 18px; font-size:.68rem; letter-spacing:.5px; max-width:280px; z-index:999; opacity:0; transform:translateY(14px); transition:opacity .3s, transform .3s, border-color .5s, border-left-color .5s; pointer-events:none; }
   #toast.on { opacity:1; transform:translateY(0); }
   #ttit { font-family:var(--font-disp); font-size:.55rem; letter-spacing:2px; color:var(--live); display:block; margin-bottom:4px; transition:color .5s; }
 
-  /* ── PULSE MAIN ── */
-  @keyframes mpulse {
-    0%  { box-shadow:0 0 0 0   hsl(var(--lh),80%,50%,.65); }
-    70% { box-shadow:0 0 0 24px hsl(var(--lh),80%,50%,0); }
-    100%{ box-shadow:0 0 0 0   hsl(var(--lh),80%,50%,0); }
-  }
+  @keyframes mpulse { 0% { box-shadow:0 0 0 0 hsl(var(--lh),80%,50%,.65); } 70% { box-shadow:0 0 0 24px hsl(var(--lh),80%,50%,0); } 100%{ box-shadow:0 0 0 0 hsl(var(--lh),80%,50%,0); } }
   .do-pulse { animation:mpulse .9s ease !important; }
 
-  /* ── FOOTER ── */
-  footer {
-    position:relative; z-index:5;
-    border-top:1px solid hsl(var(--lh),30%,12%);
-    background:rgba(7,9,15,.95);
-    padding:16px 24px;
-    text-align:center;
-    transition:border-color 1.2s;
-  }
-  .footer-inner {
-    max-width:1200px; margin:0 auto;
-    display:flex; align-items:center; justify-content:center; gap:10px;
-    flex-wrap:wrap;
-  }
+  footer { position:relative; z-index:5; border-top:1px solid hsl(var(--lh),30%,12%); background:rgba(7,9,15,.95); padding:16px 24px; text-align:center; transition:border-color 1.2s; }
+  .footer-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
+  .footer-brand { font-family:var(--font-disp); font-size:.65rem; font-weight:700; letter-spacing:3px; color:var(--live); text-transform:uppercase; transition:color .8s; }
   .footer-sep { color:var(--text-dim); font-size:.7rem; }
-  .footer-brand {
-    font-family:var(--font-disp); font-size:.65rem;
-    font-weight:700; letter-spacing:3px;
-    color:var(--live); text-transform:uppercase;
-    transition:color .8s;
-  }
-  .footer-copy {
-    font-size:.6rem; color:var(--text-dim);
-    letter-spacing:1.5px;
-  }
-  .footer-rights {
-    font-size:.58rem; color:var(--text-dim);
-    letter-spacing:1px;
-    opacity:.7;
-  }
-  .footer-year {
-    font-size:.58rem;
-    color:var(--text-dim); opacity:.5;
-    letter-spacing:1px;
-  }
+  .footer-rights { font-size:.58rem; color:var(--text-dim); letter-spacing:1px; opacity:.7; }
+  .footer-year { font-size:.58rem; color:var(--text-dim); opacity:.5; }
 
-  /* ── TENDÊNCIA CARD (à esquerda do hero) ── */
-  .top-bar {
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    gap: 14px;
-    margin-bottom: 22px;
-    align-items: start;
-  }
-  .tend-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 20px 16px 18px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-    transition: border-color .8s, box-shadow .8s, background .8s;
-  }
-  .tend-card::before {
-    content:''; position:absolute; inset:0;
-    background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.03) 0%, transparent 70%);
-    pointer-events:none;
-  }
-  .tend-tag {
-    font-size:.52rem; letter-spacing:2.5px; text-transform:uppercase;
-    color:var(--text-dim); margin-bottom:10px; display:block;
-  }
-  .tend-icon {
-    font-size:1.8rem; display:block; margin-bottom:8px; line-height:1;
-    filter:drop-shadow(0 0 10px currentColor);
-    animation:iconPulse 2.2s ease-in-out infinite;
-  }
-  @keyframes iconPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
-  .tend-label {
-    font-family:var(--font-disp); font-size:.78rem; font-weight:700;
-    letter-spacing:1.5px; display:block; margin-bottom:6px;
-    transition:color .5s;
-  }
-  .tend-sub {
-    font-size:.55rem; color:var(--text-dim); letter-spacing:1px; display:block; margin-bottom:10px;
-  }
-  .tend-bar-wrap { width:100%; height:4px; background:var(--border); border-radius:4px; overflow:hidden; margin-bottom:6px; }
-  .tend-bar { height:100%; border-radius:4px; transition:width .9s cubic-bezier(.4,0,.2,1), background .8s; }
-  .tend-pct { font-family:var(--font-disp); font-size:.68rem; font-weight:700; display:block; transition:color .5s; }
-
-  @media(max-width:900px){
-    .top-bar { grid-template-columns:1fr; }
-    .hero-row { grid-template-columns:1fr 1fr; }
-  }
-  @media(max-width:600px){
-    .hero-row { grid-template-columns:1fr; }
-    .stats-row { grid-template-columns:repeat(3,1fr); }
-    .hcard.main .hval { font-size:3rem; }
-  }
-  @media(max-width:400px){
-    .stats-row { grid-template-columns:repeat(2,1fr); }
-    #clk { display:none; }
-  }
+  @media(max-width:900px){ .hero-row { grid-template-columns:1fr 1fr; } }
+  @media(max-width:600px){ .hero-row { grid-template-columns:1fr; } .stats-row { grid-template-columns:repeat(3,1fr); } }
+  @media(max-width:400px){ .stats-row { grid-template-columns:repeat(2,1fr); } #clk { display:none; } }
   ::-webkit-scrollbar { width:5px; }
   ::-webkit-scrollbar-track { background:var(--bg); }
   ::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
-  ::-webkit-scrollbar-thumb:hover { background:var(--live-dim); }
 </style>
 </head>
 <body>
@@ -416,52 +190,46 @@
 <div id="atm"></div>
 <div id="ptcl"></div>
 
-<!-- HEADER -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">Aviator<em>.</em>Panel</div>
+    <div class="login-sub">Sortenabet — Resultados em Tempo Real</div>
+    <div class="inp-group">
+      <label for="inp-email">📧 &nbsp;Email da Sortenabet</label>
+      <input type="email" id="inp-email" placeholder="seu@email.com" autocomplete="email" />
+    </div>
+    <div class="inp-group">
+      <label for="inp-pass">🔒 &nbsp;Senha</label>
+      <input type="password" id="inp-pass" placeholder="••••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn-login" id="btnLogin" onclick="doLogin()">ENTRAR &amp; CONECTAR</button>
+    <div class="login-status" id="loginStatus">
+      <span class="ls-dot"></span>
+      <span id="loginMsg">Digite suas credenciais da Sortenabet</span>
+    </div>
+    <div class="login-hint">
+      Suas credenciais são usadas apenas para conectar ao Aviator.<br>
+      Não armazenamos seus dados. &nbsp;•&nbsp;
+      <a href="https://sortenabet.bet.br" target="_blank">Criar conta</a>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="logo">Aviator<em>.</em>Panel</div>
   <div class="hdr-r">
-    <!-- STATUS: pagando / não pagando / recolhendo -->
-    <div class="badge-status paying" id="statusBadge">
-      <span class="sdot"></span>
-      <span id="statusTxt">Pagando</span>
-    </div>
-    <!-- BADGE ROSA: acende quando próxima tende a ser rosa -->
-    <div class="badge-pink" id="pinkBadge">
-      <span class="pdot" id="pinkDot"></span>
-      <span>Rosa</span>
-    </div>
+    <div id="userBadge"><span>●</span><span id="userEmail">—</span></div>
     <div class="badge"><span class="bdot"></span>Ao vivo</div>
     <span id="clk">00:00:00</span>
   </div>
 </header>
 
 <div class="wrap">
-
-  <!-- STATUS API -->
   <div class="apibar">
     <div class="apin sim" id="apiDot"></div>
-    <span id="apiTxt">Iniciando conexão…</span>
+    <span id="apiTxt">Aguardando login…</span>
   </div>
-
-  <!-- TOP BAR: tendência (esquerda) + hero cards (direita) -->
-  <div class="top-bar">
-
-    <!-- CARD TENDÊNCIA PRÓXIMA VELA -->
-    <div class="tend-card" id="tendCard">
-      <span class="tend-tag">Próxima vela</span>
-      <span class="tend-icon" id="tendIcon">🔮</span>
-      <span class="tend-label" id="tendLabel">Calculando…</span>
-      <span class="tend-sub"   id="tendSub">—</span>
-      <div class="tend-bar-wrap">
-        <div class="tend-bar" id="tendBar" style="width:0%"></div>
-      </div>
-      <span class="tend-pct" id="tendPct">—</span>
-    </div>
-
-    <!-- HERO: última | penúltima | antepenúltima -->
-    <div class="hero-row">
-
-    <!-- ÚLTIMA (destaque principal) -->
+  <div class="hero-row">
     <div class="hcard main" id="hc0">
       <span class="ctag">✦ Última vela</span>
       <div class="hval" id="h0v">—</div>
@@ -469,8 +237,6 @@
       <div class="hsum" id="h0s">Soma: —</div>
       <div class="hform" id="h0f">—</div>
     </div>
-
-    <!-- PENÚLTIMA -->
     <div class="hcard" id="hc1">
       <span class="ctag">Penúltima</span>
       <div class="hval" id="h1v">—</div>
@@ -478,8 +244,6 @@
       <div class="hsum" id="h1s">Soma: —</div>
       <div class="hform" id="h1f">—</div>
     </div>
-
-    <!-- ANTEPENÚLTIMA -->
     <div class="hcard" id="hc2">
       <span class="ctag">Antepenúltima</span>
       <div class="hval" id="h2v">—</div>
@@ -487,10 +251,7 @@
       <div class="hsum" id="h2s">Soma: —</div>
       <div class="hform" id="h2f">—</div>
     </div>
-
-    </div><!-- /hero-row -->
-
-  </div><!-- /top-bar -->
+  </div>
   <div class="stats-row">
     <div class="sbox"><span class="slbl">Rodadas</span><span class="sval" id="sT">0</span></div>
     <div class="sbox"><span class="slbl">Maior</span><span class="sval" id="sM" style="color:var(--live)">—</span></div>
@@ -498,17 +259,13 @@
     <div class="sbox"><span class="slbl">≥ 2x</span><span class="sval" id="sU" style="color:#00ff9f">—</span></div>
     <div class="sbox"><span class="slbl">&lt; 1.5x</span><span class="sval" id="sL" style="color:#ff3358">—</span></div>
   </div>
-
-  <!-- HISTÓRICO -->
   <div class="sechdr">
     <div class="sectit">Histórico de Resultados</div>
     <span class="seccnt" id="seccnt">0 velas</span>
   </div>
   <div class="cgrid" id="grid"></div>
-
 </div>
 
-<!-- FOOTER -->
 <footer>
   <div class="footer-inner">
     <span class="footer-brand">Marcos Duarte</span>
@@ -519,13 +276,9 @@
   </div>
 </footer>
 
-<!-- TOAST -->
 <div id="toast"><span id="ttit">NOVA VELA</span><span id="tmsg">—</span></div>
 
 <script>
-// ══════════════════════════════════════════════════
-//  PALETA
-// ══════════════════════════════════════════════════
 const PAL = {
   red:    { h:350, s:100, l:58, hex:'#ff3358' },
   orange: { h: 25, s:100, l:58, hex:'#ff7a2a' },
@@ -535,7 +288,6 @@ const PAL = {
   purple: { h:270, s: 80, l:65, hex:'#b06ef3' },
   gold:   { h: 45, s:100, l:55, hex:'#ffd700' },
 };
-
 function getColor(v) {
   if (v <  1.5) return 'red';
   if (v <  2.0) return 'orange';
@@ -545,23 +297,18 @@ function getColor(v) {
   if (v < 60.0) return 'purple';
   return 'gold';
 }
-
 function calcSum(d) {
   const digs = d.replace(',','.').replace('x','').replace('.','').split('').map(Number);
   return { total: digs.reduce((a,b)=>a+b,0), formula: digs.join('+') };
 }
-
 const pad  = n => String(n).padStart(2,'0');
 const fmtV = v => v.toFixed(2).replace('.',',') + 'x';
 const fmtT = d => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-const fmtD = d => `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
-
-// ══════════════════════════════════════════════════
-//  TEMA DINÂMICO
-// ══════════════════════════════════════════════════
+setInterval(() => { document.getElementById('clk').textContent = fmtT(new Date()); }, 1000);
+document.getElementById('clk').textContent = fmtT(new Date());
+document.getElementById('footerYear').textContent = new Date().getFullYear();
 let curTheme = 'blue';
-const root   = document.documentElement;
-
+const root = document.documentElement;
 function applyTheme(name) {
   if (name === curTheme) return;
   curTheme = name;
@@ -571,216 +318,48 @@ function applyTheme(name) {
   root.style.setProperty('--ll', p.l + '%');
   spawnParticles(p);
 }
-
-// ══════════════════════════════════════════════════
-//  PARTÍCULAS
-// ══════════════════════════════════════════════════
 function spawnParticles(p) {
   const box = document.getElementById('ptcl');
   box.innerHTML = '';
   for (let i = 0; i < 24; i++) {
     const el = document.createElement('div');
     el.className = 'pt';
-    const sz  = 3 + Math.random() * 6;
-    const dur = 3.5 + Math.random() * 4;
-    const dl  = Math.random() * 2;
-    el.style.cssText = `
-      --sz:${sz}px; --x:${Math.random()*100}%;
-      --d:${dur}s; --dl:${dl}s;
-      background:hsl(${p.h},${p.s}%,${p.l+15}%);
-      box-shadow:0 0 ${sz+4}px hsl(${p.h},${p.s}%,${p.l+15}%);
-    `;
+    const sz = 3 + Math.random()*6, dur = 3.5 + Math.random()*4, dl = Math.random()*2;
+    el.style.cssText = `--sz:${sz}px;--x:${Math.random()*100}%;--d:${dur}s;--dl:${dl}s;background:hsl(${p.h},${p.s}%,${p.l+15}%);box-shadow:0 0 ${sz+4}px hsl(${p.h},${p.s}%,${p.l+15}%);`;
     box.appendChild(el);
-    setTimeout(() => el.remove(), (dur + dl) * 1000 + 300);
+    setTimeout(() => el.remove(), (dur+dl)*1000+300);
   }
 }
-
-// ══════════════════════════════════════════════════
-//  RELÓGIO + FOOTER ANO
-// ══════════════════════════════════════════════════
-setInterval(() => { document.getElementById('clk').textContent = fmtT(new Date()); }, 1000);
-document.getElementById('clk').textContent = fmtT(new Date());
-document.getElementById('footerYear').textContent = new Date().getFullYear();
-
-// ══════════════════════════════════════════════════
-//  ESTADO
-// ══════════════════════════════════════════════════
 const STATE = { candles:[], max:120, apiMode:'sim' };
-
-// ══════════════════════════════════════════════════
-//  TENDÊNCIA — analisa histórico recente
-//  Rosa = velas entre 2.0x e 3.0x
-// ══════════════════════════════════════════════════
-function computePrediction() {
-  const cs = STATE.candles;
-  if (cs.length < 5) return null;
-
-  // Janela curta (últimas 10) + janela longa (últimas 30)
-  const win10 = cs.slice(0, Math.min(10, cs.length));
-  const win30 = cs.slice(0, Math.min(30, cs.length));
-
-  const freq = (arr, fn) => arr.filter(c => fn(c.value)).length / arr.length;
-
-  // Frequências na janela curta (peso maior)
-  const pPink10  = freq(win10, v => v >= 2.0 && v < 3.0);
-  const pAbove10 = freq(win10, v => v >= 2.0);
-  const pBelow10 = freq(win10, v => v <  2.0);
-
-  // Frequências na janela longa (histórico geral)
-  const pPink30  = freq(win30, v => v >= 2.0 && v < 3.0);
-  const pAbove30 = freq(win30, v => v >= 2.0);
-  const pBelow30 = freq(win30, v => v <  2.0);
-
-  // Média ponderada: 70% janela curta + 30% longa
-  let pPink  = pPink10  * .70 + pPink30  * .30;
-  let pAbove = pAbove10 * .70 + pAbove30 * .30;
-  let pBelow = pBelow10 * .70 + pBelow30 * .30;
-
-  // Bônus rosa: se as últimas 2 velas foram < 2x e a anterior a elas foi rosa
-  // (padrão recorrente: baixo → baixo → rosa)
-  const last3 = cs.slice(0,3).map(c=>c.color);
-  const last2Low  = last3[0]==='red'||last3[0]==='orange';
-  const prev2Low  = last3[1]==='red'||last3[1]==='orange';
-  const prev3Pink = last3[2]==='pink';
-  if (last2Low && prev2Low && prev3Pink) pPink = Math.min(.85, pPink + .25);
-
-  // Bônus rosa: muitas velas baixas seguidas → tendência de retomada
-  const streak = cs.slice(0,6).filter(c=>c.value<2.0).length;
-  if (streak >= 4) pPink = Math.min(.80, pPink + .20);
-
-  // Mean-reversion geral
-  if (cs.slice(0,5).every(c=>c.color==='red'||c.color==='orange'))
-    { pAbove = Math.min(.85, pAbove+.15); }
-  if (cs.slice(0,5).every(c=>['green','blue','purple','gold'].includes(c.color)))
-    { pBelow = Math.min(.70, pBelow+.12); }
-
-  const tot = pBelow + pPink + pAbove || 1;
-  pBelow /= tot; pPink /= tot; pAbove /= tot;
-
-  let winner, conf;
-  if      (pPink  >= .22)         { winner='pink';  conf=pPink;  }
-  else if (pAbove  > pBelow)      { winner='above'; conf=pAbove; }
-  else                             { winner='below'; conf=pBelow; }
-
-  return { winner, pBelow, pPink, pAbove, conf };
-}
-
-const TCFG = {
-  above: { icon:'🚀', label:'ACIMA DE 2x',    sub:'Tendência de alta',      color:'#00ff9f' },
-  below: { icon:'📉', label:'ABAIXO DE 2x',   sub:'Tendência de baixa',     color:'#ff3358' },
-  pink:  { icon:'🌸', label:'VELA ROSA',       sub:'Estimativa 2x – 3x',    color:'#ff5fad' },
-};
-
-function renderPrediction() {
-  const pred = computePrediction();
-  if (!pred) return;
-  const cfg = TCFG[pred.winner];
-  const pct = Math.round(pred.conf * 100);
-
-  document.getElementById('tendIcon').textContent  = cfg.icon;
-  document.getElementById('tendLabel').textContent = cfg.label;
-  document.getElementById('tendLabel').style.color = cfg.color;
-  document.getElementById('tendSub').textContent   = cfg.sub;
-  document.getElementById('tendPct').textContent   = `Confiança: ${pct}%`;
-  document.getElementById('tendPct').style.color   = cfg.color;
-
-  const bar = document.getElementById('tendBar');
-  bar.style.width      = pct + '%';
-  bar.style.background = cfg.color;
-  bar.style.boxShadow  = `0 0 8px ${cfg.color}88`;
-
-  const card = document.getElementById('tendCard');
-  card.style.borderColor = cfg.color + '55';
-  card.style.boxShadow   = `0 0 28px ${cfg.color}18`;
-  card.style.background  = `linear-gradient(180deg, ${cfg.color}0a 0%, transparent 60%)`;
-
-  // ── Badge ROSA no header — só ativa quando tendência for ROSA ──
-  const pinkBadge = document.getElementById('pinkBadge');
-  const pinkDot   = document.getElementById('pinkDot');
-  if (pred.winner === 'pink') {
-    pinkBadge.classList.add('active');
-    if (pct > 50) pinkBadge.classList.add('fast');
-    else pinkBadge.classList.remove('fast');
-  } else {
-    pinkBadge.classList.remove('active');
-    pinkBadge.classList.remove('fast');
-  }
-}
-
-// ══════════════════════════════════════════════════
-//  STATUS BADGE: pagando / não pagando / recolhendo
-//  Baseado na média das últimas 5 velas
-// ══════════════════════════════════════════════════
-function updateStatusBadge() {
-  const cs = STATE.candles;
-  if (cs.length < 3) return;
-
-  const last5  = cs.slice(0, Math.min(5, cs.length)).map(c => c.value);
-  const avg5   = last5.reduce((a,b)=>a+b,0) / last5.length;
-  const lowCnt = last5.filter(v => v < 1.5).length;
-
-  const badge  = document.getElementById('statusBadge');
-  const txt    = document.getElementById('statusTxt');
-
-  if (lowCnt >= 3) {
-    // Maioria baixa = recolhendo
-    badge.className = 'badge-status retracting';
-    txt.textContent = 'Recolhendo';
-  } else if (avg5 < 2.2) {
-    // Média baixa = não está pagando bem
-    badge.className = 'badge-status warning';
-    txt.textContent = 'Não Pagando';
-  } else {
-    // Pagando
-    badge.className = 'badge-status paying';
-    txt.textContent = 'Pagando';
-  }
-}
-
-// ══════════════════════════════════════════════════
-//  HERO
-// ══════════════════════════════════════════════════
 function renderHero() {
   const [c0,c1,c2] = STATE.candles;
   if (c0) setHero('0', c0, true);
   if (c1) setHero('1', c1, false);
   if (c2) setHero('2', c2, false);
-  renderPrediction();
-  updateStatusBadge();
 }
-
 function setHero(i, c, isMain) {
   const hex = PAL[c.color].hex;
   const glo = hex + '90';
-
-  document.getElementById(`h${i}v`).textContent   = c.display;
-  document.getElementById(`h${i}v`).style.color   = hex;
+  document.getElementById(`h${i}v`).textContent = c.display;
+  document.getElementById(`h${i}v`).style.color = hex;
   document.getElementById(`h${i}v`).style.textShadow = `0 0 38px ${glo}`;
-  document.getElementById(`h${i}t`).textContent   = c.time;
-  document.getElementById(`h${i}s`).textContent   = `Soma: ${c.sum.total}`;
-  document.getElementById(`h${i}s`).style.color   = hex;
-  document.getElementById(`h${i}f`).textContent   = `${c.sum.formula} = ${c.sum.total}`;
-
+  document.getElementById(`h${i}t`).textContent = c.time;
+  document.getElementById(`h${i}s`).textContent = `Soma: ${c.sum.total}`;
+  document.getElementById(`h${i}s`).style.color = hex;
+  document.getElementById(`h${i}f`).textContent = `${c.sum.formula} = ${c.sum.total}`;
   if (isMain) {
     applyTheme(c.color);
     const card = document.getElementById('hc0');
-    card.classList.remove('do-pulse');
-    void card.offsetWidth;
-    card.classList.add('do-pulse');
+    card.classList.remove('do-pulse'); void card.offsetWidth; card.classList.add('do-pulse');
   }
 }
-
-// ══════════════════════════════════════════════════
-//  GRID
-// ══════════════════════════════════════════════════
 function makeCard(c, isNew) {
   const hex = PAL[c.color].hex;
-  const el  = document.createElement('div');
+  const el = document.createElement('div');
   el.className = 'cc' + (isNew ? ' nw' : '');
   el.style.setProperty('--cclr', hex);
   el.innerHTML = `
     <span class="ccv" style="color:${hex};text-shadow:0 0 20px ${hex}88">${c.display}</span>
-    <span class="ccd">${c.dateStr || ''}</span>
     <span class="cct">${c.time}</span>
     <span class="ccs" style="color:${hex}">Σ ${c.sum.total}</span>
     <span class="ccf">${c.sum.formula}=${c.sum.total}</span>
@@ -788,32 +367,22 @@ function makeCard(c, isNew) {
   if (isNew) setTimeout(() => el.classList.remove('nw'), 3000);
   return el;
 }
-
 function pushGrid(c) {
   const g = document.getElementById('grid');
   g.insertBefore(makeCard(c, true), g.firstChild);
   if (g.children.length > 100) g.removeChild(g.lastChild);
 }
-
-// ══════════════════════════════════════════════════
-//  STATS
-// ══════════════════════════════════════════════════
 function updateStats() {
   const cs = STATE.candles; if (!cs.length) return;
   const vs = cs.map(c=>c.value), n = vs.length;
   document.getElementById('sT').textContent = n;
   document.getElementById('sM').textContent = fmtV(Math.max(...vs));
   document.getElementById('sA').textContent = fmtV(vs.reduce((a,b)=>a+b,0)/n);
-  const u = vs.filter(v=>v>=2).length;
-  const l = vs.filter(v=>v<1.5).length;
+  const u = vs.filter(v=>v>=2).length, l = vs.filter(v=>v<1.5).length;
   document.getElementById('sU').textContent = `${u} (${Math.round(u/n*100)}%)`;
   document.getElementById('sL').textContent = `${l} (${Math.round(l/n*100)}%)`;
   document.getElementById('seccnt').textContent = n + ' velas';
 }
-
-// ══════════════════════════════════════════════════
-//  TOAST
-// ══════════════════════════════════════════════════
 const toastEl = document.getElementById('toast');
 function showToast(c) {
   const hex = PAL[c.color].hex;
@@ -824,164 +393,59 @@ function showToast(c) {
   clearTimeout(toastEl._t);
   toastEl._t = setTimeout(() => toastEl.classList.remove('on'), 4000);
 }
-
-// ══════════════════════════════════════════════════
-//  ADICIONAR VELA
-// ══════════════════════════════════════════════════
 function addCandle(raw, ts) {
-  const date    = ts ? new Date(ts) : new Date();
-  const display = fmtV(raw);
-  const color   = getColor(raw);
-  const sum     = calcSum(display);
-  const time    = fmtT(date);
-  const dateStr = fmtD(date);
-  const c = { value:raw, display, color, sum, time, dateStr, date };
+  const date = ts ? new Date(ts) : new Date();
+  const display = fmtV(raw), color = getColor(raw), sum = calcSum(display), time = fmtT(date);
+  const c = { value:raw, display, color, sum, time, date };
   STATE.candles.unshift(c);
   if (STATE.candles.length > STATE.max) STATE.candles.pop();
-  renderHero();
-  pushGrid(c);
-  updateStats();
-  showToast(c);
+  renderHero(); pushGrid(c); updateStats(); showToast(c);
 }
-
-// ══════════════════════════════════════════════════
-//  SIMULAÇÃO
-// ══════════════════════════════════════════════════
-function simResult() {
-  const r = Math.random();
-  if (r < .28) return 1.00 + Math.random()*.49;
-  if (r < .55) return 1.50 + Math.random()*.49;
-  if (r < .68) return 2.00 + Math.random()*.99;
-  if (r < .80) return 3.00 + Math.random()*2.99;
-  if (r < .90) return 6.00 + Math.random()*8.99;
-  if (r < .96) return 15.0 + Math.random()*44.9;
-  return 60.0 + Math.random()*440;
-}
-
-// ══════════════════════════════════════════════════
-//  STATUS DA API
-// ══════════════════════════════════════════════════
 function setApi(mode, src) {
   STATE.apiMode = mode;
-  document.getElementById('apiDot').className = 'apin ' + (mode==='live' ? 'live' : 'sim');
+  document.getElementById('apiDot').className = 'apin ' + (mode==='live'?'live':'sim');
   document.getElementById('apiTxt').textContent = mode === 'live'
     ? `✓ Conectado — ${src} — velas em tempo real`
-    : `⚡ Simulação ativa — inicie o servidor proxy (node server.js) para dados reais`;
+    : `⏳ ${src}`;
 }
 
-// ══════════════════════════════════════════════════
-//  CONEXÃO COM PROXY LOCAL (Socket.IO)
-//  Rode: node server.js  na pasta aviator-proxy
-//  O painel conecta automaticamente em localhost:3333
-// ══════════════════════════════════════════════════
-let proxySocket   = null;
-let proxyOk       = false;
-let simTimer      = null;
-let historyLoaded = false;
-
-const RENDER_URL = 'https://aviator-real-time-dashboard.onrender.com';
-
-function connectProxy() {
-  // Carrega Socket.IO client do proxy local
-  if (!window.io) {
-    const script = document.createElement('script');
-    script.src = RENDER_URL + '/socket.io/socket.io.js';
-    script.onload  = () => initSocket();
-    script.onerror = () => {
-      log('Proxy offline — modo simulação');
-      startSim();
-    };
-    document.head.appendChild(script);
-  } else {
-    initSocket();
+// ═══ LOGIN — chama /api/login no servidor online ═══
+function setLoginStatus(type, msg) {
+  const el = document.getElementById('loginStatus');
+  const msgEl = document.getElementById('loginMsg');
+  el.className = 'login-status ' + type;
+  msgEl.textContent = msg;
+}
+async function doLogin() {
+  const email = document.getElementById('inp-email').value.trim();
+  const pass  = document.getElementById('inp-pass').value.trim();
+  if (!email || !pass) { setLoginStatus('err', 'Preencha email e senha.'); return; }
+  const btn = document.getElementById('btnLogin');
+  btn.disabled = true;
+  setLoginStatus('loading', 'Conectando...');
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass }),
+    });
+    const data = await res.json();
+    if (!data.ok) { setLoginStatus('err', data.msg || 'Login falhou.'); btn.disabled = false; return; }
+    setLoginStatus('ok', '✓ ' + (data.msg || 'Conectado!'));
+    document.getElementById('userEmail').textContent = email.split('@')[0];
+    document.getElementById('userBadge').classList.add('show');
+    setTimeout(() => { document.getElementById('loginScreen').classList.add('hidden'); }, 1800);
+  } catch(e) {
+    setLoginStatus('err', 'Servidor offline.');
+    btn.disabled = false;
   }
 }
+document.getElementById('inp-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('inp-email').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inp-pass').focus(); });
 
-function log(msg) {
-  console.log('[Painel]', msg);
-}
-
-function initSocket() {
-  try {
-    proxySocket = window.io(RENDER_URL, {
-      transports:       ['websocket','polling'],
-      reconnection:     true,
-      reconnectionDelay:5000,
-      timeout:          8000,
-    });
-  } catch(e) { startSim(); return; }
-
-  // ── Conectado ao proxy ──
-  proxySocket.on('connect', () => {
-    proxyOk = true;
-    stopSim();
-    log('Conectado ao proxy local');
-    setApi('live', 'Spribe via Proxy Local');
-  });
-
-  // ── Histórico inicial (enviado na conexão) ──
-  proxySocket.on('history', (items) => {
-    if (historyLoaded || !items?.length) return;
-    historyLoaded = true;
-    log(`Histórico recebido: ${items.length} velas`);
-
-    // Limpa grid e carrega histórico real
-    document.getElementById('grid').innerHTML = '';
-    STATE.candles = [];
-
-    const sorted = [...items].reverse();
-    sorted.forEach(item => {
-      const val = parseFloat(item.multiplier);
-      if (!isNaN(val) && val >= 1) {
-        const date    = new Date(item.timestamp || item.time);
-        const display = fmtV(val);
-        const color   = getColor(val);
-        const sum     = calcSum(display);
-        const c = { value:val, display, color, sum, time:fmtT(date), dateStr:fmtD(date), date };
-        STATE.candles.push(c);
-        pushGrid(c);
-      }
-    });
-
-    // Reverte para ordem cronológica inversa
-    STATE.candles.reverse();
-    renderHero();
-    updateStats();
-    if (STATE.candles[0]) applyTheme(STATE.candles[0].color);
-  });
-
-  // ── Nova vela em tempo real ──
-  proxySocket.on('candle', (item) => {
-    log(`Nova vela: ${item.multiplier}x`);
-    const val = parseFloat(item.multiplier);
-    if (!isNaN(val) && val >= 1) {
-      addCandle(val, item.timestamp || item.time);
-    }
-  });
-
-  // ── Status do servidor ──
-  proxySocket.on('status', (s) => {
-    if (s.connected) {
-      setApi('live', s.source || 'Proxy Local');
-    } else {
-      setApi('sim', '');
-    }
-  });
-
-  // ── Desconectado ──
-  proxySocket.on('disconnect', () => {
-    proxyOk = false;
-    setApi('sim', '');
-    log('Proxy desconectado — simulação ativa');
-    startSim();
-  });
-
-  proxySocket.on('connect_error', () => {
-    if (!proxyOk) startSim();
-  });
-}
-
-// ── Simulação fallback ──────────────────────────────────────
+// ═══ SOCKET.IO — conecta ao servidor online ═══
+let historyLoaded = false;
+let simTimer = null;
 function simResult() {
   const r = Math.random();
   if (r < .28) return 1.00 + Math.random()*.49;
@@ -992,93 +456,63 @@ function simResult() {
   if (r < .96) return 15.0 + Math.random()*44.9;
   return 60.0 + Math.random()*440;
 }
-
 function startSim() {
-  if (simTimer || proxyOk) return;
-  simTimer = setInterval(() => { if (!proxyOk) addCandle(simResult()); }, 28000);
+  if (simTimer) return;
+  simTimer = setInterval(() => addCandle(simResult()), 28000);
 }
 
-function stopSim() {
-  clearInterval(simTimer);
-  simTimer = null;
-}
+const RENDER_URL = 'https://aviator-real-time-dashboard.onrender.com';
+const sock = io(RENDER_URL, { transports:['websocket','polling'], reconnection:true, reconnectionDelay:5000 });
 
-// ══════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════
-async function init() {
-  setApi('sim', '');
-  document.getElementById('apiTxt').textContent = 'Conectando ao servidor Render…';
-
-  // Histórico inicial simulado (substituído pelo real ao conectar)
-  const now = Date.now();
-  for (let i = 30; i >= 1; i--) {
-    const val  = simResult();
-    const disp = fmtV(val);
-    const col  = getColor(val);
-    const sum  = calcSum(disp);
-    const date = new Date(now - i * 28000);
-    const c = { value:val, display:disp, color:col, sum, time:fmtT(date), dateStr:fmtD(date), date };
-    STATE.candles.push(c);
-    pushGrid(c);
-  }
-  renderHero();
-  updateStats();
-  if (STATE.candles[0]) applyTheme(STATE.candles[0].color);
-
-  // Tenta conectar ao proxy
-  connectProxy();
-
-  // Se proxy não responder em 12s, inicia simulação
-  setTimeout(() => { if (!proxyOk) startSim(); }, 12000);
-}
-
-init();
-
-// ══════════════════════════════════════════════════
-//  ANTI-SLEEP — evita pausa do navegador
-// ══════════════════════════════════════════════════
-
-// 1) Wake Lock — mantém tela acordada (funciona no celular também)
-const wakeLock = async () => {
-  try {
-    if ('wakeLock' in navigator) {
-      await navigator.wakeLock.request('screen');
-    }
-  } catch(e) {}
-};
-wakeLock();
-
-// 2) Reconecta automaticamente ao voltar para a aba
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-    log('Aba voltou ao foco — verificando conexão...');
-    // Reconecta o socket se caiu
-    if (typeof proxySocket !== 'undefined' && proxySocket && !proxySocket.connected) {
-      log('Reconectando socket...');
-      proxySocket.connect();
-    }
-    // Se estava no modo simulação, tenta proxy novamente
-    if (!proxyOk) {
-      connectProxy();
-    }
-  }
+sock.on('connect', () => {
+  clearInterval(simTimer); simTimer = null;
+  setApi('live', 'Servidor Render Online');
 });
+sock.on('history', (items) => {
+  if (historyLoaded || !items?.length) return;
+  historyLoaded = true;
+  document.getElementById('grid').innerHTML = '';
+  STATE.candles = [];
+  [...items].reverse().forEach(item => {
+    const val = parseFloat(item.multiplier);
+    if (!isNaN(val) && val >= 1) {
+      const date = new Date(item.timestamp || item.time);
+      const display = fmtV(val), color = getColor(val), sum = calcSum(display);
+      const c = { value:val, display, color, sum, time:fmtT(date), date };
+      STATE.candles.push(c);
+      pushGrid(c);
+    }
+  });
+  STATE.candles.reverse();
+  renderHero(); updateStats();
+  if (STATE.candles[0]) applyTheme(STATE.candles[0].color);
+});
+sock.on('candle', (item) => {
+  const val = parseFloat(item.multiplier);
+  if (!isNaN(val) && val >= 1) addCandle(val, item.timestamp || item.time);
+});
+sock.on('status', (s) => {
+  if (s.connected) setApi('live', s.source || 'Aviator Online');
+});
+sock.on('disconnect', () => {
+  setApi('sim', 'Reconectando...');
+  startSim();
+});
+sock.on('connect_error', () => { startSim(); });
 
-// 3) Ping a cada 20 segundos para manter conexão viva
-setInterval(() => {
-  if (typeof proxySocket !== 'undefined' && proxySocket && proxySocket.connected) {
-    proxySocket.emit('ping');
+function initSimHistory() {
+  const now = Date.now();
+  for (let i = 20; i >= 1; i--) {
+    const val = simResult(), disp = fmtV(val), col = getColor(val), sum = calcSum(disp);
+    const date = new Date(now - i*28000);
+    STATE.candles.push({ value:val, display:disp, color:col, sum, time:fmtT(date), date });
+    pushGrid({ value:val, display:disp, color:col, sum, time:fmtT(date), date });
   }
-}, 20000);
-
-// 4) Verifica conexão a cada 30 segundos e reconecta se necessário
-setInterval(() => {
-  if (!proxyOk) {
-    log('Conexão perdida — tentando reconectar...');
-    connectProxy();
-  }
-}, 30000);
+  renderHero(); updateStats();
+  if (STATE.candles[0]) applyTheme(STATE.candles[0].color);
+}
+initSimHistory();
+setApi('sim', 'Faça login para conectar ao Aviator em tempo real');
 </script>
 </body>
 </html>
