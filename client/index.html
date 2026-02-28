@@ -288,7 +288,34 @@ const PAL = {
   purple: { h:270, s: 80, l:65, hex:'#b06ef3' },
   gold:   { h: 45, s:100, l:55, hex:'#ffd700' },
 };
-function getColor(v) {
+
+// Converte "r,g,b" → { hex, h, s, l } dinamicamente
+function rgbStrToColorObj(rgbStr) {
+  if (!rgbStr) return null;
+  const parts = rgbStr.split(',').map(Number);
+  if (parts.length < 3 || parts.some(isNaN)) return null;
+  const [r, g, b] = parts;
+  // RGB → HEX
+  const hex = '#' + [r, g, b].map(x => x.toString(16).padStart(2,'0')).join('');
+  // RGB → HSL
+  const rn = r/255, gn = g/255, bn = b/255;
+  const max = Math.max(rn,gn,bn), min = Math.min(rn,gn,bn);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case rn: h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6; break;
+      case gn: h = ((bn - rn) / d + 2) / 6; break;
+      case bn: h = ((rn - gn) / d + 4) / 6; break;
+    }
+  }
+  return { hex, h: Math.round(h*360), s: Math.round(s*100), l: Math.round(l*100) };
+}
+
+// Fallback por faixa de valor (usado quando color_rgb não vem)
+function getColorByValue(v) {
   if (v <  1.5) return 'red';
   if (v <  2.0) return 'orange';
   if (v <  3.0) return 'pink';
@@ -296,6 +323,21 @@ function getColor(v) {
   if (v < 15.0) return 'blue';
   if (v < 60.0) return 'purple';
   return 'gold';
+}
+
+// Resolve cor final: usa RGB real se disponível, senão fallback por valor
+function resolveColor(value, color_rgb) {
+  if (color_rgb) {
+    const obj = rgbStrToColorObj(color_rgb);
+    if (obj) return { type: 'raw', ...obj };
+  }
+  const name = getColorByValue(value);
+  return { type: 'pal', name, ...PAL[name] };
+}
+
+// Compat: getColor ainda usado em alguns lugares → retorna nome ou 'raw'
+function getColor(v) {
+  return getColorByValue(v);
 }
 function calcSum(d) {
   const digs = d.replace(',','.').replace('x','').replace('.','').split('').map(Number);
@@ -309,14 +351,15 @@ document.getElementById('clk').textContent = fmtT(new Date());
 document.getElementById('footerYear').textContent = new Date().getFullYear();
 let curTheme = 'blue';
 const root = document.documentElement;
-function applyTheme(name) {
-  if (name === curTheme) return;
-  curTheme = name;
-  const p = PAL[name];
-  root.style.setProperty('--lh', p.h);
-  root.style.setProperty('--ls', p.s + '%');
-  root.style.setProperty('--ll', p.l + '%');
-  spawnParticles(p);
+function applyTheme(colorObj) {
+  // colorObj pode ser { type:'pal', name, h, s, l, hex } ou { type:'raw', h, s, l, hex }
+  const themeKey = colorObj.name || colorObj.hex;
+  if (themeKey === curTheme) return;
+  curTheme = themeKey;
+  root.style.setProperty('--lh', colorObj.h);
+  root.style.setProperty('--ls', colorObj.s + '%');
+  root.style.setProperty('--ll', colorObj.l + '%');
+  spawnParticles(colorObj);
 }
 function spawnParticles(p) {
   const box = document.getElementById('ptcl');
@@ -338,7 +381,7 @@ function renderHero() {
   if (c2) setHero('2', c2, false);
 }
 function setHero(i, c, isMain) {
-  const hex = PAL[c.color].hex;
+  const hex = c.colorObj ? c.colorObj.hex : (PAL[c.color] ? PAL[c.color].hex : '#00c8ff');
   const glo = hex + '90';
   document.getElementById(`h${i}v`).textContent = c.display;
   document.getElementById(`h${i}v`).style.color = hex;
@@ -348,13 +391,13 @@ function setHero(i, c, isMain) {
   document.getElementById(`h${i}s`).style.color = hex;
   document.getElementById(`h${i}f`).textContent = `${c.sum.formula} = ${c.sum.total}`;
   if (isMain) {
-    applyTheme(c.color);
+    applyTheme(c.colorObj || PAL[c.color] || PAL['blue']);
     const card = document.getElementById('hc0');
     card.classList.remove('do-pulse'); void card.offsetWidth; card.classList.add('do-pulse');
   }
 }
 function makeCard(c, isNew) {
-  const hex = PAL[c.color].hex;
+  const hex = c.colorObj ? c.colorObj.hex : (PAL[c.color] ? PAL[c.color].hex : '#00c8ff');
   const el = document.createElement('div');
   el.className = 'cc' + (isNew ? ' nw' : '');
   el.style.setProperty('--cclr', hex);
@@ -385,7 +428,7 @@ function updateStats() {
 }
 const toastEl = document.getElementById('toast');
 function showToast(c) {
-  const hex = PAL[c.color].hex;
+  const hex = c.colorObj ? c.colorObj.hex : (PAL[c.color] ? PAL[c.color].hex : '#00c8ff');
   document.getElementById('tmsg').textContent = `${c.display}  •  Soma: ${c.sum.formula} = ${c.sum.total}`;
   toastEl.style.borderLeftColor = hex;
   document.getElementById('ttit').style.color = hex;
@@ -393,10 +436,14 @@ function showToast(c) {
   clearTimeout(toastEl._t);
   toastEl._t = setTimeout(() => toastEl.classList.remove('on'), 4000);
 }
-function addCandle(raw, ts) {
+function addCandle(raw, ts, color_rgb) {
   const date = ts ? new Date(ts) : new Date();
-  const display = fmtV(raw), color = getColor(raw), sum = calcSum(display), time = fmtT(date);
-  const c = { value:raw, display, color, sum, time, date };
+  const display = fmtV(raw);
+  const colorObj = resolveColor(raw, color_rgb);
+  // compat: color é o nome do PAL ou 'raw'
+  const color = colorObj.name || 'blue';
+  const sum = calcSum(display), time = fmtT(date);
+  const c = { value:raw, display, color, colorObj, sum, time, date };
   STATE.candles.unshift(c);
   if (STATE.candles.length > STATE.max) STATE.candles.pop();
   renderHero(); pushGrid(c); updateStats(); showToast(c);
@@ -477,19 +524,22 @@ sock.on('history', (items) => {
     const val = parseFloat(item.multiplier);
     if (!isNaN(val) && val >= 1) {
       const date = new Date(item.timestamp || item.time);
-      const display = fmtV(val), color = getColor(val), sum = calcSum(display);
-      const c = { value:val, display, color, sum, time:fmtT(date), date };
+      const display = fmtV(val);
+      const colorObj = resolveColor(val, item.color_rgb || null);
+      const color = colorObj.name || 'blue';
+      const sum = calcSum(display);
+      const c = { value:val, display, color, colorObj, sum, time:fmtT(date), date };
       STATE.candles.push(c);
       pushGrid(c);
     }
   });
   STATE.candles.reverse();
   renderHero(); updateStats();
-  if (STATE.candles[0]) applyTheme(STATE.candles[0].color);
+  if (STATE.candles[0]) applyTheme(STATE.candles[0].colorObj || PAL['blue']);
 });
 sock.on('candle', (item) => {
   const val = parseFloat(item.multiplier);
-  if (!isNaN(val) && val >= 1) addCandle(val, item.timestamp || item.time);
+  if (!isNaN(val) && val >= 1) addCandle(val, item.timestamp || item.time, item.color_rgb || null);
 });
 sock.on('status', (s) => {
   if (s.connected) setApi('live', s.source || 'Aviator Online');
@@ -503,13 +553,16 @@ sock.on('connect_error', () => { startSim(); });
 function initSimHistory() {
   const now = Date.now();
   for (let i = 20; i >= 1; i--) {
-    const val = simResult(), disp = fmtV(val), col = getColor(val), sum = calcSum(disp);
+    const val = simResult(), disp = fmtV(val);
+    const colorObj = resolveColor(val, null);
+    const col = colorObj.name || 'blue';
+    const sum = calcSum(disp);
     const date = new Date(now - i*28000);
-    STATE.candles.push({ value:val, display:disp, color:col, sum, time:fmtT(date), date });
-    pushGrid({ value:val, display:disp, color:col, sum, time:fmtT(date), date });
+    STATE.candles.push({ value:val, display:disp, color:col, colorObj, sum, time:fmtT(date), date });
+    pushGrid({ value:val, display:disp, color:col, colorObj, sum, time:fmtT(date), date });
   }
   renderHero(); updateStats();
-  if (STATE.candles[0]) applyTheme(STATE.candles[0].color);
+  if (STATE.candles[0]) applyTheme(STATE.candles[0].colorObj || PAL['blue']);
 }
 initSimHistory();
 setApi('sim', 'Faça login para conectar ao Aviator em tempo real');
