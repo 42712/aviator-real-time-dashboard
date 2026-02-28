@@ -2,12 +2,18 @@
   "manifest_version": 3,
   "name": "Aviator Live Capture",
   "version": "1.0",
-  "description": "Captura multiplicadores do Aviator e envia ao painel.",
+  "description": "Captura multiplicadores do Aviator.",
   "permissions": ["activeTab", "scripting"],
-  "host_permissions": ["https://*/*"],
+  "host_permissions": [
+    "https://*.spribegaming.com/*",
+    "https://*.sortenabet.bet.br/*"
+  ],
   "content_scripts": [
     {
-      "matches": ["https://*/*"],
+      "matches": [
+        "https://*.spribegaming.com/*",
+        "https://*.sortenabet.bet.br/*"
+      ],
       "js": ["content.js"],
       "all_frames": true,
       "run_at": "document_idle"
