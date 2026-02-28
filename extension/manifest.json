@@ -1,13 +1,23 @@
 {
   "manifest_version": 3,
   "name": "Aviator Live Capture",
-  "version": "1.0",
-  "description": "Captura multiplicadores do Aviator.",
-  "permissions": ["activeTab", "scripting"],
+  "version": "2.0",
+  "description": "Captura multiplicadores do Aviator — anti-throttle ativo.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "alarms",
+    "background"
+  ],
   "host_permissions": [
     "https://*.spribegaming.com/*",
-    "https://*.sortenabet.bet.br/*"
+    "https://*.sortenabet.bet.br/*",
+    "https://aviator-real-time-dashboard.onrender.com/*"
   ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "content_scripts": [
     {
       "matches": [
