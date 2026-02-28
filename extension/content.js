@@ -1,42 +1,32 @@
 const SERVER_URL = "https://aviator-real-time-dashboard.onrender.com";
 
-let lastValue = null;
+let lastFirst = null;
 
-// Lista de seletores para tentar capturar o multiplicador
-const SELECTORS = [
-  ".payout",
-  ".multiplier",
-  "[class*='payout']",
-  "[class*='multiplier']",
-  "[class*='crash-value']",
-  "[class*='bet-result']",
-  ".jet-game-result",
-  ".aviator-coefficient",
-];
+function capture() {
+  // Pega TODOS os .payout visíveis
+  const payouts = document.querySelectorAll(".payout");
+  if (!payouts || payouts.length === 0) return;
 
-function tryCapture() {
-  for (const sel of SELECTORS) {
-    const el = document.querySelector(sel);
-    if (!el) continue;
+  // O primeiro elemento é sempre o resultado mais recente
+  const first = payouts[0];
+  if (!first) return;
 
-    const raw = el.innerText || el.textContent || "";
-    const clean = raw.replace(/[^0-9.,]/g, "").replace(",", ".");
-    const value = parseFloat(clean);
+  const raw = (first.innerText || first.textContent || "").trim();
+  // Remove o "x" e troca vírgula por ponto
+  const clean = raw.replace("x", "").replace(",", ".").trim();
+  const value = parseFloat(clean);
 
-    if (!value || isNaN(value) || value < 1 || value === lastValue) continue;
-    if (value > 1000) continue; // ignora valores absurdos
+  if (!value || isNaN(value) || value < 1) return;
+  if (value === lastFirst) return; // já enviou esse
 
-    lastValue = value;
+  lastFirst = value;
 
-    fetch(`${SERVER_URL}/api/candle`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ multiplier: value }),
-    }).catch(() => {}); // silencia erros de rede
-
-    break;
-  }
+  fetch(`${SERVER_URL}/api/candle`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ multiplier: value }),
+  }).catch(() => {});
 }
 
-// Tenta capturar a cada 1 segundo
-setInterval(tryCapture, 1000);
+// Roda a cada 1 segundo
+setInterval(capture, 1000);
