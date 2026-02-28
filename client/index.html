@@ -8,303 +8,185 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
 <script src="https://aviator-real-time-dashboard.onrender.com/socket.io/socket.io.js"></script>
 <style>
-/* ═══════════════════════════════════════════
-   VARIÁVEIS — fundo cinza-amarelado escuro
-═══════════════════════════════════════════ */
-:root {
-  --bg:#2a2a26;
-  --surface:#33332e;
-  --surface2:#3d3d37;
-  --border:#55553d;
-  --text:#e8e0c0;
-  --text-dim:#8a8468;
-  --font-mono:'JetBrains Mono',monospace;
-  --font-disp:'Orbitron',sans-serif;
-  --lh:48; --ls:60%; --ll:62%;
-  --live:hsl(var(--lh),var(--ls),var(--ll));
-  --live-glow:hsl(var(--lh),100%,70%);
-  --pink:#ff5fad;
-  --pink-dim:rgba(255,95,173,.14);
-  --green-hit:#00e676;
-  --green-dim:rgba(0,230,118,.13);
-}
+:root{--bg:#2a2a26;--surface:#33332e;--surface2:#3d3d37;--border:#55553d;--text:#e8e0c0;--text-dim:#8a8468;--font-mono:'JetBrains Mono',monospace;--font-disp:'Orbitron',sans-serif;--lh:48;--ls:60%;--ll:62%;--live:hsl(var(--lh),var(--ls),var(--ll));--live-glow:hsl(var(--lh),100%,70%);--pink:#ff5fad;--pink-dim:rgba(255,95,173,.14);--green-hit:#00e676;--green-dim:rgba(0,230,118,.13)}
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{
-  background:linear-gradient(160deg,#2a2a26 0%,#232320 50%,#2a2a26 100%);
-  color:var(--text);font-family:var(--font-mono);
-  min-height:100vh;overflow-x:hidden;display:flex;flex-direction:column;
-}
-
-/* ── FUNDO GRADE ── */
+body{background:linear-gradient(160deg,#2a2a26 0%,#232320 50%,#2a2a26 100%);color:var(--text);font-family:var(--font-mono);min-height:100vh;overflow-x:hidden;display:flex;flex-direction:column}
 #atm{position:fixed;inset:0;pointer-events:none;z-index:0}
-#atm::before{content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse 75% 45% at 50% 0%,rgba(180,150,0,.12) 0%,transparent 65%)}
-#atm::after{content:'';position:absolute;inset:0;
-  background-image:
-    linear-gradient(rgba(180,150,0,.04) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(180,150,0,.04) 1px,transparent 1px);
-  background-size:50px 50px}
-
-/* ── CAMADA FX ── */
+#atm::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 75% 45% at 50% 0%,rgba(180,150,0,.12) 0%,transparent 65%)}
+#atm::after{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(180,150,0,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(180,150,0,.04) 1px,transparent 1px);background-size:50px 50px}
 #fx{position:fixed;inset:0;pointer-events:none;z-index:2;overflow:hidden}
-
-/* TREVOS */
-.clover{
-  position:absolute;font-size:var(--csz,18px);opacity:0;
-  bottom:-40px;left:var(--cx,50%);
-  animation:cloverRise var(--cd,9s) ease-in var(--cdl,0s) infinite;
-  filter:drop-shadow(0 0 5px rgba(0,200,80,.5));
-}
-@keyframes cloverRise{
-  0%  {opacity:0;transform:translateY(0) rotate(0deg) scale(.5)}
-  8%  {opacity:.75}
-  85% {opacity:.25}
-  100%{opacity:0;transform:translateY(-110vh) rotate(380deg) scale(.2)}
-}
-
-/* AVIÕES */
-.plane{
-  position:absolute;font-size:var(--psz,30px);opacity:0;
-  bottom:-60px;left:var(--px,50%);
-  animation:planeRise var(--pd,4.5s) ease-out var(--pdl,0s) 1 forwards;
-  filter:drop-shadow(0 2px 10px rgba(255,180,0,.7));
-}
-@keyframes planeRise{
-  0%  {opacity:0;transform:translateY(0) rotate(-18deg) scale(.5)}
-  12% {opacity:1}
-  65% {opacity:.8;transform:translateY(-55vh) rotate(6deg) scale(1.15)}
-  100%{opacity:0;transform:translateY(-115vh) rotate(22deg) scale(.4)}
-}
-
-/* ── LOGIN ── */
-#loginScreen{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;
-  justify-content:center;background:rgba(30,30,26,.97);backdrop-filter:blur(20px);
-  transition:opacity .6s,visibility .6s}
+.clover{position:absolute;font-size:var(--csz,18px);opacity:0;bottom:-40px;left:var(--cx,50%);animation:cloverRise var(--cd,9s) ease-in var(--cdl,0s) infinite;filter:drop-shadow(0 0 5px rgba(0,200,80,.5))}
+@keyframes cloverRise{0%{opacity:0;transform:translateY(0) rotate(0deg) scale(.5)}8%{opacity:.75}85%{opacity:.25}100%{opacity:0;transform:translateY(-110vh) rotate(380deg) scale(.2)}}
+.plane{position:absolute;font-size:var(--psz,30px);opacity:0;bottom:-60px;left:var(--px,50%);animation:planeRise var(--pd,4.5s) ease-out var(--pdl,0s) 1 forwards;filter:drop-shadow(0 2px 10px rgba(255,180,0,.7))}
+@keyframes planeRise{0%{opacity:0;transform:translateY(0) rotate(-18deg) scale(.5)}12%{opacity:1}65%{opacity:.8;transform:translateY(-55vh) rotate(6deg) scale(1.15)}100%{opacity:0;transform:translateY(-115vh) rotate(22deg) scale(.4)}}
+#loginScreen{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(18,18,14,.97);backdrop-filter:blur(24px);transition:opacity .7s,visibility .7s}
 #loginScreen.hidden{opacity:0;visibility:hidden;pointer-events:none}
-.login-box{background:var(--surface);border:1.5px solid var(--border);border-radius:20px;
-  padding:40px 36px 32px;width:100%;max-width:420px;text-align:center;
-  box-shadow:0 8px 48px rgba(0,0,0,.5)}
-.login-box::before{content:'';position:absolute;inset:0;border-radius:20px;
-  background:radial-gradient(circle at 50% 0%,rgba(180,150,0,.08) 0%,transparent 60%);
-  pointer-events:none}
-.login-logo{font-family:var(--font-disp);font-size:1.3rem;font-weight:900;letter-spacing:5px;
-  text-transform:uppercase;color:var(--text);margin-bottom:6px;position:relative}
-.login-logo em{font-style:normal;color:hsl(var(--lh),70%,60%)}
-.login-sub{font-size:.62rem;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:32px}
-.inp-group{text-align:left;margin-bottom:16px}
-.inp-group label{display:block;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;
-  color:var(--text-dim);margin-bottom:7px}
-.inp-group input{width:100%;background:rgba(255,255,255,.05);border:1.5px solid var(--border);
-  border-radius:10px;padding:13px 16px;font-family:var(--font-mono);font-size:.85rem;
-  color:var(--text);outline:none;transition:border-color .3s,box-shadow .3s}
-.inp-group input:focus{border-color:hsl(var(--lh),70%,55%);
-  box-shadow:0 0 0 3px hsl(var(--lh),70%,55%,.2)}
+#loginScreen::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 60% 40% at 20% 50%,rgba(0,200,80,.07) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 50%,rgba(255,95,173,.06) 0%,transparent 60%)}
+.login-box{background:linear-gradient(160deg,rgba(42,42,30,.95),rgba(28,28,20,.98));border:1.5px solid rgba(180,150,0,.25);border-radius:24px;padding:44px 40px 36px;width:100%;max-width:440px;text-align:center;box-shadow:0 0 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);position:relative;overflow:hidden}
+.login-box::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:24px;background:radial-gradient(circle at 50% 0%,rgba(180,150,0,.09) 0%,transparent 55%)}
+.login-deco{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding:0 8px;position:relative;z-index:1}
+.deco-clover{width:52px;height:52px;filter:drop-shadow(0 0 8px #00e676) drop-shadow(0 0 20px rgba(0,200,80,.5));animation:decoFloat 3.5s ease-in-out infinite}
+@keyframes decoFloat{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-6px) rotate(5deg)}}
+.deco-plane{width:52px;height:52px;filter:drop-shadow(0 0 8px #ffd700) drop-shadow(0 0 20px rgba(255,200,0,.5));animation:decoFloat2 4s ease-in-out infinite}
+@keyframes decoFloat2{0%,100%{transform:translateY(0) rotate(12deg) scaleX(-1)}50%{transform:translateY(-8px) rotate(-2deg) scaleX(-1)}}
+.login-logo{font-family:var(--font-disp);font-size:1.4rem;font-weight:900;letter-spacing:5px;text-transform:uppercase;color:var(--text);margin-bottom:5px;position:relative;z-index:1}
+.login-logo em{font-style:normal;color:hsl(var(--lh),70%,62%)}
+.login-sub{font-size:.62rem;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:32px;position:relative;z-index:1}
+.login-divider{width:100%;height:1px;margin-bottom:28px;background:linear-gradient(90deg,transparent,rgba(180,150,0,.3),rgba(255,95,173,.2),rgba(180,150,0,.3),transparent)}
+.inp-group{text-align:left;margin-bottom:16px;position:relative;z-index:1}
+.inp-group label{display:block;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:7px}
+.inp-group input{width:100%;background:rgba(255,255,255,.04);border:1.5px solid rgba(85,85,61,.6);border-radius:10px;padding:13px 16px;font-family:var(--font-mono);font-size:.85rem;color:var(--text);outline:none;transition:border-color .3s,box-shadow .3s}
+.inp-group input:focus{border-color:hsl(var(--lh),70%,55%);box-shadow:0 0 0 3px hsl(var(--lh),70%,55%,.2),0 0 20px hsl(var(--lh),70%,40%,.1)}
 .inp-group input::placeholder{color:var(--text-dim)}
-.btn-login{width:100%;margin-top:8px;
-  background:linear-gradient(135deg,hsl(var(--lh),70%,52%),hsl(var(--lh),80%,42%));
-  border:none;border-radius:12px;padding:14px 20px;font-family:var(--font-disp);
-  font-size:.8rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;
-  color:#1a1a14;cursor:pointer;transition:opacity .2s,transform .2s;
-  box-shadow:0 4px 20px hsl(var(--lh),70%,40%,.4)}
+.btn-login{width:100%;margin-top:8px;position:relative;z-index:1;background:linear-gradient(135deg,hsl(var(--lh),70%,52%),hsl(var(--lh),80%,42%));border:none;border-radius:12px;padding:14px 20px;font-family:var(--font-disp);font-size:.8rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#1a1a14;cursor:pointer;transition:opacity .2s,transform .2s,box-shadow .3s;box-shadow:0 4px 20px hsl(var(--lh),70%,40%,.4)}
 .btn-login:hover{opacity:.88;transform:translateY(-1px)}
 .btn-login:disabled{opacity:.45;cursor:not-allowed;transform:none}
-.login-status{margin-top:18px;font-size:.65rem;letter-spacing:1px;color:var(--text-dim);
-  min-height:22px;display:flex;align-items:center;justify-content:center;gap:8px}
+.login-status{margin-top:18px;font-size:.65rem;letter-spacing:1px;color:var(--text-dim);min-height:22px;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;z-index:1}
 .ls-dot{width:7px;height:7px;border-radius:50%;background:var(--live);display:none;animation:blink 1s infinite}
 .login-status.loading .ls-dot{display:block}
 .login-status.ok{color:#00e676}
 .login-status.err{color:#ff3358}
-.login-hint{margin-top:22px;font-size:.55rem;color:var(--text-dim);letter-spacing:1px;line-height:1.8}
+.login-hint{margin-top:20px;font-size:.55rem;color:var(--text-dim);letter-spacing:1px;line-height:1.8;position:relative;z-index:1}
 .login-hint a{color:var(--live);text-decoration:none}
-
-/* ── HEADER ── */
-header{position:sticky;top:0;z-index:100;height:60px;padding:0 24px;display:flex;
-  align-items:center;justify-content:space-between;
-  background:rgba(30,30,26,.95);border-bottom:1.5px solid var(--border);
-  backdrop-filter:blur(16px);box-shadow:0 2px 20px rgba(0,0,0,.4)}
-.logo{font-family:var(--font-disp);font-size:1rem;font-weight:900;letter-spacing:5px;
-  text-transform:uppercase;color:var(--text)}
+header{position:sticky;top:0;z-index:100;height:60px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(30,30,26,.95);border-bottom:1.5px solid var(--border);backdrop-filter:blur(16px);box-shadow:0 2px 20px rgba(0,0,0,.4)}
+.logo{font-family:var(--font-disp);font-size:1rem;font-weight:900;letter-spacing:5px;text-transform:uppercase;color:var(--text)}
 .logo em{font-style:normal;color:hsl(var(--lh),70%,62%)}
 .hdr-r{display:flex;align-items:center;gap:16px}
-.badge{display:flex;align-items:center;gap:7px;background:rgba(180,150,0,.12);
-  border:1px solid var(--border);color:var(--live);border-radius:20px;
-  padding:4px 14px;font-size:.6rem;letter-spacing:2px;text-transform:uppercase}
-.bdot{width:7px;height:7px;border-radius:50%;background:var(--live);
-  box-shadow:0 0 8px var(--live);animation:blink 1.4s infinite}
+.badge{display:flex;align-items:center;gap:7px;background:rgba(180,150,0,.12);border:1px solid var(--border);color:var(--live);border-radius:20px;padding:4px 14px;font-size:.6rem;letter-spacing:2px;text-transform:uppercase}
+.bdot{width:7px;height:7px;border-radius:50%;background:var(--live);box-shadow:0 0 8px var(--live);animation:blink 1.4s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-/* RELÓGIO MAIOR E NEGRITO */
-#clk{font-family:var(--font-disp);font-size:1.05rem;font-weight:900;
-  color:var(--live-glow);letter-spacing:3px;
-  text-shadow:0 0 14px hsl(var(--lh),100%,60%,.5)}
-#userBadge{font-size:.58rem;color:var(--text-dim);letter-spacing:1px;
-  background:rgba(255,255,255,.05);border:1px solid var(--border);
-  border-radius:20px;padding:4px 12px;display:none;align-items:center;gap:6px}
+#clk{font-family:var(--font-disp);font-size:1.05rem;font-weight:900;color:var(--live-glow);letter-spacing:3px;text-shadow:0 0 14px hsl(var(--lh),100%,60%,.5)}
+#userBadge{font-size:.58rem;color:var(--text-dim);letter-spacing:1px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:20px;padding:4px 12px;display:none;align-items:center;gap:6px}
 #userBadge.show{display:flex}
 #userBadge span{color:var(--live);font-size:.6rem}
-
-/* ── WRAP ── */
-.wrap{position:relative;z-index:5;max-width:1200px;margin:0 auto;
-  padding:26px 18px 30px;flex:1;width:100%}
-.apibar{display:flex;align-items:center;gap:10px;font-size:.6rem;letter-spacing:1px;
-  color:var(--text-dim);background:var(--surface);border:1.5px solid var(--border);
-  border-radius:8px;padding:9px 16px;margin-bottom:22px}
+.wrap{position:relative;z-index:5;max-width:1200px;margin:0 auto;padding:26px 18px 30px;flex:1;width:100%}
+.apibar{display:flex;align-items:center;gap:10px;font-size:.6rem;letter-spacing:1px;color:var(--text-dim);background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:9px 16px;margin-bottom:22px}
 .apin{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .5s,box-shadow .5s}
 .apin.sim{background:#c8a000;box-shadow:0 0 6px #c8a000}
 .apin.live{background:#00e676;box-shadow:0 0 8px #00e676}
-
-/* ── GATILHO ── */
-#gatilhoBar{display:none;position:relative;z-index:20;margin-bottom:18px;
-  background:linear-gradient(135deg,rgba(255,95,173,.1),rgba(255,95,173,.04));
-  border:2px solid var(--pink);border-radius:14px;padding:16px 20px;
-  flex-wrap:wrap;gap:14px;animation:gpulse 1.2s ease infinite}
+#gatilhoBar{display:none;position:relative;z-index:20;margin-bottom:18px;background:linear-gradient(135deg,rgba(255,95,173,.1),rgba(255,95,173,.04));border:2px solid var(--pink);border-radius:14px;padding:16px 20px;flex-wrap:wrap;gap:14px;animation:gpulse 1.2s ease infinite}
 #gatilhoBar.show{display:flex;align-items:center}
 @keyframes gpulse{0%,100%{box-shadow:0 0 18px rgba(255,95,173,.2)}50%{box-shadow:0 0 44px rgba(255,95,173,.55)}}
-.gtag{font-family:var(--font-disp);font-size:.6rem;font-weight:700;letter-spacing:3px;
-  text-transform:uppercase;color:var(--pink);white-space:nowrap}
+.gtag{font-family:var(--font-disp);font-size:.6rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--pink);white-space:nowrap}
 .ginfo{flex:1;font-size:.68rem;color:var(--text-dim);line-height:1.6}
 .ginfo strong{color:var(--pink)}
 .gseq{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.gseq-v{background:var(--pink-dim);border:1px solid rgba(255,95,173,.4);border-radius:8px;
-  padding:4px 10px;font-family:var(--font-disp);font-size:.75rem;font-weight:700;color:var(--pink)}
+.gseq-v{background:var(--pink-dim);border:1px solid rgba(255,95,173,.4);border-radius:8px;padding:4px 10px;font-family:var(--font-disp);font-size:.75rem;font-weight:700;color:var(--pink)}
 .garrow{color:rgba(255,95,173,.35);font-size:.8rem}
-.gcta{font-family:var(--font-disp);font-size:.6rem;font-weight:700;letter-spacing:2px;
-  text-transform:uppercase;background:var(--pink);color:#fff;border:none;
-  border-radius:8px;padding:8px 14px;cursor:pointer;white-space:nowrap}
-
-/* ── HERO ── */
+.gcta{font-family:var(--font-disp);font-size:.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:var(--pink);color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;white-space:nowrap}
 .hero-row{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:14px;margin-bottom:22px}
-.hcard{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;
-  padding:22px 16px 18px;text-align:center;position:relative;overflow:hidden;
-  transition:border-color 1s,box-shadow 1s,background 1s;
-  box-shadow:0 2px 12px rgba(0,0,0,.3)}
-.hcard.main{border-color:hsl(var(--lh),60%,35%);
-  box-shadow:0 0 40px hsl(var(--lh),70%,18%),inset 0 1px 0 rgba(255,255,255,.06);
-  background:hsl(var(--lh),25%,14%)}
-.hcard.main::before{content:'';position:absolute;inset:0;
-  background:radial-gradient(circle at 50% -10%,hsl(var(--lh),70%,22%,.32) 0%,transparent 60%);
-  pointer-events:none}
+.hcard{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:22px 16px 18px;text-align:center;position:relative;overflow:hidden;transition:border-color 1s,box-shadow 1s,background 1s;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.hcard.main{border-color:hsl(var(--lh),60%,35%);box-shadow:0 0 40px hsl(var(--lh),70%,18%),inset 0 1px 0 rgba(255,255,255,.06);background:hsl(var(--lh),25%,14%)}
+.hcard.main::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% -10%,hsl(var(--lh),70%,22%,.32) 0%,transparent 60%);pointer-events:none}
 .ctag{font-size:.55rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;display:block}
 .hval{font-family:var(--font-disp);font-size:2.7rem;font-weight:900;line-height:1;margin-bottom:10px;transition:color .5s,text-shadow .5s}
 .hcard.main .hval{font-size:3.6rem}
 .htim{font-size:.7rem;color:var(--text-dim);letter-spacing:2px;margin-bottom:7px}
 .hsum{font-size:1.15rem;font-weight:700;font-family:var(--font-disp);letter-spacing:2px;opacity:.95;transition:color .5s}
 .hform{font-size:.56rem;color:var(--text-dim);margin-top:4px}
-
-/* ── STATS ── */
 .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}
-.sbox{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;
-  padding:13px 10px;text-align:center;box-shadow:0 1px 8px rgba(0,0,0,.2)}
+.sbox{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:13px 10px;text-align:center;box-shadow:0 1px 8px rgba(0,0,0,.2)}
 .slbl{font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;display:block}
 .sval{font-family:var(--font-disp);font-size:1.05rem;font-weight:700;color:var(--text);display:block}
 .sval-sub{font-size:.5rem;color:var(--text-dim);display:block;margin-top:2px;letter-spacing:.5px}
-
-/* Prob. Rosa — clicável */
 .prob-box{cursor:pointer;position:relative;transition:border-color .2s,box-shadow .2s}
 .prob-box:hover{border-color:var(--pink);box-shadow:0 0 14px var(--pink-dim)}
 .prob-box.active-sel{border-color:var(--pink)!important;background:var(--pink-dim)!important}
-/* Prob number animada */
 #sL{transition:color .5s,text-shadow .5s}
 #sL.prob-low{color:var(--pink)}
 #sL.prob-mid{color:#ffb300}
 #sL.prob-high{color:var(--green-hit);text-shadow:0 0 12px var(--green-hit)}
-/* tooltip */
-.prob-tip{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;
-  transform:translateX(-50%);background:var(--surface2);
-  border:1.5px solid rgba(255,95,173,.4);border-radius:10px;padding:12px 15px;
-  font-size:.6rem;color:var(--text-dim);white-space:nowrap;z-index:50;
-  min-width:240px;text-align:left;box-shadow:0 6px 28px rgba(0,0,0,.5);pointer-events:none}
+.prob-tip{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surface2);border:1.5px solid rgba(255,95,173,.4);border-radius:10px;padding:12px 15px;font-size:.6rem;color:var(--text-dim);white-space:nowrap;z-index:50;min-width:260px;text-align:left;box-shadow:0 6px 28px rgba(0,0,0,.5);pointer-events:none}
 .prob-box:hover .prob-tip{display:block}
 .prob-tip b{color:var(--pink);display:block;margin-bottom:6px}
 .prob-tip span{color:var(--pink)}
 .prob-tip .hit{color:var(--green-hit)}
-
-/* ── GRID ── */
 .sechdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.sectit{font-family:var(--font-disp);font-size:.6rem;letter-spacing:3px;text-transform:uppercase;
-  color:var(--text-dim);display:flex;align-items:center;gap:8px}
-.sectit::before{content:'';display:inline-block;width:3px;height:13px;
-  background:var(--live);border-radius:2px}
+.sectit{font-family:var(--font-disp);font-size:.6rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-dim);display:flex;align-items:center;gap:8px}
+.sectit::before{content:'';display:inline-block;width:3px;height:13px;background:var(--live);border-radius:2px}
 .seccnt{font-size:.58rem;color:var(--text-dim)}
 .cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(95px,1fr));gap:9px;margin-bottom:30px}
-.cc{--cclr:var(--live);background:var(--surface);border:1.5px solid var(--border);border-radius:10px;
-  padding:13px 9px 11px;text-align:center;position:relative;overflow:hidden;cursor:default;
-  transition:transform .2s,border-color .3s,box-shadow .3s,background .3s;
-  animation:popIn .35s cubic-bezier(.34,1.56,.64,1);
-  box-shadow:0 1px 8px rgba(0,0,0,.2)}
+.cc{--cclr:var(--live);background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:13px 9px 11px;text-align:center;position:relative;overflow:hidden;cursor:default;transition:transform .2s,border-color .3s,box-shadow .3s,background .3s;animation:popIn .35s cubic-bezier(.34,1.56,.64,1);box-shadow:0 1px 8px rgba(0,0,0,.2)}
 .cc:hover{transform:translateY(-3px);box-shadow:0 6px 22px rgba(0,0,0,.35)}
 .cc.nw{border-color:var(--cclr);box-shadow:0 0 20px rgba(0,0,0,.3)}
-.cc::after{content:'';position:absolute;left:0;top:18%;bottom:18%;width:3px;
-  border-radius:0 2px 2px 0;background:var(--cclr);opacity:.65}
-/* gatilho */
+.cc::after{content:'';position:absolute;left:0;top:18%;bottom:18%;width:3px;border-radius:0 2px 2px 0;background:var(--cclr);opacity:.65}
 .cc.gatilho-card{border-color:var(--pink)!important;box-shadow:0 0 18px rgba(255,95,173,.35)!important}
-.cc.gatilho-card::before{content:"🎯";position:absolute;top:3px;right:4px;font-size:.6rem}
-/* seleção rosa */
-.cc.pink-sel{border-color:var(--pink)!important;background:var(--pink-dim)!important;
-  box-shadow:0 0 14px rgba(255,95,173,.3)!important;transform:translateY(-2px)}
-/* padrão BATEU — verde */
-.cc.pattern-hit{
-  border-color:var(--green-hit)!important;
-  background:var(--green-dim)!important;
-  box-shadow:0 0 18px rgba(0,230,118,.4)!important;
-}
+.cc.gatilho-card::before{content:"\1F3AF";position:absolute;top:3px;right:4px;font-size:.6rem}
+.cc.pink-sel{border-color:var(--pink)!important;background:var(--pink-dim)!important;box-shadow:0 0 14px rgba(255,95,173,.3)!important;transform:translateY(-2px)}
+.cc.pattern-hit{border-color:var(--green-hit)!important;background:var(--green-dim)!important;box-shadow:0 0 18px rgba(0,230,118,.4)!important}
 .cc.pattern-hit::after{background:var(--green-hit)!important}
 .cc.pattern-hit .ccv{text-shadow:0 0 14px var(--green-hit)!important}
+.cc.pattern-next{border-color:#ffd700!important;background:rgba(255,215,0,.08)!important;box-shadow:0 0 18px rgba(255,215,0,.3)!important;animation:nextPulse 1s ease infinite}
+@keyframes nextPulse{0%,100%{box-shadow:0 0 10px rgba(255,215,0,.2)}50%{box-shadow:0 0 28px rgba(255,215,0,.5)}}
+.cc.pattern-next::before{content:"\23F3";position:absolute;top:3px;right:4px;font-size:.6rem}
 @keyframes popIn{from{opacity:0;transform:scale(.85) translateY(-10px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .ccv{font-family:var(--font-disp);font-size:1.1rem;font-weight:700;display:block;margin-bottom:6px;line-height:1;transition:color .3s,text-shadow .3s}
 .cct{font-size:.55rem;color:var(--text-dim);display:block;margin-bottom:4px;letter-spacing:1px}
 .ccs{font-size:.88rem;font-weight:700;font-family:var(--font-disp);display:block;opacity:.9}
 .ccf{font-size:.52rem;color:var(--text-dim);display:block;margin-top:3px}
-
-/* ── TOAST ── */
-#toast{position:fixed;bottom:80px;right:22px;background:var(--surface2);
-  border:1.5px solid var(--border);border-left:4px solid var(--live);
-  border-radius:10px;padding:13px 18px;font-size:.68rem;letter-spacing:.5px;
-  max-width:310px;z-index:999;opacity:0;transform:translateY(14px);
-  transition:opacity .3s,transform .3s,border-left-color .4s;
-  pointer-events:none;box-shadow:0 6px 28px rgba(0,0,0,.45)}
+#cycleBar{display:none;margin-bottom:14px;background:rgba(0,230,118,.06);border:1.5px solid rgba(0,230,118,.25);border-radius:10px;padding:10px 16px;font-size:.62rem;letter-spacing:.5px;color:var(--text-dim);position:relative;z-index:5}
+#cycleBar.show{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cycle-label{color:var(--green-hit);font-family:var(--font-disp);font-size:.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.cycle-hits{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.cycle-pos{padding:2px 8px;border-radius:6px;font-family:var(--font-disp);font-size:.6rem;font-weight:700;border:1px solid}
+.cycle-pos.hit{color:var(--green-hit);border-color:rgba(0,230,118,.4);background:var(--green-dim)}
+.cycle-pos.miss{color:#ff3358;border-color:rgba(255,51,88,.3);background:rgba(255,51,88,.06)}
+.cycle-pos.wait{color:#ffd700;border-color:rgba(255,215,0,.3);background:rgba(255,215,0,.06)}
+.cycle-pos.active{color:#ffd700;border-color:#ffd700;background:rgba(255,215,0,.1);box-shadow:0 0 12px rgba(255,215,0,.3);animation:nextPulse 1s ease infinite}
+#toast{position:fixed;bottom:80px;right:22px;background:var(--surface2);border:1.5px solid var(--border);border-left:4px solid var(--live);border-radius:10px;padding:13px 18px;font-size:.68rem;letter-spacing:.5px;max-width:310px;z-index:999;opacity:0;transform:translateY(14px);transition:opacity .3s,transform .3s,border-left-color .4s;pointer-events:none;box-shadow:0 6px 28px rgba(0,0,0,.45)}
 #toast.on{opacity:1;transform:translateY(0)}
-#ttit{font-family:var(--font-disp);font-size:.55rem;letter-spacing:2px;
-  color:var(--live);display:block;margin-bottom:4px;transition:color .3s}
-
-@keyframes mpulse{0%{box-shadow:0 0 0 0 hsl(var(--lh),80%,55%,.65)}
-  70%{box-shadow:0 0 0 22px hsl(var(--lh),80%,55%,0)}
-  100%{box-shadow:0 0 0 0 hsl(var(--lh),80%,55%,0)}}
+#ttit{font-family:var(--font-disp);font-size:.55rem;letter-spacing:2px;color:var(--live);display:block;margin-bottom:4px;transition:color .3s}
+@keyframes mpulse{0%{box-shadow:0 0 0 0 hsl(var(--lh),80%,55%,.65)}70%{box-shadow:0 0 0 22px hsl(var(--lh),80%,55%,0)}100%{box-shadow:0 0 0 0 hsl(var(--lh),80%,55%,0)}}
 .do-pulse{animation:mpulse .9s ease!important}
-
-/* ── FOOTER ── */
-footer{position:relative;z-index:5;border-top:1.5px solid var(--border);
-  background:rgba(26,26,22,.98);padding:16px 24px;text-align:center}
-.footer-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;
-  justify-content:center;gap:10px;flex-wrap:wrap}
-.footer-brand{font-family:var(--font-disp);font-size:.65rem;font-weight:700;letter-spacing:3px;
-  color:var(--live);text-transform:uppercase}
+footer{position:relative;z-index:5;border-top:1.5px solid var(--border);background:rgba(26,26,22,.98);padding:16px 24px;text-align:center}
+.footer-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.footer-brand{font-family:var(--font-disp);font-size:.65rem;font-weight:700;letter-spacing:3px;color:var(--live);text-transform:uppercase}
 .footer-sep,.footer-rights,.footer-year{font-size:.58rem;color:var(--text-dim);opacity:.6}
-
 @media(max-width:900px){.hero-row{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.hero-row{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:400px){.stats-row{grid-template-columns:repeat(2,1fr)}#clk{font-size:.8rem}}
-::-webkit-scrollbar{width:5px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 </style>
 </head>
 <body>
-<div id="atm"></div>
-<div id="fx"></div>
-
-<!-- LOGIN -->
+<div id="atm"></div><div id="fx"></div>
 <div id="loginScreen">
   <div class="login-box">
-    <div class="login-logo">Aviator<em>.</em>Panel</div>
-    <div class="login-sub">Sortenabet — Resultados em Tempo Real</div>
+    <div class="login-deco">
+      <svg class="deco-clover" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="40" cy="24" r="16" stroke="#00e676" stroke-width="2.5" fill="rgba(0,230,118,.08)"/>
+        <circle cx="22" cy="54" r="16" stroke="#00e676" stroke-width="2.5" fill="rgba(0,230,118,.08)"/>
+        <circle cx="58" cy="54" r="16" stroke="#00e676" stroke-width="2.5" fill="rgba(0,230,118,.08)"/>
+        <circle cx="40" cy="40" r="6" fill="#00e676" fill-opacity=".7"/>
+        <line x1="40" y1="40" x2="40" y2="72" stroke="#00e676" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="34" y1="68" x2="46" y2="72" stroke="#00e676" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="40" cy="24" r="8" fill="#00e676" fill-opacity=".12"/>
+        <circle cx="22" cy="54" r="8" fill="#00e676" fill-opacity=".12"/>
+        <circle cx="58" cy="54" r="8" fill="#00e676" fill-opacity=".12"/>
+      </svg>
+      <div>
+        <div class="login-logo">Aviator<em>.</em>Panel</div>
+        <div class="login-sub">Sortenabet &mdash; Tempo Real</div>
+      </div>
+      <svg class="deco-plane" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 42 L58 24 L68 32 L30 48 Z" stroke="#ffd700" stroke-width="2" fill="rgba(255,215,0,.12)" stroke-linejoin="round"/>
+        <path d="M36 30 L50 14 L58 24 L36 30Z" stroke="#ffd700" stroke-width="2" fill="rgba(255,215,0,.08)"/>
+        <path d="M14 40 L20 30 L28 38Z" stroke="#ffd700" stroke-width="2" fill="rgba(255,215,0,.08)"/>
+        <circle cx="44" cy="33" r="2.5" fill="#ffd700" fill-opacity=".6"/>
+        <circle cx="52" cy="30" r="2" fill="#ffd700" fill-opacity=".4"/>
+        <path d="M8 44 L1 48" stroke="#ffd700" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+        <path d="M12 46 L3 52" stroke="#ffd700" stroke-width="1" stroke-linecap="round" opacity=".3"/>
+      </svg>
+    </div>
+    <div class="login-divider"></div>
     <div class="inp-group">
-      <label for="inp-email">📧 &nbsp;Email da Sortenabet</label>
+      <label for="inp-email">&#128231; &nbsp;Email da Sortenabet</label>
       <input type="email" id="inp-email" placeholder="seu@email.com" autocomplete="email"/>
     </div>
     <div class="inp-group">
-      <label for="inp-pass">🔒 &nbsp;Senha</label>
-      <input type="password" id="inp-pass" placeholder="••••••••••" autocomplete="current-password"/>
+      <label for="inp-pass">&#128274; &nbsp;Senha</label>
+      <input type="password" id="inp-pass" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password"/>
     </div>
     <button class="btn-login" id="btnLogin" onclick="doLogin()">ENTRAR &amp; CONECTAR</button>
     <div class="login-status" id="loginStatus">
@@ -313,504 +195,299 @@ footer{position:relative;z-index:5;border-top:1.5px solid var(--border);
     </div>
     <div class="login-hint">
       Suas credenciais são usadas apenas para conectar ao Aviator.<br>
-      Não armazenamos seus dados.&nbsp;•&nbsp;
+      Não armazenamos seus dados.&nbsp;&bull;&nbsp;
       <a href="https://sortenabet.bet.br" target="_blank">Criar conta</a>
     </div>
   </div>
 </div>
-
 <header>
   <div class="logo">Aviator<em>.</em>Panel</div>
   <div class="hdr-r">
-    <div id="userBadge"><span>●</span><span id="userEmail">—</span></div>
+    <div id="userBadge"><span>&#9679;</span><span id="userEmail">&mdash;</span></div>
     <div class="badge"><span class="bdot"></span>Ao vivo</div>
     <span id="clk">00:00:00</span>
   </div>
 </header>
-
 <div class="wrap">
   <div class="apibar">
     <div class="apin sim" id="apiDot"></div>
-    <span id="apiTxt">Aguardando login…</span>
+    <span id="apiTxt">Aguardando login&hellip;</span>
   </div>
-
-  <!-- GATILHO -->
   <div id="gatilhoBar">
     <div>
-      <div class="gtag">🎯 Gatilho — Cotação Especial</div>
-      <div class="ginfo" id="gInfo">—</div>
+      <div class="gtag">&#127919; Gatilho &mdash; Cotação Especial</div>
+      <div class="ginfo" id="gInfo">&mdash;</div>
     </div>
     <div class="gseq" id="gSeq"></div>
     <button class="gcta" onclick="dismissGatilho()">OK</button>
   </div>
-
-  <!-- HERO -->
+  <div id="cycleBar">
+    <span class="cycle-label" id="cycleLbl">Ciclo</span>
+    <div class="cycle-hits" id="cycleHits"></div>
+    <span id="cycleMeta" style="font-size:.55rem;color:var(--text-dim);margin-left:4px"></span>
+  </div>
   <div class="hero-row">
     <div class="hcard main" id="hc0">
-      <span class="ctag">✦ Última vela</span>
-      <div class="hval" id="h0v">—</div>
+      <span class="ctag">&#10022; Última vela</span>
+      <div class="hval" id="h0v">&mdash;</div>
       <div class="htim" id="h0t">--:--:--</div>
-      <div class="hsum" id="h0s">Soma: —</div>
-      <div class="hform" id="h0f">—</div>
+      <div class="hsum" id="h0s">Soma: &mdash;</div>
+      <div class="hform" id="h0f">&mdash;</div>
     </div>
     <div class="hcard" id="hc1">
       <span class="ctag">Penúltima</span>
-      <div class="hval" id="h1v">—</div>
+      <div class="hval" id="h1v">&mdash;</div>
       <div class="htim" id="h1t">--:--:--</div>
-      <div class="hsum" id="h1s">Soma: —</div>
-      <div class="hform" id="h1f">—</div>
+      <div class="hsum" id="h1s">Soma: &mdash;</div>
+      <div class="hform" id="h1f">&mdash;</div>
     </div>
     <div class="hcard" id="hc2">
       <span class="ctag">Antepenúltima</span>
-      <div class="hval" id="h2v">—</div>
+      <div class="hval" id="h2v">&mdash;</div>
       <div class="htim" id="h2t">--:--:--</div>
-      <div class="hsum" id="h2s">Soma: —</div>
-      <div class="hform" id="h2f">—</div>
+      <div class="hsum" id="h2s">Soma: &mdash;</div>
+      <div class="hform" id="h2f">&mdash;</div>
     </div>
   </div>
-
-  <!-- STATS -->
   <div class="stats-row">
-    <div class="sbox">
-      <span class="slbl">Rodadas</span>
-      <span class="sval" id="sT">0</span>
-    </div>
-    <div class="sbox">
-      <span class="slbl">Últ. Rosa</span>
-      <span class="sval" id="sM" style="color:var(--pink)">—</span>
-      <span class="sval-sub" id="sMtime"></span>
-    </div>
-    <div class="sbox">
-      <span class="slbl">Maior Rosa/h</span>
-      <span class="sval" id="sA" style="color:var(--pink)">—</span>
-      <span class="sval-sub" id="sAhour"></span>
-    </div>
-    <div class="sbox">
-      <span class="slbl">Rosas/h</span>
-      <span class="sval" id="sU" style="color:var(--pink)">—</span>
-      <span class="sval-sub" id="sUhour"></span>
-    </div>
+    <div class="sbox"><span class="slbl">Rodadas</span><span class="sval" id="sT">0</span></div>
+    <div class="sbox"><span class="slbl">Últ. Rosa</span><span class="sval" id="sM" style="color:var(--pink)">&mdash;</span><span class="sval-sub" id="sMtime"></span></div>
+    <div class="sbox"><span class="slbl">Maior Rosa/h</span><span class="sval" id="sA" style="color:var(--pink)">&mdash;</span><span class="sval-sub" id="sAhour"></span></div>
+    <div class="sbox"><span class="slbl">Rosas/h</span><span class="sval" id="sU" style="color:var(--pink)">&mdash;</span><span class="sval-sub" id="sUhour"></span></div>
     <div class="sbox prob-box" id="probBox" onclick="togglePinkSelection()">
-      <span class="slbl">🌸 Prob. Rosa</span>
-      <span class="sval prob-low" id="sL">—</span>
+      <span class="slbl">&#127800; Prob. Rosa</span>
+      <span class="sval prob-low" id="sL">&mdash;</span>
       <span class="sval-sub" id="sLnext">clique p/ ver rosas</span>
       <div class="prob-tip" id="probTip">Aguardando dados...</div>
     </div>
   </div>
-
   <div class="sechdr">
     <div class="sectit">Histórico de Resultados</div>
     <span class="seccnt" id="seccnt">0 velas</span>
   </div>
   <div class="cgrid" id="grid"></div>
 </div>
-
 <footer>
   <div class="footer-inner">
     <span class="footer-brand">Marcos Duarte</span>
-    <span class="footer-sep">•</span>
+    <span class="footer-sep">&bull;</span>
     <span class="footer-rights">Todos os Direitos Reservados</span>
-    <span class="footer-sep">•</span>
+    <span class="footer-sep">&bull;</span>
     <span class="footer-year" id="footerYear">2025</span>
   </div>
 </footer>
-
-<div id="toast"><span id="ttit">NOVA VELA</span><span id="tmsg">—</span></div>
-
+<div id="toast"><span id="ttit">NOVA VELA</span><span id="tmsg">&mdash;</span></div>
 <script>
-// ══════════════════════════════════════════════════
-//  PALETA
-// ══════════════════════════════════════════════════
-const PAL={
-  red:   {h:350,s:100,l:58,hex:'#ff3358'},
-  orange:{h:25, s:100,l:58,hex:'#ff7a2a'},
-  pink:  {h:330,s:100,l:67,hex:'#ff5fad'},
-  green: {h:145,s:100,l:42,hex:'#00b857'},
-  blue:  {h:205,s:100,l:52,hex:'#00aaff'},
-  purple:{h:270,s:80, l:62,hex:'#b06ef3'},
-  gold:  {h:48, s:90, l:55,hex:'#d4a017'},
-};
-
-function rgbStrToObj(s){
-  if(!s)return null;
-  const p=s.split(',').map(Number);
-  if(p.length<3||p.some(isNaN))return null;
-  const[r,g,b]=p;
-  const hex='#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
-  const rn=r/255,gn=g/255,bn=b/255;
-  const mx=Math.max(rn,gn,bn),mn=Math.min(rn,gn,bn);
-  let h=0,sv=0;const l=(mx+mn)/2;
-  if(mx!==mn){const d=mx-mn;sv=l>.5?d/(2-mx-mn):d/(mx+mn);
-    switch(mx){
-      case rn:h=((gn-bn)/d+(gn<bn?6:0))/6;break;
-      case gn:h=((bn-rn)/d+2)/6;break;
-      case bn:h=((rn-gn)/d+4)/6;break;
-    }}
-  return{hex,h:Math.round(h*360),s:Math.round(sv*100),l:Math.round(l*100)};
-}
-function getColorName(v){
-  if(v<1.5)return'red';if(v<2.0)return'orange';if(v<3.0)return'pink';
-  if(v<6.0)return'green';if(v<15.0)return'blue';if(v<60.0)return'purple';return'gold';
-}
-function resolveColor(value,color_rgb){
-  if(color_rgb&&color_rgb.trim()){
-    const o=rgbStrToObj(color_rgb.trim());
-    if(o&&o.hex!=='#000000')return{type:'raw',...o};
-  }
-  const name=getColorName(value);
-  return{type:'pal',name,...PAL[name]};
-}
-function isPink(c){
-  if(c.colorObj){
-    if(c.colorObj.type==='raw'){const{h,s,l}=c.colorObj;return h>=290&&h<=355&&s>=40&&l>=30;}
-    if(c.colorObj.name==='pink')return true;
-  }
-  return c.color==='pink'||(c.value>=2.0&&c.value<3.0);
-}
-function getHex(c){return c.colorObj?c.colorObj.hex:(PAL[c.color]?PAL[c.color].hex:'#00aaff')}
-function lastDigit(d){return d.replace(/[^0-9]/g,'').slice(-1)}
-
-// ══════════════════════════════════════════════════
-//  HELPERS
-// ══════════════════════════════════════════════════
-const pad  = n=>String(n).padStart(2,'0');
-const fmtV = v=>v.toFixed(2).replace('.',',')+' x';
-const fmtT = d=>`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-function calcSum(d){
-  const digs=d.replace(',','.').replace(' x','').replace('x','').replace('.','')
-    .split('').map(Number).filter(n=>!isNaN(n));
-  return{total:digs.reduce((a,b)=>a+b,0),formula:digs.join('+')};
-}
-setInterval(()=>{document.getElementById('clk').textContent=fmtT(new Date())},1000);
+const PAL={red:{h:350,s:100,l:58,hex:'#ff3358'},orange:{h:25,s:100,l:58,hex:'#ff7a2a'},pink:{h:330,s:100,l:67,hex:'#ff5fad'},green:{h:145,s:100,l:42,hex:'#00b857'},blue:{h:205,s:100,l:52,hex:'#00aaff'},purple:{h:270,s:80,l:62,hex:'#b06ef3'},gold:{h:48,s:90,l:55,hex:'#d4a017'}};
+function rgbStrToObj(s){if(!s)return null;const p=s.split(',').map(Number);if(p.length<3||p.some(isNaN))return null;const[r,g,b]=p;const hex='#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');const rn=r/255,gn=g/255,bn=b/255;const mx=Math.max(rn,gn,bn),mn=Math.min(rn,gn,bn);let h=0,sv=0;const l=(mx+mn)/2;if(mx!==mn){const d=mx-mn;sv=l>.5?d/(2-mx-mn):d/(mx+mn);switch(mx){case rn:h=((gn-bn)/d+(gn<bn?6:0))/6;break;case gn:h=((bn-rn)/d+2)/6;break;case bn:h=((rn-gn)/d+4)/6;break;}}return{hex,h:Math.round(h*360),s:Math.round(sv*100),l:Math.round(l*100)};}
+function getColorName(v){if(v<1.5)return'red';if(v<2.0)return'orange';if(v<3.0)return'pink';if(v<6.0)return'green';if(v<15.0)return'blue';if(v<60.0)return'purple';return'gold';}
+function resolveColor(value,color_rgb){if(color_rgb&&color_rgb.trim()){const o=rgbStrToObj(color_rgb.trim());if(o&&o.hex!=='#000000')return{type:'raw',...o};}const name=getColorName(value);return{type:'pal',name,...PAL[name]};}
+function isPink(c){if(c.colorObj){if(c.colorObj.type==='raw'){const{h,s,l}=c.colorObj;return h>=290&&h<=355&&s>=40&&l>=30;}if(c.colorObj.name==='pink')return true;}return c.color==='pink'||(c.value>=2.0&&c.value<3.0);}
+function getHex(c){return c.colorObj?c.colorObj.hex:(PAL[c.color]?PAL[c.color].hex:'#00aaff');}
+function lastDigit(d){return d.replace(/[^0-9]/g,'').slice(-1);}
+const pad=n=>String(n).padStart(2,'0');
+const fmtV=v=>v.toFixed(2).replace('.',',')+' x';
+const fmtT=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+function calcSum(d){const digs=d.replace(',','.').replace(' x','').replace('x','').replace('.','').split('').map(Number).filter(n=>!isNaN(n));return{total:digs.reduce((a,b)=>a+b,0),formula:digs.join('+')};}
+setInterval(()=>{document.getElementById('clk').textContent=fmtT(new Date());},1000);
 document.getElementById('clk').textContent=fmtT(new Date());
 document.getElementById('footerYear').textContent=new Date().getFullYear();
 
-// ══════════════════════════════════════════════════
-//  FX — trevos + aviões
-// ══════════════════════════════════════════════════
-let cloverInterval=null,isLiveConnected=false;
+// FX
+let cloverInterval=null,isLiveConnected=false,fxProbLevel=0,planeInterval=null;
+function setFxByProb(prob){fxProbLevel=prob;if(!isLiveConnected)return;if(cloverInterval){clearInterval(cloverInterval);cloverInterval=null;}if(prob<90){const ms=Math.round(300+prob*41);cloverInterval=setInterval(spawnClover,ms);}if(prob>=40&&prob<70)spawnPlanes(1,false);else if(prob>=70&&prob<85)spawnPlanes(3,false);else if(prob>=85&&prob<95)spawnPlanes(6,false);else if(prob>=95)spawnPlanes(18,true);}
+function startPlaneLoop(prob){if(planeInterval){clearInterval(planeInterval);planeInterval=null;}if(prob>=70){const ms=prob>=90?1800:prob>=85?3000:5000;const count=prob>=90?4:prob>=85?2:1;planeInterval=setInterval(()=>spawnPlanes(count,prob>=90),ms);}}
+function updateFxByProb(prob){setFxByProb(prob);startPlaneLoop(prob);}
+function spawnClover(){const fx=document.getElementById('fx');const el=document.createElement('div');el.className='clover';const sz=12+Math.random()*16,dur=7+Math.random()*5,dl=Math.random()*1.5;el.style.cssText=`--csz:${sz}px;--cx:${Math.random()*95}%;--cd:${dur}s;--cdl:${dl}s`;el.textContent='\u{1F340}';fx.appendChild(el);setTimeout(()=>el.remove(),(dur+dl+1)*1000);}
+function startClovers(){if(cloverInterval)return;cloverInterval=setInterval(spawnClover,400);}
+function stopClovers(){clearInterval(cloverInterval);cloverInterval=null;document.querySelectorAll('.clover').forEach(e=>e.remove());}
+function spawnPlanes(count,intense){const fx=document.getElementById('fx');for(let i=0;i<count;i++){const el=document.createElement('div');el.className='plane';const sz=intense?(32+Math.random()*26):(18+Math.random()*16);const dur=3+Math.random()*3,dl=i*0.12+Math.random()*0.3;el.style.cssText=`--psz:${sz}px;--px:${Math.random()*94}%;--pd:${dur}s;--pdl:${dl}s`;el.textContent='\u2708\uFE0F';fx.appendChild(el);setTimeout(()=>el.remove(),(dur+dl+0.5)*1000);}}
 
-// Intensidade FX controlada pela probabilidade (0-100)
-// prob 0-30: só trevos | 30-60: mix | 60-100: mais aviões, menos trevos
-let fxProbLevel=0; // 0-100
+// TEMA
+let curThemeKey='gold';const root=document.documentElement;
+function applyTheme(colorObj){const key=colorObj&&(colorObj.name||colorObj.hex)||'gold';if(key===curThemeKey)return;curThemeKey=key;root.style.setProperty('--lh',colorObj.h);root.style.setProperty('--ls',colorObj.s+'%');root.style.setProperty('--ll',colorObj.l+'%');}
 
-function updateFxByProb(prob){
-  fxProbLevel=prob;
-  if(!isLiveConnected)return;
-  // Ajusta frequência dos trevos: intervalo 300ms (baixo prob) até 2000ms (alto prob)
-  const cloverMs=Math.round(300+prob*17); // 300→2000
-  if(cloverInterval){clearInterval(cloverInterval);cloverInterval=null;}
-  if(prob<95){// se prob==100 para trevos totalmente
-    cloverInterval=setInterval(spawnClover,cloverMs);
-  }
-  // A partir de 40% começa a spawn aviões contínuos
-  if(prob>=40){
-    const intensity=Math.floor((prob-40)/20); // 0,1,2,3
-    spawnPlanes(intensity+1,false);
-  }
-}
+// STATE
+const STATE={candles:[],max:300,apiMode:'sim'};
+function renderHero(){const[c0,c1,c2]=STATE.candles;if(c0)setHero('0',c0,true);if(c1)setHero('1',c1,false);if(c2)setHero('2',c2,false);}
+function setHero(i,c,isMain){const hex=getHex(c),glo=hex+'88';document.getElementById(`h${i}v`).textContent=c.display;document.getElementById(`h${i}v`).style.color=hex;document.getElementById(`h${i}v`).style.textShadow=`0 0 30px ${glo}`;document.getElementById(`h${i}t`).textContent=c.time;document.getElementById(`h${i}s`).textContent=`Soma: ${c.sum.total}`;document.getElementById(`h${i}s`).style.color=hex;document.getElementById(`h${i}f`).textContent=`${c.sum.formula} = ${c.sum.total}`;if(isMain){applyTheme(c.colorObj||PAL[c.color]||PAL.gold);const card=document.getElementById('hc0');card.classList.remove('do-pulse');void card.offsetWidth;card.classList.add('do-pulse');}}
+function makeCard(c,isNew){const hex=getHex(c);const el=document.createElement('div');el.className='cc'+(isNew?' nw':'');el.style.setProperty('--cclr',hex);el.dataset.isPink=isPink(c)?'1':'0';el.innerHTML=`<span class="ccv" style="color:${hex};text-shadow:0 0 16px ${hex}55">${c.display}</span><span class="cct">${c.time}</span><span class="ccs" style="color:${hex}">&Sigma; ${c.sum.total}</span><span class="ccf">${c.sum.formula}=${c.sum.total}</span>`;if(isNew)setTimeout(()=>el.classList.remove('nw'),3000);return el;}
+function pushGrid(c){const g=document.getElementById('grid');g.insertBefore(makeCard(c,true),g.firstChild);if(g.children.length>100)g.removeChild(g.lastChild);}
 
-function spawnClover(){
-  const fx=document.getElementById('fx');
-  const el=document.createElement('div');
-  el.className='clover';
-  const sz=12+Math.random()*16,dur=7+Math.random()*5,dl=Math.random()*1.5;
-  el.style.cssText=`--csz:${sz}px;--cx:${Math.random()*95}%;--cd:${dur}s;--cdl:${dl}s`;
-  el.textContent='🍀';
-  fx.appendChild(el);
-  setTimeout(()=>el.remove(),(dur+dl+1)*1000);
-}
-function startClovers(){
-  if(cloverInterval)return;
-  cloverInterval=setInterval(spawnClover,400);
-}
-function stopClovers(){
-  clearInterval(cloverInterval);cloverInterval=null;
-  document.querySelectorAll('.clover').forEach(e=>e.remove());
-}
-function spawnPlanes(count,intense){
-  const fx=document.getElementById('fx');
-  const n=count||(intense?20:8);
-  for(let i=0;i<n;i++){
-    const el=document.createElement('div');
-    el.className='plane';
-    const sz=intense?(26+Math.random()*20):(16+Math.random()*16);
-    const dur=3.5+Math.random()*3,dl=i*0.15+Math.random()*0.35;
-    el.style.cssText=`--psz:${sz}px;--px:${Math.random()*94}%;--pd:${dur}s;--pdl:${dl}s`;
-    el.textContent='✈️';
-    fx.appendChild(el);
-    setTimeout(()=>el.remove(),(dur+dl+0.5)*1000);
-  }
-}
-
-// ══════════════════════════════════════════════════
-//  TEMA
-// ══════════════════════════════════════════════════
-let curThemeKey='gold';
-const root=document.documentElement;
-function applyTheme(colorObj){
-  const key=colorObj&&(colorObj.name||colorObj.hex)||'gold';
-  if(key===curThemeKey)return;curThemeKey=key;
-  root.style.setProperty('--lh',colorObj.h);
-  root.style.setProperty('--ls',colorObj.s+'%');
-  root.style.setProperty('--ll',colorObj.l+'%');
-}
-
-// ══════════════════════════════════════════════════
-//  STATE
-// ══════════════════════════════════════════════════
-const STATE={candles:[],max:200,apiMode:'sim'};
-
-function renderHero(){
-  const[c0,c1,c2]=STATE.candles;
-  if(c0)setHero('0',c0,true);
-  if(c1)setHero('1',c1,false);
-  if(c2)setHero('2',c2,false);
-}
-function setHero(i,c,isMain){
-  const hex=getHex(c),glo=hex+'88';
-  document.getElementById(`h${i}v`).textContent=c.display;
-  document.getElementById(`h${i}v`).style.color=hex;
-  document.getElementById(`h${i}v`).style.textShadow=`0 0 30px ${glo}`;
-  document.getElementById(`h${i}t`).textContent=c.time;
-  document.getElementById(`h${i}s`).textContent=`Soma: ${c.sum.total}`;
-  document.getElementById(`h${i}s`).style.color=hex;
-  document.getElementById(`h${i}f`).textContent=`${c.sum.formula} = ${c.sum.total}`;
-  if(isMain){
-    applyTheme(c.colorObj||PAL[c.color]||PAL.gold);
-    const card=document.getElementById('hc0');
-    card.classList.remove('do-pulse');void card.offsetWidth;card.classList.add('do-pulse');
-  }
-}
-function makeCard(c,isNew){
-  const hex=getHex(c);
-  const el=document.createElement('div');
-  el.className='cc'+(isNew?' nw':'');
-  el.style.setProperty('--cclr',hex);
-  el.dataset.isPink=isPink(c)?'1':'0';
-  el.innerHTML=`
-    <span class="ccv" style="color:${hex};text-shadow:0 0 16px ${hex}55">${c.display}</span>
-    <span class="cct">${c.time}</span>
-    <span class="ccs" style="color:${hex}">Σ ${c.sum.total}</span>
-    <span class="ccf">${c.sum.formula}=${c.sum.total}</span>`;
-  if(isNew)setTimeout(()=>el.classList.remove('nw'),3000);
-  return el;
-}
-function pushGrid(c){
-  const g=document.getElementById('grid');
-  g.insertBefore(makeCard(c,true),g.firstChild);
-  if(g.children.length>100)g.removeChild(g.lastChild);
-}
-
-// ══════════════════════════════════════════════════
-//  TOGGLE SELEÇÃO ROSAS
-// ══════════════════════════════════════════════════
+// TOGGLE ROSAS
 let pinkSelActive=false;
-function togglePinkSelection(){
-  pinkSelActive=!pinkSelActive;
-  document.getElementById('probBox').classList.toggle('active-sel',pinkSelActive);
-  document.querySelectorAll('#grid .cc').forEach(el=>{
-    el.classList.remove('pink-sel');
-    if(pinkSelActive&&el.dataset.isPink==='1')el.classList.add('pink-sel');
-  });
-  if(!pinkSelActive)document.getElementById('sLnext').textContent='clique p/ ver rosas';
-}
+function togglePinkSelection(){pinkSelActive=!pinkSelActive;document.getElementById('probBox').classList.toggle('active-sel',pinkSelActive);document.querySelectorAll('#grid .cc').forEach(el=>{el.classList.remove('pink-sel');if(pinkSelActive&&el.dataset.isPink==='1')el.classList.add('pink-sel');});if(!pinkSelActive)document.getElementById('sLnext').textContent='clique p/ ver rosas';}
 
 // ══════════════════════════════════════════════════
-//  PADRÃO DE PROBABILIDADE
-//
-//  Âncora: PRIMEIRA rosa a partir do minuto :00 de 3 horas atrás
-//  Posições (base 1, relativas à âncora):
-//    pos 3  (após âncora na pos 2 → paga na 3)
-//    pos 4  (após 3 → paga na 4)   ← NOVO
-//    pos 5  (após 4 → paga na 5)
-//    pos 6  (após 5 → paga na 6)
-//    pos 7  (após 6 → paga na 7)
-//    pos 8  (após 7 → paga na 8)
-//    pos 11 (após 10 → paga na 11)
-//
-//  Quando TODAS as posições são verificadas → ciclo completo → reinicia
-//  Ciclo reinicia: nova âncora = próxima rosa após a última do ciclo
+//  PADRÃO DE CASAS — ÂNCORA FIXA 3H
+//  Janela: sempre as últimas 3 horas
+//  Âncora: primeira rosa da janela — NÃO muda até expirar
+//  Casas: 3,4,5,6,7,8,11 (relativas à âncora=pos1)
 // ══════════════════════════════════════════════════
 const PATTERN_POS=[3,4,5,6,7,8,11];
+let lastPatternToast=0;
+let fixedAnchor=null;
 
-// Guarda qual posição do ciclo atual está ativa e o índice da âncora
-let cycleAnchorDate=null; // data/hora da âncora atual
-let lastPatternToast=0;   // evita spam de toast
-
-function getAnchorWindow(){
-  // Início = 3 horas atrás arredondado para o minuto :00
-  const now=new Date();
-  const t=new Date(now.getTime()-3*60*60*1000);
-  t.setSeconds(0,0);
-  // não arredonda para hora cheia, usa o minuto exato - 3h
-  return t;
+function getWindowStart(){
+  const now = new Date();
+  // CORREÇÃO: Sempre retorna exatamente 3 horas atrás do momento atual
+  return new Date(now.getTime() - 3 * 60 * 60 * 1000);
 }
 
 function calcProb(){
   const eP=document.getElementById('sL');
   const eN=document.getElementById('sLnext');
   const eT=document.getElementById('probTip');
-
-  const winStart=getAnchorWindow();
-  const allInWindow=STATE.candles
-    .filter(c=>c.date>=winStart)
-    .sort((a,b)=>a.date-b.date);
-
-  if(!allInWindow.length){
-    eP.textContent='—';setProbStyle(0);
-    eT.innerHTML='Aguardando velas (janela 3h)...';return;
+  const cycleBar=document.getElementById('cycleBar');
+  const winStart=getWindowStart();
+  
+  // Filtra velas dentro da janela de 3 horas
+  const inWindow=STATE.candles
+    .filter(c=>c.date instanceof Date&&!isNaN(c.date.getTime())&&c.date>=winStart)
+    .sort((a,b)=>a.date.getTime()-b.date.getTime());
+  
+  if(!inWindow.length){
+    eP.textContent='\u2014';setProbStyle(0);
+    eT.innerHTML='Aguardando velas na janela de 3h...';
+    cycleBar.classList.remove('show');return;
   }
-
-  // Âncora = primeira rosa da janela
-  const ai=allInWindow.findIndex(c=>isPink(c));
-  if(ai<0){
-    eP.textContent='—';setProbStyle(0);
-    eT.innerHTML='Sem vela rosa nas últimas 3 horas.';
-    eN.textContent='Sem âncora';return;
+  
+  // CORREÇÃO: Verifica se a âncora ainda está na janela
+  if (fixedAnchor && fixedAnchor.date < winStart) {
+    fixedAnchor = null;
+    console.log('🔄 Âncora expirou, buscando nova...');
   }
-
-  // Verifica se ciclo completo (todas posições já passaram)
-  // Se sim, tenta reiniciar a partir da última rosa do ciclo anterior
-  const anchor=allInWindow[ai];
-  const after=allInWindow.slice(ai); // pos 1 = âncora
-  const curPos=after.length;
-
-  // Checa se ciclo completo: última posição do padrão já ocorreu
-  const lastPatPos=PATTERN_POS[PATTERN_POS.length-1]; // 11
-  if(curPos>lastPatPos){
-    // Ciclo completo — reinicia: nova âncora = próxima rosa após pos 11
-    const nextAnchorSearch=after.slice(lastPatPos); // a partir de pos 12
-    const nai=nextAnchorSearch.findIndex(c=>isPink(c));
-    if(nai>=0){
-      // Tem nova âncora — recalcula recursivamente com sub-array
-      return calcProbFromAnchor(nextAnchorSearch,nai,eP,eN,eT,'(ciclo 2)');
+  
+  // CORREÇÃO: Sempre busca a primeira rosa da janela atual
+  if(!fixedAnchor){
+    const firstPink=inWindow.find(c=>isPink(c));
+    if(firstPink){
+      fixedAnchor=firstPink;
+      console.log('🎯 Âncora fixada:',firstPink.display,firstPink.time);
     }
-    // Sem nova âncora ainda — mostra ciclo completado
-    eP.textContent='✓';setProbStyle(100);
-    eN.textContent='Ciclo completo — aguardando nova rosa';
-    eT.innerHTML=`<b>Ciclo completo!</b>Âncora: <span>${anchor.display}</span> ${anchor.time}<br>Aguardando nova âncora para reiniciar.`;
+  }
+  
+  if(!fixedAnchor){
+    eP.textContent='0%';setProbStyle(0);
+    eN.textContent='Aguardando primeira rosa';
+    eT.innerHTML='<b>Sem rosa na janela</b><br>Aguardando primeira vela rosa para fixar âncora.';
+    cycleBar.classList.remove('show');updateFxByProb(0);return;
+  }
+  
+  const anchorIndex=inWindow.findIndex(c=>c===fixedAnchor);
+  if(anchorIndex<0){
+    fixedAnchor=null;
     return;
   }
-
-  calcProbFromAnchor(allInWindow,ai,eP,eN,eT,'');
-}
-
-function calcProbFromAnchor(arr,ai,eP,eN,eT,label){
-  const anchor=arr[ai];
-  const after=arr.slice(ai);
-  const curPos=after.length;
-
-  const hits={};let hc=0;
+  
+  const afterAnchor=inWindow.slice(anchorIndex);
+  const anchor=fixedAnchor;
+  const curPos=afterAnchor.length;
+  const hits={};
+  
   PATTERN_POS.forEach(pos=>{
     const idx=pos-1;
-    if(idx<after.length){hits[pos]=isPink(after[idx]);if(hits[pos])hc++;}
+    if(idx<afterAnchor.length)hits[pos]=isPink(afterAnchor[idx]);
     else hits[pos]=null;
   });
-
-  const occ=PATTERN_POS.filter(p=>hits[p]!==null);
-  // Prob progressiva: número de acertos / ocorridas, ponderado pela posição atual
-  // Quanto mais perto de um hit futuro, mais sobe
-  const baseProb=occ.length>0?Math.round(hc/occ.length*100):0;
-  const nxt=PATTERN_POS.find(p=>hits[p]===null);
-
-  // Prob progressiva: sobe à medida que nos aproximamos da próxima posição esperada
-  let prob=baseProb;
-  if(nxt!==undefined){
-    // Distância até próxima: nxt - curPos velas faltando
-    const dist=nxt-curPos;
-    if(dist<=0){
-      // ESTAMOS na posição! Prob máxima desse passo
-      prob=Math.min(99,baseProb+40);
-    } else if(dist===1){
-      prob=Math.min(95,baseProb+25);
-    } else if(dist===2){
-      prob=Math.min(80,baseProb+10);
-    }
+  
+  const nextPos=PATTERN_POS.find(p=>hits[p]===null);
+  const occurred=PATTERN_POS.filter(p=>hits[p]!==null);
+  const hitCount=occurred.filter(p=>hits[p]===true).length;
+  const baseRate=occurred.length>0?hitCount/occurred.length:0.5;
+  let prob=Math.round(baseRate*100);
+  
+  if(nextPos!==undefined){
+    const dist=nextPos-curPos;
+    if(dist<=0)prob=Math.min(98,prob+45);
+    else if(dist===1)prob=Math.min(90,prob+30);
+    else if(dist===2)prob=Math.min(78,prob+18);
+    else if(dist===3)prob=Math.min(65,prob+8);
+    if(baseRate>=0.5&&dist<=1)prob=Math.min(98,prob+10);
+  } else {
+    prob=Math.min(80,prob);
   }
-
-  eP.textContent=prob+'%';
-  setProbStyle(prob);
-  updateFxByProb(prob);
-
+  
+  eP.textContent=prob+'%';setProbStyle(prob);updateFxByProb(prob);
+  
   if(!pinkSelActive){
-    eN.textContent=nxt?`Próx: pos.${nxt} (atual:${curPos})`:`Ciclo completo ${label}`;
+    if(nextPos!==undefined)eN.textContent=`Prox: casa ${nextPos} (pos atual: ${curPos})`;
+    else eN.textContent=`Ciclo completo \u2713 (${hitCount}/${occurred.length})`;
   }
-
-  // ── Highlight verde nos cards que BATERAM o padrão ──
-  document.querySelectorAll('#grid .cc.pattern-hit').forEach(e=>e.classList.remove('pattern-hit'));
+  
+  document.querySelectorAll('#grid .cc.pattern-hit,.cc.pattern-next').forEach(e=>e.classList.remove('pattern-hit','pattern-next'));
   const cards=document.querySelectorAll('#grid .cc');
+  
   PATTERN_POS.forEach(pos=>{
     if(hits[pos]===true){
-      // No grid (mais recente primeiro): âncora está em índice (curPos-1),
-      // pos-1 no array after → índice no grid = (curPos-1)-(pos-1) = curPos-pos
       const gIdx=curPos-pos;
       if(gIdx>=0&&cards[gIdx])cards[gIdx].classList.add('pattern-hit');
     }
   });
-
-  // ── Momento de padrão chegando → aviões ──
-  if(nxt!==undefined&&nxt-curPos<=0){
+  
+  if(nextPos!==undefined&&nextPos===curPos){
+    const gIdx=curPos-nextPos;
+    if(gIdx>=0&&cards[gIdx])cards[gIdx].classList.add('pattern-next');
+  }
+  
+  renderCycleBar(hits,hitCount,occurred.length,anchor,curPos,nextPos,winStart);
+  
+  if(nextPos!==undefined&&nextPos===curPos){
     const now=Date.now();
-    if(now-lastPatternToast>15000){
+    if(now-lastPatternToast>12000){
       lastPatternToast=now;
-      spawnPlanes(22,true);
-      showToastPattern(nxt,anchor.display);
+      spawnPlanes(25,true);
+      showToastPattern(nextPos,anchor.display,prob);
     }
   }
-
-  // ── Tooltip ──
-  const ws=getAnchorWindow();
-  const wLbl=`${pad(ws.getHours())}:${pad(ws.getMinutes())} – agora`;
-  let html=`<b>Padrão Rosa ${label} — janela 3h</b>`;
+  
+  const wLabel=`${pad(winStart.getHours())}:${pad(winStart.getMinutes())} \u2013 agora`;
+  let html=`<b>Padrão de Casas — janela móvel 3h</b>`;
   html+=`Âncora: <span>${anchor.display}</span> às ${anchor.time}<br>`;
-  html+=`Posição atual: <span>${curPos}</span> &nbsp; Janela: ${wLbl}<br><br>`;
+  html+=`Posição atual: <span>${curPos}</span> &nbsp;|&nbsp; Janela: ${wLabel}<br><br>`;
+  
   PATTERN_POS.forEach(pos=>{
     const v=hits[pos];
     const icon=v===null?'⏳':(v?'✅':'❌');
     const lbl=v===null?'aguardando':(v?'ROSA ✓':'não rosa');
-    const val=v!==null&&after[pos-1]?` (${after[pos-1].display})`:'';
+    const val=v!==null&&afterAnchor[pos-1]?` (${afterAnchor[pos-1].display})`:'';
     const cl=v===true?'class="hit"':'';
-    html+=`${icon} Pos.<span>${pos}</span>: <span ${cl}>${lbl}</span>${val}<br>`;
+    html+=`${icon} Casa <span>${pos}</span>: <span ${cl}>${lbl}</span>${val}<br>`;
   });
-  html+=`<br>Acertos: <span>${hc}/${occ.length}</span> → <span>${prob}%</span>`;
+  
+  html+=`<br>Acertos: <span>${hitCount}/${occurred.length}</span> → prob <span>${prob}%</span>`;
   eT.innerHTML=html;
 }
 
-function setProbStyle(prob){
-  const el=document.getElementById('sL');
-  el.classList.remove('prob-low','prob-mid','prob-high');
-  if(prob>=70)el.classList.add('prob-high');
-  else if(prob>=40)el.classList.add('prob-mid');
-  else el.classList.add('prob-low');
+function renderCycleBar(hits,hitCount,total,anchor,curPos,nextPos,winStart){
+  const bar=document.getElementById('cycleBar');bar.classList.add('show');
+  document.getElementById('cycleLbl').textContent=`Ciclo ${pad(winStart.getHours())}:${pad(winStart.getMinutes())}`;
+  document.getElementById('cycleMeta').textContent=`Âncora: ${anchor.display} ${anchor.time} | pos.${curPos}`;
+  const hitsEl=document.getElementById('cycleHits');hitsEl.innerHTML='';
+  PATTERN_POS.forEach(pos=>{
+    const v=hits[pos];const el=document.createElement('span');el.className='cycle-pos';
+    if(v===null){if(pos===nextPos&&nextPos===curPos){el.classList.add('active');el.textContent=`C${pos}⚡`;}else{el.classList.add('wait');el.textContent=`C${pos}`;}}
+    else{el.classList.add(v?'hit':'miss');el.textContent=v?`C${pos}✓`:`C${pos}✗`;}
+    hitsEl.appendChild(el);
+  });
 }
 
-function showToastPattern(pos,anchorVal){
-  const t=document.getElementById('toast');
-  document.getElementById('ttit').textContent='🔮 PADRÃO ATIVO!';
-  document.getElementById('ttit').style.color='#00e676';
-  document.getElementById('tmsg').textContent=`Pos.${pos} — rosa esperada agora! Âncora: ${anchorVal}`;
-  t.style.borderLeftColor='#00e676';
-  t.classList.remove('on');void t.offsetWidth;t.classList.add('on');
-  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),8000);
-}
+function setProbStyle(prob){const el=document.getElementById('sL');el.classList.remove('prob-low','prob-mid','prob-high');if(prob>=70)el.classList.add('prob-high');else if(prob>=40)el.classList.add('prob-mid');else el.classList.add('prob-low');}
+function showToastPattern(pos,anchorVal,prob){const t=document.getElementById('toast');document.getElementById('ttit').textContent='🌸 CASA '+pos+' — ROSA ESPERADA!';document.getElementById('ttit').style.color='#00e676';document.getElementById('tmsg').textContent=`Prob ${prob}% — Âncora: ${anchorVal} — Entrada agora!`;t.style.borderLeftColor='#00e676';t.classList.remove('on');void t.offsetWidth;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),10000);}
 
-// ══════════════════════════════════════════════════
-//  STATS
-// ══════════════════════════════════════════════════
 function updateStats(){
   const cs=STATE.candles;if(!cs.length)return;
   document.getElementById('sT').textContent=cs.length;
   const lp=cs.find(c=>isPink(c));
-  document.getElementById('sM').textContent=lp?lp.display:'—';
+  document.getElementById('sM').textContent=lp?lp.display:'\u2014';
   document.getElementById('sMtime').textContent=lp?lp.time:'';
   const now=new Date(),hS=new Date(now);hS.setMinutes(0,0,0);
   const hE=new Date(hS);hE.setHours(hS.getHours()+1);
-  const hl=`${pad(hS.getHours())}:00–${pad(hE.getHours())}:00`;
+  const hl=`${pad(hS.getHours())}:00\u2013${pad(hE.getHours())}:00`;
   const csH=cs.filter(c=>c.date>=hS&&c.date<hE);
   const pH=csH.filter(c=>isPink(c));
   const mp=pH.length?Math.max(...pH.map(c=>c.value)):null;
-  document.getElementById('sA').textContent=mp?fmtV(mp):'—';
+  document.getElementById('sA').textContent=mp?fmtV(mp):'\u2014';
   document.getElementById('sAhour').textContent=hl;
   document.getElementById('sU').textContent=pH.length||'0';
   document.getElementById('sUhour').textContent=hl;
@@ -818,74 +495,18 @@ function updateStats(){
   document.getElementById('seccnt').textContent=cs.length+' velas';
 }
 
-// ══════════════════════════════════════════════════
-//  TOAST
-// ══════════════════════════════════════════════════
 const toastEl=document.getElementById('toast');
-function showToast(c){
-  const hex=getHex(c);
-  document.getElementById('tmsg').textContent=`${c.display}  •  Soma: ${c.sum.formula} = ${c.sum.total}`;
-  document.getElementById('ttit').textContent='NOVA VELA';
-  document.getElementById('ttit').style.color=hex;
-  toastEl.style.borderLeftColor=hex;
-  toastEl.classList.remove('on');void toastEl.offsetWidth;toastEl.classList.add('on');
-  clearTimeout(toastEl._t);
-  toastEl._t=setTimeout(()=>toastEl.classList.remove('on'),4000);
-}
-function showToastGatilho(digit,val){
-  document.getElementById('ttit').textContent='🎯 COTAÇÃO ESPECIAL';
-  document.getElementById('ttit').style.color=PAL.pink.hex;
-  document.getElementById('tmsg').textContent=`4 velas dígito "${digit}" — última: ${val} — até 4ª casa`;
-  toastEl.style.borderLeftColor=PAL.pink.hex;
-  toastEl.classList.remove('on');void toastEl.offsetWidth;toastEl.classList.add('on');
-  clearTimeout(toastEl._t);toastEl._t=setTimeout(()=>toastEl.classList.remove('on'),8000);
-}
+function showToast(c){const hex=getHex(c);document.getElementById('tmsg').textContent=`${c.display}  \u2022  Soma: ${c.sum.formula} = ${c.sum.total}`;document.getElementById('ttit').textContent='NOVA VELA';document.getElementById('ttit').style.color=hex;toastEl.style.borderLeftColor=hex;toastEl.classList.remove('on');void toastEl.offsetWidth;toastEl.classList.add('on');clearTimeout(toastEl._t);toastEl._t=setTimeout(()=>toastEl.classList.remove('on'),4000);}
+function showToastGatilho(digit,val){document.getElementById('ttit').textContent='\uD83C\uDFAF COTAÇÃO ESPECIAL';document.getElementById('ttit').style.color=PAL.pink.hex;document.getElementById('tmsg').textContent=`4 velas dígito "${digit}" — Última: ${val} — até 4ª casa`;toastEl.style.borderLeftColor=PAL.pink.hex;toastEl.classList.remove('on');void toastEl.offsetWidth;toastEl.classList.add('on');clearTimeout(toastEl._t);toastEl._t=setTimeout(()=>toastEl.classList.remove('on'),8000);}
 
-// ══════════════════════════════════════════════════
-//  GATILHO COTAÇÃO ESPECIAL
-// ══════════════════════════════════════════════════
 let gatilhoActive=false,gatilhoDismissed=false,lastGatilhoSeq=null;
-function checkGatilho(){
-  const cs=STATE.candles;if(cs.length<4)return;
-  const top4=cs.slice(0,4);
-  const digits=top4.map(c=>lastDigit(c.display));
-  if(digits.every(d=>d===digits[0]&&d!=='')){
-    const seqKey=top4.map(c=>c.display).join('|');
-    if(seqKey===lastGatilhoSeq&&gatilhoActive)return;
-    lastGatilhoSeq=seqKey;gatilhoActive=true;gatilhoDismissed=false;
-    renderGatilho(top4,digits[0]);
-  }
-}
-function renderGatilho(seq,digit){
-  if(gatilhoDismissed)return;
-  const bar=document.getElementById('gatilhoBar');if(!bar)return;
-  bar.classList.add('show');
-  document.getElementById('gInfo').innerHTML=
-    `<strong>4 velas com dígito final "${digit}"</strong> — Entrega esperada até a <strong>4ª casa</strong>`;
-  const seqEl=document.getElementById('gSeq');seqEl.innerHTML='';
-  [...seq].reverse().forEach((c,i)=>{
-    if(i>0){const a=document.createElement('span');a.className='garrow';a.textContent='→';seqEl.appendChild(a);}
-    const v=document.createElement('span');v.className='gseq-v';v.textContent=c.display;seqEl.appendChild(v);
-  });
-  showToastGatilho(digit,seq[0].display);
-  markGatilhoCards(seq);
-}
-function markGatilhoCards(seq){
-  document.querySelectorAll('.cc.gatilho-card').forEach(e=>e.classList.remove('gatilho-card'));
-  const cards=document.querySelectorAll('#grid .cc');
-  seq.forEach((_,i)=>{if(cards[i])cards[i].classList.add('gatilho-card');});
-}
-function dismissGatilho(){
-  gatilhoDismissed=true;gatilhoActive=false;
-  document.getElementById('gatilhoBar').classList.remove('show');
-  document.querySelectorAll('.cc.gatilho-card').forEach(e=>e.classList.remove('gatilho-card'));
-}
+function checkGatilho(){const cs=STATE.candles;if(cs.length<4)return;const top4=cs.slice(0,4);const digits=top4.map(c=>lastDigit(c.display));if(digits.every(d=>d===digits[0]&&d!=='')){const seqKey=top4.map(c=>c.display).join('|');if(seqKey===lastGatilhoSeq&&gatilhoActive)return;lastGatilhoSeq=seqKey;gatilhoActive=true;gatilhoDismissed=false;renderGatilho(top4,digits[0]);}}
+function renderGatilho(seq,digit){if(gatilhoDismissed)return;const bar=document.getElementById('gatilhoBar');if(!bar)return;bar.classList.add('show');document.getElementById('gInfo').innerHTML=`<strong>4 velas com dígito final "${digit}"</strong> — Entrega esperada até a <strong>4ª casa</strong>`;const seqEl=document.getElementById('gSeq');seqEl.innerHTML='';[...seq].reverse().forEach((c,i)=>{if(i>0){const a=document.createElement('span');a.className='garrow';a.textContent='→';seqEl.appendChild(a);}const v=document.createElement('span');v.className='gseq-v';v.textContent=c.display;seqEl.appendChild(v);});showToastGatilho(digit,seq[0].display);markGatilhoCards(seq);}
+function markGatilhoCards(seq){document.querySelectorAll('.cc.gatilho-card').forEach(e=>e.classList.remove('gatilho-card'));const cards=document.querySelectorAll('#grid .cc');seq.forEach((_,i)=>{if(cards[i])cards[i].classList.add('gatilho-card');});}
+function dismissGatilho(){gatilhoDismissed=true;gatilhoActive=false;document.getElementById('gatilhoBar').classList.remove('show');document.querySelectorAll('.cc.gatilho-card').forEach(e=>e.classList.remove('gatilho-card'));}
 
-// ══════════════════════════════════════════════════
-//  ADD CANDLE
-// ══════════════════════════════════════════════════
 function addCandle(raw,ts,color_rgb){
-  const date=ts?new Date(ts):new Date();
+  const date=ts?new Date(typeof ts==='number'?ts:ts):new Date();
   const display=fmtV(raw);
   const colorObj=resolveColor(raw,color_rgb||null);
   const color=colorObj.name||'gold';
@@ -895,28 +516,12 @@ function addCandle(raw,ts,color_rgb){
   if(STATE.candles.length>STATE.max)STATE.candles.pop();
   renderHero();pushGrid(c);updateStats();showToast(c);
   checkGatilho();
-  if(isPink(c))spawnPlanes(10,false);
-  if(pinkSelActive&&isPink(c)){
-    const cards=document.querySelectorAll('#grid .cc');
-    if(cards[0])cards[0].classList.add('pink-sel');
-  }
+  if(isPink(c))spawnPlanes(12,false);
+  if(pinkSelActive&&isPink(c)){const cards=document.querySelectorAll('#grid .cc');if(cards[0])cards[0].classList.add('pink-sel');}
 }
-function setApi(mode,src){
-  STATE.apiMode=mode;
-  document.getElementById('apiDot').className='apin '+(mode==='live'?'live':'sim');
-  document.getElementById('apiTxt').textContent=mode==='live'
-    ?`✓ Conectado — ${src} — velas em tempo real`:`⏳ ${src}`;
-  if(mode==='live'&&!isLiveConnected){isLiveConnected=true;startClovers();}
-  if(mode!=='live'){isLiveConnected=false;stopClovers();}
-}
+function setApi(mode,src){STATE.apiMode=mode;document.getElementById('apiDot').className='apin '+(mode==='live'?'live':'sim');document.getElementById('apiTxt').textContent=mode==='live'?`✓ Conectado — ${src} — velas em tempo real`:`⏳ ${src}`;if(mode==='live'&&!isLiveConnected){isLiveConnected=true;startClovers();}if(mode!=='live'){isLiveConnected=false;stopClovers();}}
 
-// ══════════════════════════════════════════════════
-//  LOGIN
-// ══════════════════════════════════════════════════
-function setLoginStatus(type,msg){
-  document.getElementById('loginStatus').className='login-status '+type;
-  document.getElementById('loginMsg').textContent=msg;
-}
+function setLoginStatus(type,msg){document.getElementById('loginStatus').className='login-status '+type;document.getElementById('loginMsg').textContent=msg;}
 async function doLogin(){
   const email=document.getElementById('inp-email').value.trim();
   const pass=document.getElementById('inp-pass').value.trim();
@@ -924,10 +529,7 @@ async function doLogin(){
   const btn=document.getElementById('btnLogin');btn.disabled=true;
   setLoginStatus('loading','Conectando...');
   try{
-    const res=await fetch('https://aviator-real-time-dashboard.onrender.com/api/login',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email,password:pass})
-    });
+    const res=await fetch('https://aviator-real-time-dashboard.onrender.com/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
     const data=await res.json();
     if(!data.ok){setLoginStatus('err',data.msg||'Login falhou.');btn.disabled=false;return;}
     setLoginStatus('ok','✓ '+(data.msg||'Conectado!'));
@@ -939,32 +541,13 @@ async function doLogin(){
 document.getElementById('inp-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 document.getElementById('inp-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('inp-pass').focus();});
 
-// ══════════════════════════════════════════════════
-//  SOCKET.IO
-// ══════════════════════════════════════════════════
 let historyLoaded=false,simTimer=null;
-function simResult(){
-  const r=Math.random();
-  if(r<.28)return 1.00+Math.random()*.49;
-  if(r<.55)return 1.50+Math.random()*.49;
-  if(r<.68)return 2.00+Math.random()*.99;
-  if(r<.80)return 3.00+Math.random()*2.99;
-  if(r<.90)return 6.00+Math.random()*8.99;
-  if(r<.96)return 15.0+Math.random()*44.9;
-  return 60.0+Math.random()*440;
-}
-function startSim(){
-  if(simTimer)return;
-  simTimer=setInterval(()=>addCandle(simResult(),null,null),28000);
-}
+function simResult(){const r=Math.random();if(r<.28)return 1.00+Math.random()*.49;if(r<.55)return 1.50+Math.random()*.49;if(r<.68)return 2.00+Math.random()*.99;if(r<.80)return 3.00+Math.random()*2.99;if(r<.90)return 6.00+Math.random()*8.99;if(r<.96)return 15.0+Math.random()*44.9;return 60.0+Math.random()*440;}
+function startSim(){if(simTimer)return;simTimer=setInterval(()=>addCandle(simResult(),Date.now(),null),28000);}
 
 const RENDER_URL='https://aviator-real-time-dashboard.onrender.com';
 const sock=io(RENDER_URL,{transports:['websocket','polling'],reconnection:true,reconnectionDelay:5000});
-
-sock.on('connect',()=>{
-  clearInterval(simTimer);simTimer=null;
-  setApi('live','Servidor Render Online');
-});
+sock.on('connect',()=>{clearInterval(simTimer);simTimer=null;setApi('live','Servidor Render Online');});
 sock.on('history',(items)=>{
   if(historyLoaded||!items?.length)return;
   historyLoaded=true;
@@ -973,7 +556,8 @@ sock.on('history',(items)=>{
   [...items].reverse().forEach(item=>{
     const val=parseFloat(item.multiplier);
     if(!isNaN(val)&&val>=1){
-      const date=new Date(item.timestamp||item.time);
+      const rawTs=item.timestamp||item.time;
+      const date=rawTs?new Date(typeof rawTs==='number'?rawTs:rawTs):new Date();
       const display=fmtV(val);
       const colorObj=resolveColor(val,item.color_rgb||null);
       const color=colorObj.name||'gold';
@@ -987,23 +571,22 @@ sock.on('history',(items)=>{
   if(STATE.candles[0])applyTheme(STATE.candles[0].colorObj||PAL.gold);
   checkGatilho();
 });
-sock.on('candle',(item)=>{
-  const val=parseFloat(item.multiplier);
-  if(!isNaN(val)&&val>=1)addCandle(val,item.timestamp||item.time,item.color_rgb||null);
-});
+sock.on('candle',(item)=>{const val=parseFloat(item.multiplier);if(!isNaN(val)&&val>=1)addCandle(val,item.timestamp||item.time,item.color_rgb||null);});
 sock.on('status',(s)=>{if(s.connected)setApi('live',s.source||'Aviator Online');});
 sock.on('disconnect',()=>{setApi('sim','Reconectando...');startSim();});
 sock.on('connect_error',()=>{startSim();});
 
-// Sim inicial
+// SIM INICIAL: 220 velas cobrindo ~4h (i=1 mais recente, i=220 mais antiga)
 function initSimHistory(){
   const now=Date.now();
-  for(let i=20;i>=1;i--){
+  const TOTAL=220,INTERVAL=65000;
+  for(let i=1;i<=TOTAL;i++){
     const val=simResult(),disp=fmtV(val);
     const colorObj=resolveColor(val,null),col=colorObj.name||'gold',sum=calcSum(disp);
-    const date=new Date(now-i*28000);
+    const date=new Date(now-i*INTERVAL);
     const c={value:val,display:disp,color:col,colorObj,sum,time:fmtT(date),date};
-    STATE.candles.push(c);pushGrid(c);
+    STATE.candles.push(c);
+    if(i<=100)pushGrid(c);
   }
   renderHero();updateStats();
   if(STATE.candles[0])applyTheme(STATE.candles[0].colorObj||PAL.gold);
