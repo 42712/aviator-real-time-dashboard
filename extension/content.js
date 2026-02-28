@@ -1,25 +1,20 @@
 const SERVER_URL = "https://aviator-real-time-dashboard.onrender.com";
 
-let lastFirst = null;
+let lastValue = null;
 
 function capture() {
-  // Pega TODOS os .payout visíveis
   const payouts = document.querySelectorAll(".payout");
-  if (!payouts || payouts.length === 0) return;
+  if (!payouts.length) return;
 
-  // O primeiro elemento é sempre o resultado mais recente
-  const first = payouts[0];
-  if (!first) return;
-
-  const raw = (first.innerText || first.textContent || "").trim();
-  // Remove o "x" e troca vírgula por ponto
-  const clean = raw.replace("x", "").replace(",", ".").trim();
+  // Pega o texto do primeiro .payout (mais recente)
+  const raw = (payouts[0].innerText || payouts[0].textContent || "").trim();
+  const clean = raw.replace(/x/gi, "").replace(",", ".").trim();
   const value = parseFloat(clean);
 
-  if (!value || isNaN(value) || value < 1) return;
-  if (value === lastFirst) return; // já enviou esse
+  if (!value || isNaN(value) || value < 1 || value > 10000) return;
+  if (value === lastValue) return;
 
-  lastFirst = value;
+  lastValue = value;
 
   fetch(`${SERVER_URL}/api/candle`, {
     method: "POST",
@@ -28,5 +23,4 @@ function capture() {
   }).catch(() => {});
 }
 
-// Roda a cada 1 segundo
 setInterval(capture, 1000);
