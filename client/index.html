@@ -145,7 +145,15 @@
   .stats-row { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:24px; }
   .sbox { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:13px 10px; text-align:center; }
   .slbl { font-size:.54rem; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:5px; display:block; }
-  .sval { font-family:var(--font-disp); font-size:1.05rem; font-weight:700; color:#fff; }
+  .sval { font-family:var(--font-disp); font-size:1.05rem; font-weight:700; color:#fff; display:block; }
+  .sval-sub { font-size:.52rem; color:var(--text-dim); display:block; margin-top:3px; letter-spacing:.5px; line-height:1.5; }
+  .prob-box { cursor:default; position:relative; }
+  .prob-detail { display:none; position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+    background:#0a1220; border:1px solid #ff5fad44; border-radius:10px; padding:10px 14px;
+    font-size:.6rem; color:var(--text-dim); white-space:nowrap; z-index:50; min-width:200px; text-align:left;
+    box-shadow:0 4px 24px rgba(0,0,0,.6); }
+  .prob-box:hover .prob-detail { display:block; }
+  .prob-detail span { color:#ff5fad; font-weight:700; }
 
   .sechdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
   .sectit { font-family:var(--font-disp); font-size:.6rem; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim); display:flex; align-items:center; gap:8px; }
@@ -254,10 +262,23 @@
   </div>
   <div class="stats-row">
     <div class="sbox"><span class="slbl">Rodadas</span><span class="sval" id="sT">0</span></div>
-    <div class="sbox"><span class="slbl">Maior</span><span class="sval" id="sM" style="color:var(--live)">—</span></div>
-    <div class="sbox"><span class="slbl">Média</span><span class="sval" id="sA">—</span></div>
-    <div class="sbox"><span class="slbl">≥ 2x</span><span class="sval" id="sU" style="color:#00ff9f">—</span></div>
-    <div class="sbox"><span class="slbl">&lt; 1.5x</span><span class="sval" id="sL" style="color:#ff3358">—</span></div>
+    <div class="sbox"><span class="slbl">Últ. Rosa</span><span class="sval" id="sM" style="color:#ff5fad">—</span></div>
+    <div class="sbox">
+      <span class="slbl">Maior Rosa/h</span>
+      <span class="sval" id="sA" style="color:#ff5fad">—</span>
+      <span class="sval-sub" id="sAhour"></span>
+    </div>
+    <div class="sbox">
+      <span class="slbl">Rosas/h</span>
+      <span class="sval" id="sU" style="color:#ff5fad">—</span>
+      <span class="sval-sub" id="sUhour"></span>
+    </div>
+    <div class="sbox prob-box" id="probBox">
+      <span class="slbl">Prob. Rosa</span>
+      <span class="sval" id="sL" style="color:#ff5fad">—</span>
+      <span class="sval-sub" id="sLdetail"></span>
+      <div class="prob-detail" id="probDetail">Aguardando dados...</div>
+    </div>
   </div>
   <div class="sechdr">
     <div class="sectit">Histórico de Resultados</div>
@@ -327,17 +348,29 @@ function getColorByValue(v) {
 
 // Resolve cor final: usa RGB real se disponível, senão fallback por valor
 function resolveColor(value, color_rgb) {
-  if (color_rgb) {
-    const obj = rgbStrToColorObj(color_rgb);
-    if (obj) return { type: 'raw', ...obj };
+  if (color_rgb && color_rgb.trim() !== '') {
+    const obj = rgbStrToColorObj(color_rgb.trim());
+    if (obj && obj.hex && obj.hex !== '#000000') return { type: 'raw', ...obj };
   }
   const name = getColorByValue(value);
   return { type: 'pal', name, ...PAL[name] };
 }
 
-// Compat: getColor ainda usado em alguns lugares → retorna nome ou 'raw'
-function getColor(v) {
-  return getColorByValue(v);
+// Compat
+function getColor(v) { return getColorByValue(v); }
+
+// Detecta se vela é ROSA
+// Rosa real via RGB: hue 290–355, sat>50, lum>40
+// Fallback: faixa 2.0–2.99
+function isPink(c) {
+  if (c.colorObj) {
+    if (c.colorObj.type === 'raw') {
+      const h = c.colorObj.h, s = c.colorObj.s, l = c.colorObj.l;
+      return h >= 290 && h <= 355 && s >= 50 && l >= 40;
+    }
+    if (c.colorObj.name === 'pink') return true;
+  }
+  return c.color === 'pink' || (c.value >= 2.0 && c.value < 3.0);
 }
 function calcSum(d) {
   const digs = d.replace(',','.').replace('x','').replace('.','').split('').map(Number);
@@ -416,15 +449,129 @@ function pushGrid(c) {
   if (g.children.length > 100) g.removeChild(g.lastChild);
 }
 function updateStats() {
-  const cs = STATE.candles; if (!cs.length) return;
-  const vs = cs.map(c=>c.value), n = vs.length;
-  document.getElementById('sT').textContent = n;
-  document.getElementById('sM').textContent = fmtV(Math.max(...vs));
-  document.getElementById('sA').textContent = fmtV(vs.reduce((a,b)=>a+b,0)/n);
-  const u = vs.filter(v=>v>=2).length, l = vs.filter(v=>v<1.5).length;
-  document.getElementById('sU').textContent = `${u} (${Math.round(u/n*100)}%)`;
-  document.getElementById('sL').textContent = `${l} (${Math.round(l/n*100)}%)`;
-  document.getElementById('seccnt').textContent = n + ' velas';
+  const cs = STATE.candles;
+  if (!cs.length) return;
+
+  // ── Rodadas totais ──
+  document.getElementById('sT').textContent = cs.length;
+
+  // ── STAT 2: Última vela rosa que saiu ──
+  const lastPink = cs.find(c => isPink(c));
+  document.getElementById('sM').textContent = lastPink ? lastPink.display : '—';
+
+  // ── Janela de 1 hora atual (hora cheia corrente) ──
+  // Ex: agora 14:37 → janela 14:00–14:59
+  const now = new Date();
+  const hourStart = new Date(now);
+  hourStart.setMinutes(0, 0, 0);
+  const hourEnd = new Date(hourStart);
+  hourEnd.setHours(hourStart.getHours() + 1);
+
+  const candlesThisHour = cs.filter(c => c.date >= hourStart && c.date < hourEnd);
+  const pinkThisHour   = candlesThisHour.filter(c => isPink(c));
+  const hourLabel      = `${pad(hourStart.getHours())}:00–${pad(hourEnd.getHours())}:00`;
+
+  // ── STAT 3: Maior vela rosa desta hora ──
+  const maxPinkHour = pinkThisHour.length
+    ? Math.max(...pinkThisHour.map(c => c.value))
+    : null;
+  document.getElementById('sA').textContent = maxPinkHour ? fmtV(maxPinkHour) : '—';
+  document.getElementById('sAhour').textContent = hourLabel;
+
+  // ── STAT 4: Quantidade de rosas nesta hora ──
+  document.getElementById('sU').textContent = pinkThisHour.length || '0';
+  document.getElementById('sUhour').textContent = hourLabel;
+
+  // ── STAT 5: Probabilidade de saída de vela rosa ──
+  // Lógica: a partir da PRIMEIRA rosa desta hora (âncora),
+  // calcula quantas vezes rosas apareceram nas posições 3,4,5,6,7,8,11
+  // contando posição relativa à rosa âncora dentro das velas da hora.
+  // Posição 1 = a própria âncora.
+  calcPinkProbability(candlesThisHour, pinkThisHour, hourLabel);
+
+  document.getElementById('seccnt').textContent = cs.length + ' velas';
+}
+
+// ── CÁLCULO DE PROBABILIDADE DE PADRÃO ROSA ──
+// Posições de referência: 3, 4, 5, 6, 7, 8, 11
+const PATTERN_POSITIONS = [3, 4, 5, 6, 7, 8, 11];
+
+function calcPinkProbability(candlesHour, pinkHour, hourLabel) {
+  const elProb   = document.getElementById('sL');
+  const elDetail = document.getElementById('sLdetail');
+  const elTooltip= document.getElementById('probDetail');
+
+  if (!pinkHour.length || candlesHour.length < 3) {
+    elProb.textContent    = '—';
+    elDetail.textContent  = 'Sem rosas na hora';
+    elTooltip.innerHTML   = 'Aguardando velas rosas na hora atual...';
+    return;
+  }
+
+  // As velas da hora ordenadas do mais antigo ao mais recente
+  // candlesHour vem de STATE.candles que é mais recente primeiro → reverter
+  const sorted = [...candlesHour].sort((a, b) => a.date - b.date);
+
+  // Âncora = PRIMEIRA vela rosa da hora
+  const anchorIdx = sorted.findIndex(c => isPink(c));
+  if (anchorIdx < 0) {
+    elProb.textContent   = '—';
+    elDetail.textContent = 'Sem rosa âncora';
+    return;
+  }
+
+  const anchor     = sorted[anchorIdx];
+  const afterAnchor = sorted.slice(anchorIdx); // posição 1 = âncora
+
+  // Para cada posição do padrão, verifica se houve rosa
+  const hits   = {}; // posição → true/false
+  let hitCount = 0;
+  const totalPositions = PATTERN_POSITIONS.length;
+
+  PATTERN_POSITIONS.forEach(pos => {
+    const idx = pos - 1; // posição 3 → índice 2
+    if (idx < afterAnchor.length) {
+      const isHit = isPink(afterAnchor[idx]);
+      hits[pos] = isHit;
+      if (isHit) hitCount++;
+    } else {
+      hits[pos] = null; // ainda não chegou
+    }
+  });
+
+  // Posições que já aconteceram (não null)
+  const occurred = PATTERN_POSITIONS.filter(p => hits[p] !== null);
+  const prob = occurred.length > 0
+    ? Math.round((hitCount / occurred.length) * 100)
+    : 0;
+
+  // Próxima posição do padrão que ainda não ocorreu
+  const nextPos = PATTERN_POSITIONS.find(p => hits[p] === null);
+  // Posição atual (quantas velas após âncora já existem)
+  const currentRelPos = afterAnchor.length;
+
+  elProb.textContent   = prob + '%';
+  elDetail.textContent = nextPos
+    ? `Próxima: pos.${nextPos} (atual: ${currentRelPos})`
+    : `Padrão completo`;
+
+  // Tooltip detalhado
+  const anchorTime = fmtT(anchor.date);
+  let tooltipHtml = `<b style="color:#ff5fad">Padrão Rosa — ${hourLabel}</b><br>`;
+  tooltipHtml += `Âncora: <span>${anchor.display}</span> às ${anchorTime}<br>`;
+  tooltipHtml += `Pos. atual após âncora: <span>${currentRelPos}</span><br><br>`;
+
+  PATTERN_POSITIONS.forEach(pos => {
+    const v = hits[pos];
+    const icon = v === null ? '⏳' : (v ? '✅' : '❌');
+    const label = v === null ? 'aguardando' : (v ? 'ROSA ✓' : 'não rosa');
+    const valStr = (v !== null && afterAnchor[pos-1])
+      ? ` (${afterAnchor[pos-1].display})` : '';
+    tooltipHtml += `${icon} Pos.<span>${pos}</span>: ${label}${valStr}<br>`;
+  });
+
+  tooltipHtml += `<br>Acertos: <span>${hitCount}/${occurred.length}</span> → <span>${prob}%</span>`;
+  elTooltip.innerHTML = tooltipHtml;
 }
 const toastEl = document.getElementById('toast');
 function showToast(c) {
