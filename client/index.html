@@ -83,8 +83,8 @@ header{position:sticky;top:0;z-index:100;height:60px;padding:0 24px;display:flex
 .hval{font-family:var(--font-disp);font-size:2.7rem;font-weight:900;line-height:1;margin-bottom:10px;transition:color .5s,text-shadow .5s}
 .hcard.main .hval{font-size:3.6rem}
 .htim{font-size:.7rem;color:var(--text-dim);letter-spacing:2px;margin-bottom:7px}
-.hsum{font-size:1.15rem;font-weight:700;font-family:var(--font-disp);letter-spacing:2px;opacity:.95;transition:color .5s}
-.hform{font-size:.56rem;color:var(--text-dim);margin-top:4px}
+.hsum{font-size:1.5rem;font-weight:900;font-family:var(--font-disp);letter-spacing:2px;opacity:1;transition:color .5s}
+.hform{display:none}
 .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}
 .sbox{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:13px 10px;text-align:center;box-shadow:0 1px 8px rgba(0,0,0,.2)}
 .slbl{font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;display:block}
@@ -121,10 +121,11 @@ header{position:sticky;top:0;z-index:100;height:60px;padding:0 24px;display:flex
 @keyframes nextPulse{0%,100%{box-shadow:0 0 10px rgba(255,215,0,.2)}50%{box-shadow:0 0 28px rgba(255,215,0,.5)}}
 .cc.pattern-next::before{content:"\23F3";position:absolute;top:3px;right:4px;font-size:.6rem}
 @keyframes popIn{from{opacity:0;transform:scale(.85) translateY(-10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.ccr{font-size:.5rem;color:var(--text-dim);display:block;letter-spacing:1px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 .ccv{font-family:var(--font-disp);font-size:1.1rem;font-weight:700;display:block;margin-bottom:6px;line-height:1;transition:color .3s,text-shadow .3s}
 .cct{font-size:.55rem;color:var(--text-dim);display:block;margin-bottom:4px;letter-spacing:1px}
-.ccs{font-size:.88rem;font-weight:700;font-family:var(--font-disp);display:block;opacity:.9}
-.ccf{font-size:.52rem;color:var(--text-dim);display:block;margin-top:3px}
+.ccs{font-size:1.15rem;font-weight:900;font-family:var(--font-disp);display:block;opacity:1;letter-spacing:1px}
+.ccf{display:none}
 #cycleBar{display:none;margin-bottom:14px;background:rgba(0,230,118,.06);border:1.5px solid rgba(0,230,118,.25);border-radius:10px;padding:10px 16px;font-size:.62rem;letter-spacing:.5px;color:var(--text-dim);position:relative;z-index:5}
 #cycleBar.show{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .cycle-label{color:var(--green-hit);font-family:var(--font-disp);font-size:.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase}
@@ -146,6 +147,13 @@ footer{position:relative;z-index:5;border-top:1.5px solid var(--border);backgrou
 @media(max-width:900px){.hero-row{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.hero-row{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:400px){.stats-row{grid-template-columns:repeat(2,1fr)}#clk{font-size:.8rem}}
+
+.next-casa-alert{color:#00e676;font-family:var(--font-disp);font-size:.58rem;font-weight:900;letter-spacing:1px;animation:alertBlink .5s ease infinite}
+@keyframes alertBlink{0%,100%{opacity:1;text-shadow:0 0 12px #00e676}50%{opacity:.5;text-shadow:none}}
+.next-casa-warn{color:#ffd700;font-family:var(--font-disp);font-size:.58rem;font-weight:700;animation:warnPulse .8s ease infinite}
+@keyframes warnPulse{0%,100%{opacity:1}50%{opacity:.55}}
+.sbox.casa-alert{border-color:#00e676!important;box-shadow:0 0 20px rgba(0,230,118,.5)!important;animation:casaGlow 1s ease infinite}
+@keyframes casaGlow{0%,100%{box-shadow:0 0 14px rgba(0,230,118,.3)}50%{box-shadow:0 0 32px rgba(0,230,118,.7)}}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 </style>
 </head>
@@ -293,15 +301,79 @@ setInterval(()=>{document.getElementById('clk').textContent=fmtT(new Date());},1
 document.getElementById('clk').textContent=fmtT(new Date());
 document.getElementById('footerYear').textContent=new Date().getFullYear();
 
-// FX
-let cloverInterval=null,isLiveConnected=false,fxProbLevel=0,planeInterval=null;
-function setFxByProb(prob){fxProbLevel=prob;if(!isLiveConnected)return;if(cloverInterval){clearInterval(cloverInterval);cloverInterval=null;}if(prob<90){const ms=Math.round(300+prob*41);cloverInterval=setInterval(spawnClover,ms);}if(prob>=40&&prob<70)spawnPlanes(1,false);else if(prob>=70&&prob<85)spawnPlanes(3,false);else if(prob>=85&&prob<95)spawnPlanes(6,false);else if(prob>=95)spawnPlanes(18,true);}
-function startPlaneLoop(prob){if(planeInterval){clearInterval(planeInterval);planeInterval=null;}if(prob>=70){const ms=prob>=90?1800:prob>=85?3000:5000;const count=prob>=90?4:prob>=85?2:1;planeInterval=setInterval(()=>spawnPlanes(count,prob>=90),ms);}}
-function updateFxByProb(prob){setFxByProb(prob);startPlaneLoop(prob);}
-function spawnClover(){const fx=document.getElementById('fx');const el=document.createElement('div');el.className='clover';const sz=12+Math.random()*16,dur=7+Math.random()*5,dl=Math.random()*1.5;el.style.cssText=`--csz:${sz}px;--cx:${Math.random()*95}%;--cd:${dur}s;--cdl:${dl}s`;el.textContent='\u{1F340}';fx.appendChild(el);setTimeout(()=>el.remove(),(dur+dl+1)*1000);}
-function startClovers(){if(cloverInterval)return;cloverInterval=setInterval(spawnClover,400);}
-function stopClovers(){clearInterval(cloverInterval);cloverInterval=null;document.querySelectorAll('.clover').forEach(e=>e.remove());}
-function spawnPlanes(count,intense){const fx=document.getElementById('fx');for(let i=0;i<count;i++){const el=document.createElement('div');el.className='plane';const sz=intense?(32+Math.random()*26):(18+Math.random()*16);const dur=3+Math.random()*3,dl=i*0.12+Math.random()*0.3;el.style.cssText=`--psz:${sz}px;--px:${Math.random()*94}%;--pd:${dur}s;--pdl:${dl}s`;el.textContent='\u2708\uFE0F';fx.appendChild(el);setTimeout(()=>el.remove(),(dur+dl+0.5)*1000);}}
+// ══════════════════════════════════════════════════
+// FX — TREVOS + AVIÕES
+// Regra:
+//  • Trevos: sempre ativos quando live (fundo suave)
+//  • Aviões grandes: quando dist<=2 de uma casa do padrão
+//  • Passa a casa: para aviões, volta só trevos
+// ══════════════════════════════════════════════════
+let cloverInterval=null,isLiveConnected=false,planeInterval=null;
+let fxMode='clovers'; // 'clovers' | 'planes'
+
+function spawnClover(){
+  const fx=document.getElementById('fx');
+  const el=document.createElement('div');el.className='clover';
+  const sz=10+Math.random()*14,dur=8+Math.random()*5,dl=Math.random()*2;
+  el.style.cssText=`--csz:${sz}px;--cx:${Math.random()*96}%;--cd:${dur}s;--cdl:${dl}s`;
+  el.textContent='\u{1F340}';fx.appendChild(el);
+  setTimeout(()=>el.remove(),(dur+dl+1)*1000);
+}
+function startClovers(){
+  if(cloverInterval)return;
+  cloverInterval=setInterval(spawnClover,500);
+}
+function stopClovers(){
+  clearInterval(cloverInterval);cloverInterval=null;
+  document.querySelectorAll('.clover').forEach(e=>e.remove());
+}
+
+function spawnPlanes(count,intense){
+  const fx=document.getElementById('fx');
+  for(let i=0;i<count;i++){
+    const el=document.createElement('div');el.className='plane';
+    const sz=intense?(36+Math.random()*28):(20+Math.random()*18);
+    const dur=3+Math.random()*2.5,dl=i*0.1+Math.random()*0.25;
+    el.style.cssText=`--psz:${sz}px;--px:${Math.random()*93}%;--pd:${dur}s;--pdl:${dl}s`;
+    el.textContent='\u2708\uFE0F';fx.appendChild(el);
+    setTimeout(()=>el.remove(),(dur+dl+0.5)*1000);
+  }
+}
+function startPlaneLoop(intense){
+  if(planeInterval){clearInterval(planeInterval);planeInterval=null;}
+  const ms=intense?1400:2800;
+  const cnt=intense?5:2;
+  planeInterval=setInterval(()=>spawnPlanes(cnt,intense),ms);
+}
+function stopPlanes(){
+  if(planeInterval){clearInterval(planeInterval);planeInterval=null;}
+  document.querySelectorAll('.plane').forEach(e=>e.remove());
+}
+
+// Chamado pelo calcProb a cada vela
+// dist = quantas rosas faltam para próxima casa (999 se não tem próxima)
+function updateFxByCycle(dist){
+  if(!isLiveConnected)return;
+  if(dist<=0){
+    // CHEGOU NA CASA — explosão de aviões grandes
+    fxMode='planes';
+    stopClovers();
+    spawnPlanes(20,true); // rajada imediata
+    startPlaneLoop(true);
+  } else if(dist===1){
+    // Falta 1 rosa — aviões médios
+    fxMode='planes';
+    stopClovers();
+    startPlaneLoop(false);
+  } else {
+    // Longe da casa — só trevos
+    if(fxMode!=='clovers'){
+      fxMode='clovers';
+      stopPlanes();
+      startClovers();
+    }
+  }
+}
 
 // TEMA
 let curThemeKey='gold';const root=document.documentElement;
@@ -311,7 +383,12 @@ function applyTheme(colorObj){const key=colorObj&&(colorObj.name||colorObj.hex)|
 const STATE={candles:[],max:300,apiMode:'sim'};
 function renderHero(){const[c0,c1,c2]=STATE.candles;if(c0)setHero('0',c0,true);if(c1)setHero('1',c1,false);if(c2)setHero('2',c2,false);}
 function setHero(i,c,isMain){const hex=getHex(c),glo=hex+'88';document.getElementById(`h${i}v`).textContent=c.display;document.getElementById(`h${i}v`).style.color=hex;document.getElementById(`h${i}v`).style.textShadow=`0 0 30px ${glo}`;document.getElementById(`h${i}t`).textContent=c.time;document.getElementById(`h${i}s`).textContent=`Soma: ${c.sum.total}`;document.getElementById(`h${i}s`).style.color=hex;document.getElementById(`h${i}f`).textContent=`${c.sum.formula} = ${c.sum.total}`;if(isMain){applyTheme(c.colorObj||PAL[c.color]||PAL.gold);const card=document.getElementById('hc0');card.classList.remove('do-pulse');void card.offsetWidth;card.classList.add('do-pulse');}}
-function makeCard(c,isNew){const hex=getHex(c);const el=document.createElement('div');el.className='cc'+(isNew?' nw':'');el.style.setProperty('--cclr',hex);el.dataset.isPink=isPink(c)?'1':'0';el.innerHTML=`<span class="ccv" style="color:${hex};text-shadow:0 0 16px ${hex}55">${c.display}</span><span class="cct">${c.time}</span><span class="ccs" style="color:${hex}">&Sigma; ${c.sum.total}</span><span class="ccf">${c.sum.formula}=${c.sum.total}</span>`;if(isNew)setTimeout(()=>el.classList.remove('nw'),3000);return el;}
+function makeCard(c,isNew){const hex=getHex(c);const el=document.createElement('div');el.className='cc'+(isNew?' nw':'');el.style.setProperty('--cclr',hex);el.dataset.isPink=isPink(c)?'1':'0';
+  // Número da rodada — só o número se disponível, senão vazio
+  const rndTxt=c.round?`#${c.round}`:'';
+  // Valor: se for a maior rosa do ciclo, mostrar 3 casas decimais
+  const dispVal=c._bigPink?c.value.toFixed(3).replace('.',',')+' x':c.display;
+  el.innerHTML=`<span class="ccr">${rndTxt}</span><span class="ccv" style="color:${hex};text-shadow:0 0 16px ${hex}55">${dispVal}</span><span class="cct">${c.time}</span><span class="ccs" style="color:${hex}">&Sigma; ${c.sum.total}</span><span class="ccf">${c.sum.formula}=${c.sum.total}</span>`;if(isNew)setTimeout(()=>el.classList.remove('nw'),3000);return el;}
 function pushGrid(c){const g=document.getElementById('grid');g.insertBefore(makeCard(c,true),g.firstChild);if(g.children.length>100)g.removeChild(g.lastChild);}
 
 // TOGGLE ROSAS
@@ -320,18 +397,47 @@ function togglePinkSelection(){pinkSelActive=!pinkSelActive;document.getElementB
 
 // ══════════════════════════════════════════════════
 //  PADRÃO DE CASAS — ÂNCORA FIXA 3H
-//  Janela: sempre as últimas 3 horas
-//  Âncora: primeira rosa da janela — NÃO muda até expirar
+//  Janela fixa: criada uma vez, dura 3h completas
+//  Âncora: primeira rosa da janela — NÃO muda
 //  Casas: 3,4,5,6,7,8,11 (relativas à âncora=pos1)
 // ══════════════════════════════════════════════════
 const PATTERN_POS=[3,4,5,6,7,8,11];
 let lastPatternToast=0;
+let cycleStartTime=null;
 let fixedAnchor=null;
+let lastCycleReset=0;
+
+let lastWindowHour = -1; // controla quando a janela mudou
 
 function getWindowStart(){
   const now = new Date();
-  // CORREÇÃO: Sempre retorna exatamente 3 horas atrás do momento atual
-  return new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const windowHour = now.getHours(); // hora atual (a janela vai de H-3:00 até agora)
+  
+  // Se virou a hora — novo ciclo
+  if(windowHour !== lastWindowHour && lastWindowHour !== -1){
+    fixedAnchor = null; // reseta âncora
+    lastWindowHour = windowHour;
+    // Limpa marcações antigas do grid
+    document.querySelectorAll('#grid .cc.pattern-hit,.cc.pattern-next')
+      .forEach(e=>e.classList.remove('pattern-hit','pattern-next'));
+    // Para aviões, volta trevos
+    stopPlanes();
+    if(isLiveConnected) startClovers();
+    console.log('\uD83D\uDD01 Nova hora — ciclo renovado');
+  }
+  if(lastWindowHour===-1) lastWindowHour=windowHour;
+  
+  // Janela = hora atual - 3h, começando em :00
+  const wStart = new Date(now);
+  wStart.setHours(now.getHours() - 3);
+  wStart.setMinutes(0, 0, 0);
+  return wStart;
+}
+
+function isInPinkWindow(date){
+  // Janela rosa: minutos 50-59 de qualquer hora
+  const m=date.getMinutes();
+  return m>=50&&m<=59;
 }
 
 function calcProb(){
@@ -340,140 +446,230 @@ function calcProb(){
   const eT=document.getElementById('probTip');
   const cycleBar=document.getElementById('cycleBar');
   const winStart=getWindowStart();
-  
-  // Filtra velas dentro da janela de 3 horas
+  const now=new Date();
+  const curMin=now.getMinutes();
+  const curSec=now.getSeconds();
+
   const inWindow=STATE.candles
     .filter(c=>c.date instanceof Date&&!isNaN(c.date.getTime())&&c.date>=winStart)
     .sort((a,b)=>a.date.getTime()-b.date.getTime());
-  
+
   if(!inWindow.length){
     eP.textContent='\u2014';setProbStyle(0);
     eT.innerHTML='Aguardando velas na janela de 3h...';
     cycleBar.classList.remove('show');return;
   }
-  
-  // CORREÇÃO: Verifica se a âncora ainda está na janela
-  if (fixedAnchor && fixedAnchor.date < winStart) {
-    fixedAnchor = null;
-    console.log('🔄 Âncora expirou, buscando nova...');
-  }
-  
-  // CORREÇÃO: Sempre busca a primeira rosa da janela atual
+
+  // ── FIXA ÂNCORA: primeira rosa que saiu entre min :50 e :59 ──
   if(!fixedAnchor){
-    const firstPink=inWindow.find(c=>isPink(c));
+    const firstPinkWindow=inWindow.find(c=>isPink(c)&&isInPinkWindow(c.date));
+    // Se não encontrou na janela específica, pega qualquer rosa
+    const firstPink=firstPinkWindow||inWindow.find(c=>isPink(c));
     if(firstPink){
       fixedAnchor=firstPink;
-      console.log('🎯 Âncora fixada:',firstPink.display,firstPink.time);
+      // Limpa marcações antigas ao fixar nova âncora
+      document.querySelectorAll('#grid .cc.pattern-hit,.cc.pattern-next')
+        .forEach(e=>e.classList.remove('pattern-hit','pattern-next'));
+      console.log('\uD83C\uDFAF \xC2ncora fixada:',firstPink.display,firstPink.time,'min:',firstPink.date.getMinutes());
     }
   }
-  
+
   if(!fixedAnchor){
     eP.textContent='0%';setProbStyle(0);
-    eN.textContent='Aguardando primeira rosa';
-    eT.innerHTML='<b>Sem rosa na janela</b><br>Aguardando primeira vela rosa para fixar âncora.';
+    eN.textContent='Aguardando rosa :50-:59';
+    eT.innerHTML='<b>Aguardando</b><br>Procurando primeira rosa entre minuto :50 e :59.';
     cycleBar.classList.remove('show');updateFxByProb(0);return;
   }
-  
+
   const anchorIndex=inWindow.findIndex(c=>c===fixedAnchor);
-  if(anchorIndex<0){
-    fixedAnchor=null;
-    return;
-  }
-  
+  if(anchorIndex<0){fixedAnchor=null;return;}
+
+  // Todas as velas desde a âncora (inclusive)
   const afterAnchor=inWindow.slice(anchorIndex);
   const anchor=fixedAnchor;
-  const curPos=afterAnchor.length;
+
+  // ── CONTAGEM SÓ EM VELAS ROSAS ──
+  // Filtra só as rosas desde a âncora (âncora é pos 1)
+  const pinksFromAnchor=afterAnchor.filter(c=>isPink(c));
+  // Posição atual = quantas rosas existem desde a âncora (inclusive ela)
+  const curPos=pinksFromAnchor.length;
+
+  // ── AVALIA CASAS (posição = índice entre rosas) ──
   const hits={};
-  
   PATTERN_POS.forEach(pos=>{
-    const idx=pos-1;
-    if(idx<afterAnchor.length)hits[pos]=isPink(afterAnchor[idx]);
-    else hits[pos]=null;
+    const idx=pos-1; // 0-indexed na lista de rosas
+    if(idx<pinksFromAnchor.length){
+      hits[pos]=true; // é rosa por definição (veio de pinksFromAnchor)
+    } else {
+      // Verificar se já passamos da posição esperada entre as velas totais
+      // Precisamos saber se já se passaram velas suficientes para a pos não ser mais possível no ciclo
+      hits[pos]=null; // ainda aguardando
+    }
   });
-  
+
   const nextPos=PATTERN_POS.find(p=>hits[p]===null);
   const occurred=PATTERN_POS.filter(p=>hits[p]!==null);
   const hitCount=occurred.filter(p=>hits[p]===true).length;
   const baseRate=occurred.length>0?hitCount/occurred.length:0.5;
+
+  // ── PROBABILIDADE: sobe conforme se aproxima da casa E do minuto :50 ──
   let prob=Math.round(baseRate*100);
-  
+
+  // Fator de proximidade do minuto :50
+  let minFactor=0;
+  if(curMin>=45&&curMin<50)minFactor=10; // se aproximando
+  if(curMin>=50&&curMin<=59)minFactor=25; // DENTRO da janela rosa!
+
   if(nextPos!==undefined){
+    // dist = quantas rosas ainda faltam para a próxima casa
     const dist=nextPos-curPos;
-    if(dist<=0)prob=Math.min(98,prob+45);
-    else if(dist===1)prob=Math.min(90,prob+30);
-    else if(dist===2)prob=Math.min(78,prob+18);
-    else if(dist===3)prob=Math.min(65,prob+8);
-    if(baseRate>=0.5&&dist<=1)prob=Math.min(98,prob+10);
+    if(dist<=0){
+      // Chegou na casa (nova rosa entrou nesta posição)!
+      prob=Math.min(99,prob+45+minFactor);
+    } else if(dist===1){
+      // Falta 1 rosa
+      prob=Math.min(92,prob+30+minFactor);
+    } else if(dist===2){
+      prob=Math.min(80,prob+18+minFactor);
+    } else if(dist===3){
+      prob=Math.min(68,prob+8+minFactor);
+    } else {
+      prob=Math.min(60,prob+minFactor);
+    }
+    if(baseRate>=0.5&&dist<=1)prob=Math.min(99,prob+10);
   } else {
-    prob=Math.min(80,prob);
+    prob=Math.min(85,prob+minFactor);
   }
-  
-  eP.textContent=prob+'%';setProbStyle(prob);updateFxByProb(prob);
-  
+
+  eP.textContent=prob+'%';
+  setProbStyle(prob);
+
+  // ── AVISO PISCANDO: mostra próxima casa esperada ──
+  const probBoxEl=document.getElementById('probBox');
+  const sLnextEl=document.getElementById('sLnext');
+
   if(!pinkSelActive){
-    if(nextPos!==undefined)eN.textContent=`Prox: casa ${nextPos} (pos atual: ${curPos})`;
-    else eN.textContent=`Ciclo completo \u2713 (${hitCount}/${occurred.length})`;
+    if(nextPos!==undefined){
+      const dist=nextPos-curPos;
+      if(dist<=0){
+        // ESTAMOS NA CASA! Piscar forte
+        sLnextEl.innerHTML=`<span class="next-casa-alert">\uD83C\uDF38 CASA ${nextPos} \u2014 PAGAR AGORA!</span>`;
+        probBoxEl.classList.add('casa-alert');
+      } else if(dist<=2){
+        // Próxima casa chegando
+        sLnextEl.innerHTML=`<span class="next-casa-warn">\u26A1 Prox: CASA ${nextPos} (${dist} vel.)</span>`;
+        probBoxEl.classList.remove('casa-alert');
+      } else {
+        sLnextEl.textContent=`Prox: casa ${nextPos} | rosa ${curPos} de ${nextPos}`;
+        probBoxEl.classList.remove('casa-alert');
+      }
+      // Janela :50-:59 ativa
+      if(curMin>=50&&curMin<=59){
+        sLnextEl.innerHTML+=' <span style="color:#ffd700;font-size:.55rem">\u231A :'+pad(curMin)+'</span>';
+      }
+    } else {
+      sLnextEl.textContent=`Ciclo completo \u2713 (${hitCount}/${occurred.length})`;
+      probBoxEl.classList.remove('casa-alert');
+    }
   }
-  
+
+  // ── HIGHLIGHT GRID ──
   document.querySelectorAll('#grid .cc.pattern-hit,.cc.pattern-next').forEach(e=>e.classList.remove('pattern-hit','pattern-next'));
   const cards=document.querySelectorAll('#grid .cc');
-  
+  const totalVelas=afterAnchor.length; // total de velas desde âncora (para índice no grid)
   PATTERN_POS.forEach(pos=>{
     if(hits[pos]===true){
-      const gIdx=curPos-pos;
-      if(gIdx>=0&&cards[gIdx])cards[gIdx].classList.add('pattern-hit');
+      // Rosa na posição pos entre as rosas
+      const rosaCard=pinksFromAnchor[pos-1];
+      if(rosaCard){
+        const afterIdx=afterAnchor.indexOf(rosaCard); // índice dela no afterAnchor
+        const gIdx=totalVelas-1-afterIdx; // no grid (0=mais recente)
+        if(gIdx>=0&&cards[gIdx])cards[gIdx].classList.add('pattern-hit');
+      }
     }
   });
-  
+  // Próxima casa: marca a posição esperada (só visual, a vela ainda não existe)
   if(nextPos!==undefined&&nextPos===curPos){
-    const gIdx=curPos-nextPos;
-    if(gIdx>=0&&cards[gIdx])cards[gIdx].classList.add('pattern-next');
+    // Estamos exatamente na casa — a última card rosa é a que chegou
+    if(cards[0])cards[0].classList.add('pattern-next');
   }
-  
-  renderCycleBar(hits,hitCount,occurred.length,anchor,curPos,nextPos,winStart);
-  
-  if(nextPos!==undefined&&nextPos===curPos){
-    const now=Date.now();
-    if(now-lastPatternToast>12000){
-      lastPatternToast=now;
-      spawnPlanes(25,true);
-      showToastPattern(nextPos,anchor.display,prob);
+
+  const distNow=nextPos!==undefined?(nextPos-curPos):999;
+  updateFxByCycle(distNow);
+  renderCycleBar(hits,hitCount,occurred.length,anchor,curPos,nextPos,winStart,distNow);
+
+  // ── TOAST AO CHEGAR NA CASA ──
+  // Toast quando rosa acabou de entrar em uma casa do padrão
+  if(nextPos===undefined||curPos>1){
+    // Verifica se a última rosa que entrou (pinksFromAnchor[curPos-1]) é de uma casa do padrão
+    const lastRosaPos=curPos;
+    if(PATTERN_POS.includes(lastRosaPos)&&pinksFromAnchor.length>0){
+      const nowMs=Date.now();
+      if(nowMs-lastPatternToast>8000){
+        lastPatternToast=nowMs;spawnPlanes(25,true);
+        showToastPattern(lastRosaPos,anchor.display,prob);
+      }
     }
   }
-  
-  const wLabel=`${pad(winStart.getHours())}:${pad(winStart.getMinutes())} \u2013 agora`;
-  let html=`<b>Padrão de Casas — janela móvel 3h</b>`;
-  html+=`Âncora: <span>${anchor.display}</span> às ${anchor.time}<br>`;
-  html+=`Posição atual: <span>${curPos}</span> &nbsp;|&nbsp; Janela: ${wLabel}<br><br>`;
-  
+  // Aviso antecipado: próxima casa chegando
+  if(nextPos!==undefined&&nextPos===curPos){
+    const nowMs=Date.now();
+    if(nowMs-lastPatternToast>12000){lastPatternToast=nowMs;spawnPlanes(25,true);showToastPattern(nextPos,anchor.display,prob);}
+  }
+
+  // ── TOOLTIP ──
+  const wLabel=`${pad(winStart.getHours())}:00 \u2013 agora`;
+  let html=`<b>\uD83C\uDF38 Padr\xE3o de Casas \u2014 janela 3h</b>`;
+  html+=`\xC2ncora: <span>${anchor.display}</span> \xE0s ${anchor.time} (min :${pad(anchor.date.getMinutes())})<br>`;
+  html+=`Posi\xE7\xE3o atual: <span>Rosa ${curPos}</span> de ${afterAnchor.length} velas | Janela: ${wLabel}<br>`;
+  html+=`Minuto atual: <span>${pad(curMin)}:${pad(curSec)}</span>`;
+  if(curMin>=50&&curMin<=59)html+=` \u26A1 <span style="color:#ffd700">JANELA ROSA ATIVA!</span>`;
+  html+='<br><br>';
   PATTERN_POS.forEach(pos=>{
     const v=hits[pos];
-    const icon=v===null?'⏳':(v?'✅':'❌');
-    const lbl=v===null?'aguardando':(v?'ROSA ✓':'não rosa');
+    const icon=v===null?'\u23F3':(v?'\u2705':'\u274C');
+    const lbl=v===null?`aguardando (casa ${pos})`:(v?'ROSA \u2713':'n\xE3o rosa');
     const val=v!==null&&afterAnchor[pos-1]?` (${afterAnchor[pos-1].display})`:'';
     const cl=v===true?'class="hit"':'';
-    html+=`${icon} Casa <span>${pos}</span>: <span ${cl}>${lbl}</span>${val}<br>`;
+    const isnext=(pos===nextPos)?` <b style="color:#ffd700">\u2190 PR\xD3XIMA</b>`:'';
+    html+=`${icon} Casa <span>${pos}</span>: <span ${cl}>${lbl}</span>${val}${isnext}<br>`;
   });
-  
-  html+=`<br>Acertos: <span>${hitCount}/${occurred.length}</span> → prob <span>${prob}%</span>`;
+  html+=`<br>Acertos: <span>${hitCount}/${occurred.length}</span> \u2192 prob <span>${prob}%</span>`;
   eT.innerHTML=html;
 }
 
-function renderCycleBar(hits,hitCount,total,anchor,curPos,nextPos,winStart){
+function renderCycleBar(hits,hitCount,total,anchor,curPos,nextPos,winStart,distToNext){
   const bar=document.getElementById('cycleBar');bar.classList.add('show');
-  document.getElementById('cycleLbl').textContent=`Ciclo ${pad(winStart.getHours())}:${pad(winStart.getMinutes())}`;
-  document.getElementById('cycleMeta').textContent=`Âncora: ${anchor.display} ${anchor.time} | pos.${curPos}`;
+  document.getElementById('cycleLbl').textContent=`Ciclo ${pad(winStart.getHours())}:00`;
+  const nowM=new Date().getMinutes();
+  const janelaAtiva=nowM>=50&&nowM<=59;
+  const metaExtra=janelaAtiva?' \u26A1 Janela Rosa!':'';
+  document.getElementById('cycleMeta').textContent=`\xC2ncora: ${anchor.display} ${anchor.time} | Rosa ${curPos}${metaExtra}`;
   const hitsEl=document.getElementById('cycleHits');hitsEl.innerHTML='';
   PATTERN_POS.forEach(pos=>{
     const v=hits[pos];const el=document.createElement('span');el.className='cycle-pos';
-    if(v===null){if(pos===nextPos&&nextPos===curPos){el.classList.add('active');el.textContent=`C${pos}⚡`;}else{el.classList.add('wait');el.textContent=`C${pos}`;}}
-    else{el.classList.add(v?'hit':'miss');el.textContent=v?`C${pos}✓`:`C${pos}✗`;}
+    if(v===null){
+      if(pos===nextPos){
+        if(nextPos===curPos){
+          el.classList.add('active');el.textContent=`C${pos}\u26A1 PAGAR!`;
+        } else if(distToNext<=2){
+          el.classList.add('active');el.textContent=`C${pos}\u23F3 prox`;
+        } else {
+          el.classList.add('wait');el.textContent=`C${pos}`;
+        }
+      } else {
+        el.classList.add('wait');el.textContent=`C${pos}`;
+      }
+    } else {
+      el.classList.add(v?'hit':'miss');
+      el.textContent=v?`C${pos}\u2713`:`C${pos}\u2717`;
+    }
     hitsEl.appendChild(el);
   });
 }
 
 function setProbStyle(prob){const el=document.getElementById('sL');el.classList.remove('prob-low','prob-mid','prob-high');if(prob>=70)el.classList.add('prob-high');else if(prob>=40)el.classList.add('prob-mid');else el.classList.add('prob-low');}
-function showToastPattern(pos,anchorVal,prob){const t=document.getElementById('toast');document.getElementById('ttit').textContent='🌸 CASA '+pos+' — ROSA ESPERADA!';document.getElementById('ttit').style.color='#00e676';document.getElementById('tmsg').textContent=`Prob ${prob}% — Âncora: ${anchorVal} — Entrada agora!`;t.style.borderLeftColor='#00e676';t.classList.remove('on');void t.offsetWidth;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),10000);}
+function showToastPattern(pos,anchorVal,prob){const t=document.getElementById('toast');document.getElementById('ttit').textContent='\uD83C\uDF38 CASA '+pos+' \u2014 ROSA ESPERADA!';document.getElementById('ttit').style.color='#00e676';document.getElementById('tmsg').textContent=`Prob ${prob}% \u2014 \xC2ncora: ${anchorVal} \u2014 Entrada agora!`;t.style.borderLeftColor='#00e676';t.classList.remove('on');void t.offsetWidth;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),10000);}
 
 function updateStats(){
   const cs=STATE.candles;if(!cs.length)return;
@@ -497,29 +693,52 @@ function updateStats(){
 
 const toastEl=document.getElementById('toast');
 function showToast(c){const hex=getHex(c);document.getElementById('tmsg').textContent=`${c.display}  \u2022  Soma: ${c.sum.formula} = ${c.sum.total}`;document.getElementById('ttit').textContent='NOVA VELA';document.getElementById('ttit').style.color=hex;toastEl.style.borderLeftColor=hex;toastEl.classList.remove('on');void toastEl.offsetWidth;toastEl.classList.add('on');clearTimeout(toastEl._t);toastEl._t=setTimeout(()=>toastEl.classList.remove('on'),4000);}
-function showToastGatilho(digit,val){document.getElementById('ttit').textContent='\uD83C\uDFAF COTAÇÃO ESPECIAL';document.getElementById('ttit').style.color=PAL.pink.hex;document.getElementById('tmsg').textContent=`4 velas dígito "${digit}" — Última: ${val} — até 4ª casa`;toastEl.style.borderLeftColor=PAL.pink.hex;toastEl.classList.remove('on');void toastEl.offsetWidth;toastEl.classList.add('on');clearTimeout(toastEl._t);toastEl._t=setTimeout(()=>toastEl.classList.remove('on'),8000);}
+function showToastGatilho(digit,val){document.getElementById('ttit').textContent='\uD83C\uDFAF COTA\xC7\xC3O ESPECIAL';document.getElementById('ttit').style.color=PAL.pink.hex;document.getElementById('tmsg').textContent=`4 velas d\xEDgito "${digit}" \u2014 \xFAltima: ${val} \u2014 at\xE9 4\xAA casa`;toastEl.style.borderLeftColor=PAL.pink.hex;toastEl.classList.remove('on');void toastEl.offsetWidth;toastEl.classList.add('on');clearTimeout(toastEl._t);toastEl._t=setTimeout(()=>toastEl.classList.remove('on'),8000);}
 
 let gatilhoActive=false,gatilhoDismissed=false,lastGatilhoSeq=null;
 function checkGatilho(){const cs=STATE.candles;if(cs.length<4)return;const top4=cs.slice(0,4);const digits=top4.map(c=>lastDigit(c.display));if(digits.every(d=>d===digits[0]&&d!=='')){const seqKey=top4.map(c=>c.display).join('|');if(seqKey===lastGatilhoSeq&&gatilhoActive)return;lastGatilhoSeq=seqKey;gatilhoActive=true;gatilhoDismissed=false;renderGatilho(top4,digits[0]);}}
-function renderGatilho(seq,digit){if(gatilhoDismissed)return;const bar=document.getElementById('gatilhoBar');if(!bar)return;bar.classList.add('show');document.getElementById('gInfo').innerHTML=`<strong>4 velas com dígito final "${digit}"</strong> — Entrega esperada até a <strong>4ª casa</strong>`;const seqEl=document.getElementById('gSeq');seqEl.innerHTML='';[...seq].reverse().forEach((c,i)=>{if(i>0){const a=document.createElement('span');a.className='garrow';a.textContent='→';seqEl.appendChild(a);}const v=document.createElement('span');v.className='gseq-v';v.textContent=c.display;seqEl.appendChild(v);});showToastGatilho(digit,seq[0].display);markGatilhoCards(seq);}
+function renderGatilho(seq,digit){if(gatilhoDismissed)return;const bar=document.getElementById('gatilhoBar');if(!bar)return;bar.classList.add('show');document.getElementById('gInfo').innerHTML=`<strong>4 velas com d\xEDgito final "${digit}"</strong> \u2014 Entrega esperada at\xE9 a <strong>4\xAA casa</strong>`;const seqEl=document.getElementById('gSeq');seqEl.innerHTML='';[...seq].reverse().forEach((c,i)=>{if(i>0){const a=document.createElement('span');a.className='garrow';a.textContent='\u2192';seqEl.appendChild(a);}const v=document.createElement('span');v.className='gseq-v';v.textContent=c.display;seqEl.appendChild(v);});showToastGatilho(digit,seq[0].display);markGatilhoCards(seq);}
 function markGatilhoCards(seq){document.querySelectorAll('.cc.gatilho-card').forEach(e=>e.classList.remove('gatilho-card'));const cards=document.querySelectorAll('#grid .cc');seq.forEach((_,i)=>{if(cards[i])cards[i].classList.add('gatilho-card');});}
 function dismissGatilho(){gatilhoDismissed=true;gatilhoActive=false;document.getElementById('gatilhoBar').classList.remove('show');document.querySelectorAll('.cc.gatilho-card').forEach(e=>e.classList.remove('gatilho-card'));}
 
-function addCandle(raw,ts,color_rgb){
+function markBigPink(){
+  // Marca a maior vela rosa do ciclo atual com _bigPink=true
+  const winStart=getWindowStart();
+  const pinks=STATE.candles.filter(c=>c.date>=winStart&&isPink(c));
+  const maxVal=pinks.length?Math.max(...pinks.map(c=>c.value)):0;
+  STATE.candles.forEach(c=>{c._bigPink=isPink(c)&&c.value===maxVal&&maxVal>0;});
+}
+function addCandle(raw,ts,color_rgb,round){
   const date=ts?new Date(typeof ts==='number'?ts:ts):new Date();
   const display=fmtV(raw);
   const colorObj=resolveColor(raw,color_rgb||null);
   const color=colorObj.name||'gold';
   const sum=calcSum(display),time=fmtT(date);
-  const c={value:raw,display,color,colorObj,sum,time,date};
+  const c={value:raw,display,color,colorObj,sum,time,date,round:round||null,_bigPink:false};
   STATE.candles.unshift(c);
   if(STATE.candles.length>STATE.max)STATE.candles.pop();
+  markBigPink();
   renderHero();pushGrid(c);updateStats();showToast(c);
   checkGatilho();
   if(isPink(c))spawnPlanes(12,false);
   if(pinkSelActive&&isPink(c)){const cards=document.querySelectorAll('#grid .cc');if(cards[0])cards[0].classList.add('pink-sel');}
 }
-function setApi(mode,src){STATE.apiMode=mode;document.getElementById('apiDot').className='apin '+(mode==='live'?'live':'sim');document.getElementById('apiTxt').textContent=mode==='live'?`✓ Conectado — ${src} — velas em tempo real`:`⏳ ${src}`;if(mode==='live'&&!isLiveConnected){isLiveConnected=true;startClovers();}if(mode!=='live'){isLiveConnected=false;stopClovers();}}
+function setApi(mode,src){
+  STATE.apiMode=mode;
+  document.getElementById('apiDot').className='apin '+(mode==='live'?'live':'sim');
+  document.getElementById('apiTxt').textContent=mode==='live'?`\u2713 Conectado \u2014 ${src} \u2014 velas em tempo real`:`\u23F3 ${src}`;
+  if(mode==='live'&&!isLiveConnected){
+    isLiveConnected=true;
+    fxMode='clovers';
+    startClovers();
+  }
+  if(mode!=='live'){
+    isLiveConnected=false;
+    stopClovers();
+    stopPlanes();
+    fxMode='clovers';
+  }
+}
 
 function setLoginStatus(type,msg){document.getElementById('loginStatus').className='login-status '+type;document.getElementById('loginMsg').textContent=msg;}
 async function doLogin(){
@@ -532,7 +751,7 @@ async function doLogin(){
     const res=await fetch('https://aviator-real-time-dashboard.onrender.com/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
     const data=await res.json();
     if(!data.ok){setLoginStatus('err',data.msg||'Login falhou.');btn.disabled=false;return;}
-    setLoginStatus('ok','✓ '+(data.msg||'Conectado!'));
+    setLoginStatus('ok','\u2713 '+(data.msg||'Conectado!'));
     document.getElementById('userEmail').textContent=email.split('@')[0];
     document.getElementById('userBadge').classList.add('show');
     setTimeout(()=>document.getElementById('loginScreen').classList.add('hidden'),1800);
@@ -562,7 +781,7 @@ sock.on('history',(items)=>{
       const colorObj=resolveColor(val,item.color_rgb||null);
       const color=colorObj.name||'gold';
       const sum=calcSum(display);
-      const c={value:val,display,color,colorObj,sum,time:fmtT(date),date};
+      const c={value:val,display,color,colorObj,sum,time:fmtT(date),date,round:item.round||item.game_id||null,_bigPink:false};
       STATE.candles.push(c);pushGrid(c);
     }
   });
@@ -571,7 +790,7 @@ sock.on('history',(items)=>{
   if(STATE.candles[0])applyTheme(STATE.candles[0].colorObj||PAL.gold);
   checkGatilho();
 });
-sock.on('candle',(item)=>{const val=parseFloat(item.multiplier);if(!isNaN(val)&&val>=1)addCandle(val,item.timestamp||item.time,item.color_rgb||null);});
+sock.on('candle',(item)=>{const val=parseFloat(item.multiplier);if(!isNaN(val)&&val>=1)addCandle(val,item.timestamp||item.time,item.color_rgb||null,item.round||item.game_id||null);});
 sock.on('status',(s)=>{if(s.connected)setApi('live',s.source||'Aviator Online');});
 sock.on('disconnect',()=>{setApi('sim','Reconectando...');startSim();});
 sock.on('connect_error',()=>{startSim();});
@@ -584,7 +803,7 @@ function initSimHistory(){
     const val=simResult(),disp=fmtV(val);
     const colorObj=resolveColor(val,null),col=colorObj.name||'gold',sum=calcSum(disp);
     const date=new Date(now-i*INTERVAL);
-    const c={value:val,display:disp,color:col,colorObj,sum,time:fmtT(date),date};
+    const c={value:val,display:disp,color:col,colorObj,sum,time:fmtT(date),date,round:Math.floor(3000000+Math.random()*500000),_bigPink:false};
     STATE.candles.push(c);
     if(i<=100)pushGrid(c);
   }
@@ -592,7 +811,7 @@ function initSimHistory(){
   if(STATE.candles[0])applyTheme(STATE.candles[0].colorObj||PAL.gold);
 }
 initSimHistory();
-setApi('sim','Faça login para conectar ao Aviator em tempo real');
+setApi('sim','Fa\xE7a login para conectar ao Aviator em tempo real');
 </script>
 </body>
 </html>
