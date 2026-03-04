@@ -1135,10 +1135,18 @@ function simResult(){const r=Math.random();if(r<.28)return 1.00+Math.random()*.4
 function startSim(){if(simTimer)return;simTimer=setInterval(()=>addCandle(simResult(),Date.now(),null),28000);}
 
 const RENDER_URL='https://aviator-real-time-dashboard.onrender.com';
-const sock=io(RENDER_URL,{transports:['websocket','polling'],reconnection:true,reconnectionDelay:5000});
-sock.on('connect',()=>{clearInterval(simTimer);simTimer=null;setApi('live','Servidor Render Online');});
-sock.on('history',(items)=>{
-  if(historyLoaded||!items?.length)return;
+
+// Mobile: polling primeiro (mais confiável em redes móveis), depois upgrade para websocket
+const sock=io(RENDER_URL,{
+  transports:['polling','websocket'],
+  reconnection:true,
+  reconnectionDelay:2000,
+  reconnectionDelayMax:8000,
+  timeout:20000
+});
+
+function loadHistory(items){
+  if(!items||!items.length)return;
   historyLoaded=true;
   document.getElementById('grid').innerHTML='';
   STATE.candles=[];
@@ -1159,11 +1167,38 @@ sock.on('history',(items)=>{
   renderHero();updateStats();
   if(STATE.candles[0])applyTheme(STATE.candles[0].colorObj||PAL.gold);
   checkGatilho();
+}
+
+sock.on('connect',()=>{
+  clearInterval(simTimer);simTimer=null;
+  setApi('live','Servidor Online');
+  historyLoaded=false; // sempre recarrega ao conectar
+  sock.emit('requestHistory');
 });
-sock.on('candle',(item)=>{const val=parseFloat(item.multiplier);if(!isNaN(val)&&val>=1)addCandle(val,item.timestamp||item.time,item.color_rgb||null,item.round||item.game_id||null);});
+sock.on('history',(items)=>{
+  if(historyLoaded)return;
+  loadHistory(items);
+});
+sock.on('candle',(item)=>{
+  const val=parseFloat(item.multiplier);
+  if(!isNaN(val)&&val>=1)addCandle(val,item.timestamp||item.time,item.color_rgb||null,item.round||item.game_id||null);
+});
 sock.on('status',(s)=>{if(s.connected)setApi('live',s.source||'Aviator Online');});
-sock.on('disconnect',()=>{setApi('sim','Reconectando...');startSim();});
+sock.on('disconnect',()=>{setApi('sim','Reconectando...');historyLoaded=false;startSim();});
 sock.on('connect_error',()=>{startSim();});
+
+// FIX MOBILE: volta do background → força reconexão/reload histórico
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){
+    if(!sock.connected){
+      console.log('[Mobile] Reconectando...');
+      sock.connect();
+    } else {
+      historyLoaded=false;
+      sock.emit('requestHistory');
+    }
+  }
+});
 
 // SIM INICIAL: 220 velas cobrindo ~4h (i=1 mais recente, i=220 mais antiga)
 function initSimHistory(){
