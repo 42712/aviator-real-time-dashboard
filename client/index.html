@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -85,7 +86,7 @@ header{position:sticky;top:0;z-index:100;height:60px;padding:0 24px;display:flex
 .htim{font-size:.7rem;color:var(--text-dim);letter-spacing:2px;margin-bottom:7px}
 .hsum{font-size:1.5rem;font-weight:900;font-family:var(--font-disp);letter-spacing:2px;opacity:1;transition:color .5s}
 .hform{display:none}
-.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
 .sbox{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:13px 10px;text-align:center;box-shadow:0 1px 8px rgba(0,0,0,.2)}
 .slbl{font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;display:block}
 .sval{font-family:var(--font-disp);font-size:1.05rem;font-weight:700;color:var(--text);display:block}
@@ -121,7 +122,7 @@ header{position:sticky;top:0;z-index:100;height:60px;padding:0 24px;display:flex
 @keyframes nextPulse{0%,100%{box-shadow:0 0 10px rgba(255,215,0,.2)}50%{box-shadow:0 0 28px rgba(255,215,0,.5)}}
 .cc.pattern-next::before{content:"\23F3";position:absolute;top:3px;right:4px;font-size:.6rem}
 @keyframes popIn{from{opacity:0;transform:scale(.85) translateY(-10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-.ccr{font-size:.5rem;color:var(--text-dim);display:block;letter-spacing:1px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.ccr{font-size:.48rem;color:var(--text-dim);display:block;letter-spacing:.8px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;opacity:.8;font-family:var(--font-mono)}
 .ccv{font-family:var(--font-disp);font-size:1.1rem;font-weight:700;display:block;margin-bottom:6px;line-height:1;transition:color .3s,text-shadow .3s}
 .cct{font-size:.55rem;color:var(--text-dim);display:block;margin-bottom:4px;letter-spacing:1px}
 .ccs{font-size:1.15rem;font-weight:900;font-family:var(--font-disp);display:block;opacity:1;letter-spacing:1px}
@@ -145,7 +146,7 @@ footer{position:relative;z-index:5;border-top:1.5px solid var(--border);backgrou
 .footer-brand{font-family:var(--font-disp);font-size:.65rem;font-weight:700;letter-spacing:3px;color:var(--live);text-transform:uppercase}
 .footer-sep,.footer-rights,.footer-year{font-size:.58rem;color:var(--text-dim);opacity:.6}
 @media(max-width:900px){.hero-row{grid-template-columns:1fr 1fr}}
-@media(max-width:600px){.hero-row{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.hero-row{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:400px){.stats-row{grid-template-columns:repeat(2,1fr)}#clk{font-size:.8rem}}
 
 .next-casa-alert{color:#00e676;font-family:var(--font-disp);font-size:.58rem;font-weight:900;letter-spacing:1px;animation:alertBlink .5s ease infinite}
@@ -154,6 +155,34 @@ footer{position:relative;z-index:5;border-top:1.5px solid var(--border);backgrou
 @keyframes warnPulse{0%,100%{opacity:1}50%{opacity:.55}}
 .sbox.casa-alert{border-color:#00e676!important;box-shadow:0 0 20px rgba(0,230,118,.5)!important;animation:casaGlow 1s ease infinite}
 @keyframes casaGlow{0%,100%{box-shadow:0 0 14px rgba(0,230,118,.3)}50%{box-shadow:0 0 32px rgba(0,230,118,.7)}}
+
+
+/* ══ PAINEL ANÁLISE ESTRATÉGICA ══ */
+#analysisPanel{margin-bottom:14px;position:relative;z-index:5}
+.an-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px}
+@media(max-width:700px){.an-row{grid-template-columns:repeat(2,1fr)}}
+.an-box{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;transition:border-color .4s,box-shadow .4s,background .4s}
+.an-lbl{font-size:.5rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:4px}
+.an-val{font-family:var(--font-disp);font-size:.85rem;font-weight:800;display:block;color:var(--text);line-height:1.2}
+.an-sub{font-size:.48rem;color:var(--text-dim);display:block;margin-top:3px;letter-spacing:.3px}
+.an-box.ciclo-recolhimento{border-color:#00aaff;box-shadow:0 0 12px rgba(0,170,255,.18)}.an-box.ciclo-recolhimento .an-val{color:#00aaff}
+.an-box.ciclo-pagamento{border-color:#b06ef3;box-shadow:0 0 12px rgba(176,110,243,.2)}.an-box.ciclo-pagamento .an-val{color:#b06ef3}
+.an-box.ciclo-rosa{border-color:var(--pink);box-shadow:0 0 14px rgba(255,95,173,.28)}.an-box.ciclo-rosa .an-val{color:var(--pink)}
+.an-box.ciclo-alerta{border-color:#ffb300;box-shadow:0 0 10px rgba(255,179,0,.18)}.an-box.ciclo-alerta .an-val{color:#ffb300}
+.an-box.min-confirmado{border-color:#00e676;box-shadow:0 0 16px rgba(0,230,118,.3);background:rgba(0,230,118,.05)}.an-box.min-confirmado .an-val{color:#00e676;animation:alertBlink .5s infinite}
+.an-box.padrao-hit{border-color:#00e676;background:rgba(0,230,118,.05)}.an-box.padrao-hit .an-val{color:#00e676}
+#gatilhosLine{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:8px 14px;min-height:36px}
+.gat-lbl{font-size:.54rem;color:var(--text-dim);letter-spacing:1px;white-space:nowrap;font-weight:700;flex-shrink:0}
+#gatilhosList{display:flex;gap:5px;flex-wrap:wrap;flex:1;align-items:center}
+.gat-chip{padding:2px 9px;border-radius:20px;font-size:.52rem;font-weight:700;font-family:var(--font-disp);letter-spacing:.4px;border:1px solid;white-space:nowrap}
+.gat-chip.g-rosa{color:#ff5fad;border-color:rgba(255,95,173,.4);background:rgba(255,95,173,.1)}
+.gat-chip.g-amarelo{color:#ffb300;border-color:rgba(255,179,0,.35);background:rgba(255,179,0,.08)}
+.gat-chip.g-verde{color:#00e676;border-color:rgba(0,230,118,.4);background:rgba(0,230,118,.08)}
+.gat-chip.g-roxo{color:#b06ef3;border-color:rgba(176,110,243,.35);background:rgba(176,110,243,.08)}
+.gat-chip.g-alert{color:#ffd700;border-color:rgba(255,215,0,.5);background:rgba(255,215,0,.1);animation:warnPulse .7s infinite}
+
+#preAlertBar.show{display:flex!important}
+@keyframes prePulse{0%,100%{box-shadow:0 0 14px rgba(255,215,0,.25)}50%{box-shadow:0 0 36px rgba(255,215,0,.65)}}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 </style>
 </head>
@@ -229,39 +258,75 @@ footer{position:relative;z-index:5;border-top:1.5px solid var(--border);backgrou
     <div class="gseq" id="gSeq"></div>
     <button class="gcta" onclick="dismissGatilho()">OK</button>
   </div>
+  <!-- ALERTA PRÉ-CASA -->
+  <div id="preAlertBar" style="display:none;margin-bottom:10px;background:linear-gradient(135deg,rgba(255,215,0,.12),rgba(255,215,0,.04));border:2px solid #ffd700;border-radius:12px;padding:12px 18px;align-items:center;gap:12px;animation:prePulse 0.7s ease infinite">
+    <span style="font-size:1.1rem">⚡</span>
+    <div style="flex:1">
+      <span id="preAlertTxt" style="font-family:var(--font-disp);font-size:.68rem;font-weight:900;color:#ffd700;letter-spacing:2px"></span><br>
+      <span id="preAlertSub" style="font-size:.55rem;color:var(--text-dim)"></span>
+    </div>
+    <span id="preAlertCount" style="font-family:var(--font-disp);font-size:1.4rem;font-weight:900;color:#ffd700;min-width:32px;text-align:right"></span>
+  </div>
   <div id="cycleBar">
     <span class="cycle-label" id="cycleLbl">Ciclo</span>
     <div class="cycle-hits" id="cycleHits"></div>
     <span id="cycleMeta" style="font-size:.55rem;color:var(--text-dim);margin-left:4px"></span>
+  </div>
+
+
+  <!-- ══ PAINEL ANÁLISE ESTRATÉGICA ══ -->
+  <div id="analysisPanel">
+    <div class="an-row">
+      <div class="an-box" id="anCiclo">
+        <span class="an-lbl">📊 Ciclo (30min)</span>
+        <span class="an-val" id="anCicloVal">—</span>
+        <span class="an-sub" id="anCicloSub">aguardando dados</span>
+      </div>
+      <div class="an-box" id="anMin">
+        <span class="an-lbl">⏱ Minuto Pagante</span>
+        <span class="an-val" id="anMinVal">—</span>
+        <span class="an-sub" id="anMinSub">aguardando rosas</span>
+      </div>
+      <div class="an-box" id="anPadrao">
+        <span class="an-lbl">📈 Padrão Ativo</span>
+        <span class="an-val" id="anPadraoVal">—</span>
+        <span class="an-sub" id="anPadraoSub">analisando</span>
+      </div>
+      <div class="an-box" id="anMed">
+        <span class="an-lbl">📉 Média Rosa</span>
+        <span class="an-val" id="anMedVal">—</span>
+        <span class="an-sub" id="anMedSub">teto 10x–15x</span>
+      </div>
+    </div>
+    <div id="gatilhosLine">
+      <span class="gat-lbl">🎯 Gatilhos:</span>
+      <div id="gatilhosList"><span style="font-size:.52rem;color:var(--text-dim)">Aguardando velas...</span></div>
+    </div>
   </div>
   <div class="hero-row">
     <div class="hcard main" id="hc0">
       <span class="ctag">&#10022; Última vela</span>
       <div class="hval" id="h0v">&mdash;</div>
       <div class="htim" id="h0t">--:--:--</div>
-      <div class="hsum" id="h0s">Soma: &mdash;</div>
-      <div class="hform" id="h0f">&mdash;</div>
+      <div id="h0s" style="display:none"></div><div id="h0f" style="display:none"></div>
     </div>
     <div class="hcard" id="hc1">
       <span class="ctag">Penúltima</span>
       <div class="hval" id="h1v">&mdash;</div>
       <div class="htim" id="h1t">--:--:--</div>
-      <div class="hsum" id="h1s">Soma: &mdash;</div>
-      <div class="hform" id="h1f">&mdash;</div>
+      <div id="h1s" style="display:none"></div><div id="h1f" style="display:none"></div>
     </div>
     <div class="hcard" id="hc2">
       <span class="ctag">Antepenúltima</span>
       <div class="hval" id="h2v">&mdash;</div>
       <div class="htim" id="h2t">--:--:--</div>
-      <div class="hsum" id="h2s">Soma: &mdash;</div>
-      <div class="hform" id="h2f">&mdash;</div>
+      <div id="h2s" style="display:none"></div><div id="h2f" style="display:none"></div>
     </div>
   </div>
   <div class="stats-row">
     <div class="sbox"><span class="slbl">Rodadas</span><span class="sval" id="sT">0</span></div>
     <div class="sbox"><span class="slbl">Últ. Rosa</span><span class="sval" id="sM" style="color:var(--pink)">&mdash;</span><span class="sval-sub" id="sMtime"></span></div>
-    <div class="sbox"><span class="slbl">Maior Rosa/h</span><span class="sval" id="sA" style="color:var(--pink)">&mdash;</span><span class="sval-sub" id="sAhour"></span></div>
-    <div class="sbox"><span class="slbl">Rosas/h</span><span class="sval" id="sU" style="color:var(--pink)">&mdash;</span><span class="sval-sub" id="sUhour"></span></div>
+    <div id="sA" style="display:none"></div><span id="sAhour" style="display:none"></span><div id="sU" style="display:none"></div><span id="sUhour" style="display:none"></span>
     <div class="sbox prob-box" id="probBox" onclick="togglePinkSelection()">
       <span class="slbl">&#127800; Prob. Rosa</span>
       <span class="sval prob-low" id="sL">&mdash;</span>
@@ -385,7 +450,7 @@ function renderHero(){const[c0,c1,c2]=STATE.candles;if(c0)setHero('0',c0,true);i
 function setHero(i,c,isMain){const hex=getHex(c),glo=hex+'88';document.getElementById(`h${i}v`).textContent=c.display;document.getElementById(`h${i}v`).style.color=hex;document.getElementById(`h${i}v`).style.textShadow=`0 0 30px ${glo}`;document.getElementById(`h${i}t`).textContent=c.time;document.getElementById(`h${i}s`).textContent=`Soma: ${c.sum.total}`;document.getElementById(`h${i}s`).style.color=hex;document.getElementById(`h${i}f`).textContent=`${c.sum.formula} = ${c.sum.total}`;if(isMain){applyTheme(c.colorObj||PAL[c.color]||PAL.gold);const card=document.getElementById('hc0');card.classList.remove('do-pulse');void card.offsetWidth;card.classList.add('do-pulse');}}
 function makeCard(c,isNew){const hex=getHex(c);const el=document.createElement('div');el.className='cc'+(isNew?' nw':'');el.style.setProperty('--cclr',hex);el.dataset.isPink=isPink(c)?'1':'0';
   // Número da rodada — só o número se disponível, senão vazio
-  const rndTxt=c.round?`#${c.round}`:'';
+  const rndTxt=c.round?`#${String(c.round).slice(-7)}`:'';  // últimos 7 dígitos da rodada
   // Valor: se for a maior rosa do ciclo, mostrar 3 casas decimais
   const dispVal=c._bigPink?c.value.toFixed(3).replace('.',',')+' x':c.display;
   el.innerHTML=`<span class="ccr">${rndTxt}</span><span class="ccv" style="color:${hex};text-shadow:0 0 16px ${hex}55">${dispVal}</span><span class="cct">${c.time}</span><span class="ccs" style="color:${hex}">&Sigma; ${c.sum.total}</span><span class="ccf">${c.sum.formula}=${c.sum.total}</span>`;if(isNew)setTimeout(()=>el.classList.remove('nw'),3000);return el;}
@@ -544,32 +609,54 @@ function calcProb(){
   eP.textContent=prob+'%';
   setProbStyle(prob);
 
-  // ── AVISO PISCANDO: mostra próxima casa esperada ──
+  // ── AVISO + PRÉ-ALERTA ──
   const probBoxEl=document.getElementById('probBox');
   const sLnextEl=document.getElementById('sLnext');
+  const preBar=document.getElementById('preAlertBar');
+  const preAlertTxt=document.getElementById('preAlertTxt');
+  const preAlertSub=document.getElementById('preAlertSub');
+  const preAlertCount=document.getElementById('preAlertCount');
 
   if(!pinkSelActive){
     if(nextPos!==undefined){
       const dist=nextPos-curPos;
       if(dist<=0){
-        // ESTAMOS NA CASA! Piscar forte
+        // CHEGOU NA CASA
         sLnextEl.innerHTML=`<span class="next-casa-alert">\uD83C\uDF38 CASA ${nextPos} \u2014 PAGAR AGORA!</span>`;
         probBoxEl.classList.add('casa-alert');
-      } else if(dist<=2){
-        // Próxima casa chegando
-        sLnextEl.innerHTML=`<span class="next-casa-warn">\u26A1 Prox: CASA ${nextPos} (${dist} vel.)</span>`;
+        preBar.classList.remove('show');
+        preBar.style.display='none';
+      } else if(dist===1){
+        // 1 ROSA DE DISTÂNCIA — PRÉ-ALERTA
+        sLnextEl.innerHTML=`<span class="next-casa-warn">\u26A1 PRÓXIMA CASA ${nextPos}</span>`;
         probBoxEl.classList.remove('casa-alert');
+        preBar.classList.add('show');
+        preAlertTxt.textContent=`\u26A1 ATENÇÃO — CASA ${nextPos} CHEGANDO`;
+        preAlertSub.textContent=`Falta 1 rosa para a casa ${nextPos} do padrão — prepare entrada`;
+        preAlertCount.textContent=`C${nextPos}`;
+        // Toast único por posição
+        const toastKey=`pre_${nextPos}_${anchor.time}`;
+        if(window._lastPreAlertKey!==toastKey){
+          window._lastPreAlertKey=toastKey;
+          showToastPreAlert(nextPos,prob);
+          if(isLiveConnected){stopClovers();spawnPlanes(10,false);startPlaneLoop(false);}
+        }
+      } else if(dist<=3){
+        sLnextEl.textContent=`Prox: casa ${nextPos} | faltam ${dist} rosas`;
+        probBoxEl.classList.remove('casa-alert');
+        preBar.classList.remove('show');preBar.style.display='none';
       } else {
-        sLnextEl.textContent=`Prox: casa ${nextPos} | rosa ${curPos} de ${nextPos}`;
+        sLnextEl.textContent=`Casa ${nextPos} | rosa ${curPos}/${PATTERN_POS[PATTERN_POS.length-1]}`;
         probBoxEl.classList.remove('casa-alert');
+        preBar.classList.remove('show');preBar.style.display='none';
       }
-      // Janela :50-:59 ativa
       if(curMin>=50&&curMin<=59){
         sLnextEl.innerHTML+=' <span style="color:#ffd700;font-size:.55rem">\u231A :'+pad(curMin)+'</span>';
       }
     } else {
       sLnextEl.textContent=`Ciclo completo \u2713 (${hitCount}/${occurred.length})`;
       probBoxEl.classList.remove('casa-alert');
+      preBar.classList.remove('show');preBar.style.display='none';
     }
   }
 
@@ -669,7 +756,290 @@ function renderCycleBar(hits,hitCount,total,anchor,curPos,nextPos,winStart,distT
 }
 
 function setProbStyle(prob){const el=document.getElementById('sL');el.classList.remove('prob-low','prob-mid','prob-high');if(prob>=70)el.classList.add('prob-high');else if(prob>=40)el.classList.add('prob-mid');else el.classList.add('prob-low');}
+function showToastPreAlert(pos,prob){
+  const t=document.getElementById('toast');
+  document.getElementById('ttit').textContent='\u26A1 CASA '+pos+' CHEGANDO \u2014 1 ROSA!';
+  document.getElementById('ttit').style.color='#ffd700';
+  document.getElementById('tmsg').textContent=`Prob ${prob}% \u2014 Falta 1 rosa p/ casa ${pos} \u2014 Prepare entrada agora`;
+  t.style.borderLeftColor='#ffd700';
+  t.classList.remove('on');void t.offsetWidth;t.classList.add('on');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),10000);
+}
 function showToastPattern(pos,anchorVal,prob){const t=document.getElementById('toast');document.getElementById('ttit').textContent='\uD83C\uDF38 CASA '+pos+' \u2014 ROSA ESPERADA!';document.getElementById('ttit').style.color='#00e676';document.getElementById('tmsg').textContent=`Prob ${prob}% \u2014 \xC2ncora: ${anchorVal} \u2014 Entrada agora!`;t.style.borderLeftColor='#00e676';t.classList.remove('on');void t.offsetWidth;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),10000);}
+
+// ══════════════════════════════════════════════════════════════
+//  ENGINE DE ANÁLISE ESTRATÉGICA v2.0
+// ══════════════════════════════════════════════════════════════
+
+function isBlue(c){
+  if(c.colorObj){if(c.colorObj.type==='raw'){const{h,s,l}=c.colorObj;return h>=185&&h<=240&&s>=25&&l>=25;}if(c.colorObj.name==='blue')return true;}
+  return c.color==='blue'||(c.value>=6.0&&c.value<15.0);
+}
+function isPurple(c){
+  if(c.colorObj){if(c.colorObj.type==='raw'){const{h,s,l}=c.colorObj;return h>=240&&h<=295&&s>=25&&l>=20;}if(c.colorObj.name==='purple')return true;}
+  return c.color==='purple'||(c.value>=15.0&&c.value<60.0);
+}
+function isGoldHigh(c){return c.value>=60.0;}
+
+function getRecent30(){
+  const cutoff=Date.now()-30*60*1000;
+  return STATE.candles.filter(c=>c.date&&c.date.getTime()>=cutoff);
+}
+
+// ── 1. CICLO ──
+function analyzeCiclo(cs30){
+  if(!cs30.length)return{tipo:'—',sub:'sem dados',cls:''};
+  const n=cs30.length;
+  const blues=cs30.filter(isBlue).length;
+  const purps=cs30.filter(isPurple).length;
+  const pinks=cs30.filter(isPink).length;
+  const highPurp=cs30.filter(c=>(isPurple(c)||isGoldHigh(c))&&c.value>=10).length;
+
+  // Rosas nas casas do padrão (3,4,5,6,7,8,11)
+  // Verifica se há repetição de rosas na posição esperada
+  const pinkRate=pinks/n;
+  const blueRate=blues/n;
+  const purpRate=purps/n;
+
+  if(pinkRate>=0.15)return{tipo:'🌸 Rosa Ativo',sub:`${pinks} rosas ${Math.round(pinkRate*100)}% (${n} velas)`,cls:'ciclo-rosa'};
+  if(blueRate>=0.40&&purpRate<0.15)return{tipo:'🔵 Recolhimento',sub:`${blues} azuis ${Math.round(blueRate*100)}% — baixo risco`,cls:'ciclo-recolhimento'};
+  if(purpRate>=0.25||highPurp>=2)return{tipo:'🟣 Pagamento',sub:`${purps} roxas${highPurp?` | ${highPurp} altas≥10x`:''}`,cls:'ciclo-pagamento'};
+  return{tipo:'⚠️ Indefinido',sub:`A=${blues} R=${purps} P=${pinks} — padrão misto`,cls:'ciclo-alerta'};
+}
+
+// ── 2. GATILHOS (12 tipos) ──
+function analyzeGatilhos(cs){
+  const chips=[];
+  if(!cs||cs.length<3)return chips;
+  const top=cs.slice(0,15);
+
+  // G1: 1.00x repetido — 3 a 5 crashes consecutivos (< 1.05)
+  const lowRun=[];for(let i=0;i<top.length;i++){if(top[i].value<1.05)lowRun.push(i);else break;}
+  if(lowRun.length>=3)chips.push({txt:`G1: ${lowRun.length}x crash ≤1.05`,cls:'g-rosa'});
+
+  // G2: velas abaixo de 1.15 E acima de 1.55 nas últimas 6
+  const w6=top.slice(0,6);
+  if(w6.some(c=>c.value<1.15)&&w6.some(c=>c.value>1.55&&c.value<2.5))
+    chips.push({txt:'G2: baixo↔médio',cls:'g-amarelo'});
+
+  // G3: velas idênticas (arredondadas 2 casas) nas últimas 10
+  {const seen={};let found=null;
+   top.slice(0,10).forEach(c=>{const k=(Math.round(c.value*100)/100).toFixed(2);if(seen[k]&&!found)found=k;else seen[k]=true;});
+   if(found)chips.push({txt:`G3: dupla ${found}x`,cls:'g-amarelo'});}
+
+  // G4: últimos dígitos iguais entre velas consecutivas
+  {const digs=top.slice(0,8).map(c=>c.display.replace(/[^0-9]/g,'').slice(-1));
+   for(let i=0;i<digs.length-1;i++){
+     if(digs[i]&&digs[i]===digs[i+1]){
+       chips.push({txt:`G4: dígito "${digs[i]}" igual`,cls:'g-amarelo'});break;
+     }
+   }}
+
+  // G5: velas parecidas — diferença ≤ 0.05x (até 5 casas = 0.05 diferença)
+  for(let i=0;i<Math.min(6,top.length-1);i++){
+    if(Math.abs(top[i].value-top[i+1].value)<=0.05){
+      chips.push({txt:`G5: ~igual ${top[i].display}≈${top[i+1].display}`,cls:'g-verde'});break;
+    }
+  }
+
+  // G6: roxa alta (>=10x) seguida de rosa nas próximas 4 velas
+  for(let i=1;i<Math.min(10,top.length);i++){
+    if((isPurple(top[i])||isGoldHigh(top[i]))&&top[i].value>=10){
+      const after=top.slice(0,i);
+      if(after.some(c=>isPink(c))){
+        chips.push({txt:`G6: roxa ${top[i].display}→rosa`,cls:'g-alert'});
+      } else if(after.length>=1){
+        chips.push({txt:`G6: ${top[i].display} aguard rosa`,cls:'g-roxo'});
+      }
+      break;
+    }
+  }
+
+  // G7: valor próximo de 6x ou 9x (±0.5) nas últimas 5
+  {const g7=top.slice(0,5).filter(c=>Math.abs(c.value-6)<0.5||Math.abs(c.value-9)<0.5);
+   if(g7.length)chips.push({txt:`G7: ${g7[0].display} (6x/9x)→rosa`,cls:'g-verde'});}
+
+  // G8: finalização em 0,1,2,3,9 em 3+ das últimas 5
+  {const ends=['0','1','2','3','9'];
+   const cnt=top.slice(0,5).filter(c=>ends.includes(c.display.replace(/[^0-9]/g,'').slice(-1))).length;
+   if(cnt>=3)chips.push({txt:`G8: fim 0/1/2/3/9 (${cnt}/5)`,cls:'g-amarelo'});}
+
+  // G9: sequência 2 azuis → 2 roxas → 2 rosas (mais recente = índice 0)
+  if(top.length>=6){
+    const s=top;
+    if(isPink(s[0])&&isPink(s[1])&&isPurple(s[2])&&isPurple(s[3])&&isBlue(s[4])&&isBlue(s[5]))
+      chips.push({txt:'G9: 2A→2Rx→2🌸 completo',cls:'g-alert'});
+    else if(isPurple(s[0])&&isPurple(s[1])&&isBlue(s[2])&&isBlue(s[3]))
+      chips.push({txt:'G9: 2A→2Rx — aguard 2🌸',cls:'g-roxo'});
+  }
+
+  // G10: vela ≥200x nas últimas 10, seguida de ≥50x nas últimas 5
+  {const has200=cs.slice(0,12).some(c=>c.value>=200);
+   const has50=cs.slice(0,5).some(c=>c.value>=50&&c.value<200);
+   if(has200&&has50)chips.push({txt:'G10: 200x→50x',cls:'g-alert'});
+   else if(has200)chips.push({txt:'G10: 200x — aguard 50x',cls:'g-roxo'});}
+
+  // G11: xadrez dígitos — posição 0,2 igual & posição 1,3 igual & diferentes entre si
+  {const d=top.slice(0,8).map(c=>c.display.replace(/[^0-9]/g,'').slice(-1));
+   if(d.length>=4&&d[0]===d[2]&&d[1]===d[3]&&d[0]!==d[1]&&d[0])
+     chips.push({txt:`G11: xadrez …${d[1]}${d[0]}${d[1]}${d[0]}`,cls:'g-amarelo'});}
+
+  // G12: vela ≥300x nas últimas 15 — pode puxar 4 velas altas
+  {const has300=cs.slice(0,15).some(c=>c.value>=300);
+   if(has300){
+     const altas=cs.slice(0,8).filter(c=>c.value>=50).length;
+     chips.push({txt:`G12: 300x→${altas} altas`,cls:'g-alert'});
+   }}
+
+  return chips;
+}
+
+// ── 3. MINUTAGEM PAGANTE ──
+function analyzeMinutagem(cs30){
+  const pinks=cs30.filter(c=>isPink(c));
+  if(pinks.length<2)return{val:'—',sub:`${pinks.length}/2 rosas (aguardando)`,cls:''};
+  // Frequência de minutos
+  const freq={};
+  pinks.forEach(c=>{const m=c.date.getMinutes();freq[m]=(freq[m]||0)+1;});
+  // Ordena por frequência
+  const sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+  const confirmados=sorted.filter(([,f])=>f>=2);
+  if(!confirmados.length)return{val:'—',sub:`${pinks.length} rosas, nenhum min 2x`,cls:''};
+  const now=new Date();
+  const cur=now.getMinutes();
+  // Mais próximo do minuto atual
+  const best=confirmados.reduce((acc,[m,f])=>{
+    const diff=Math.min(Math.abs(parseInt(m)-cur),60-Math.abs(parseInt(m)-cur));
+    const adiff=Math.min(Math.abs(parseInt(acc[0])-cur),60-Math.abs(parseInt(acc[0])-cur));
+    return diff<adiff?[m,f]:acc;
+  },confirmados[0]);
+  const m=parseInt(best[0]),f=best[1];
+  const diff=Math.min(Math.abs(m-cur),60-Math.abs(m-cur));
+  const isNow=diff<=1;
+  const allConf=confirmados.map(([m,f])=>`${pad(m)}(${f}x)`).join(' ');
+  return{
+    val:`${pad(m)}min`,
+    sub:isNow?`ENTRAR AGORA! ← ${f}x conf.`:`${diff}min restantes | ${allConf}`,
+    cls:isNow?'min-confirmado':''
+  };
+}
+
+// ── 4. PADRÕES ESTRATÉGICOS ──
+function analyzePadroes(cs30){
+  if(!cs30||cs30.length<4)return{val:'Analisando',sub:'aguardando dados',cls:''};
+  const top=cs30.slice(0,10);
+
+  // Espelho: rosa dupla consecutiva
+  if(isPink(top[0])&&isPink(top[1]))
+    return{val:'🪞 Rosa Dupla',sub:`espelho: ${top[1].display}→${top[0].display}`,cls:'padrao-hit'};
+
+  // Xadrez A→R→A
+  if(isBlue(top[0])&&isPink(top[1])&&isBlue(top[2]))
+    return{val:'♟️ Xadrez A→R→A',sub:`${top[2].display}→${top[1].display}→${top[0].display}`,cls:'padrao-hit'};
+
+  // Coluna: 2+ roxas seguidas puxam rosa
+  let purpRun=0;for(let i=0;i<top.length;i++){if(isPurple(top[i]))purpRun++;else break;}
+  if(purpRun>=2&&isPink(top[purpRun]))
+    return{val:`🔄 Coluna ${purpRun}Rx→🌸`,sub:'coluna confirmada',cls:'padrao-hit'};
+  if(purpRun>=2)
+    return{val:`🔄 ${purpRun} Roxas`,sub:'aguardando rosa após coluna',cls:'ciclo-pagamento'};
+
+  // Fechamento de vala: A→Rx→R
+  if(isPink(top[0])&&isPurple(top[1])&&isBlue(top[2]))
+    return{val:'📉 Vala Fechada',sub:`${top[2].display}→${top[1].display}→${top[0].display}`,cls:'padrao-hit'};
+
+  // Inversão de rosa: dígitos invertidos
+  if(isPink(top[1])&&top[0].value>=1.0&&top[0].value<10){
+    const digits=top[1].display.replace(/[^0-9]/g,'').substring(0,4);
+    const inv=digits.split('').reverse().join('');
+    const invVal=parseFloat(inv)/Math.pow(10,inv.length-1);
+    if(Math.abs(top[0].value-invVal)<0.1)
+      return{val:'🔃 Inversão',sub:`${top[1].display}→${top[0].display}`,cls:'padrao-hit'};
+  }
+
+  // Quebra de acompanhamento: 3+ roxas → vela não roxa
+  const wasRox=top.slice(1,5).filter(isPurple).length;
+  if(wasRox>=3&&!isPurple(top[0]))
+    return{val:'🔁 Quebra Roxa',sub:`após ${wasRox} roxas → ${top[0].display}`,cls:''};
+
+  // Sequência de roxas (alerta)
+  const rSeq=top.filter(isPurple).length;
+  if(rSeq>=4)return{val:`🟣 ${rSeq} Roxas`,sub:'ciclo pagamento',cls:'ciclo-pagamento'};
+
+  return{val:'Monitorando',sub:'sem padrão claro',cls:''};
+}
+
+// ── 5. MÉDIA ROSA ──
+function analyzeMedRosa(cs30){
+  const pinks=cs30.filter(c=>isPink(c));
+  if(!pinks.length)return{val:'—',sub:'sem rosas nos últimos 30min'};
+  const avg=pinks.reduce((s,c)=>s+c.value,0)/pinks.length;
+  const maxV=Math.max(...pinks.map(c=>c.value));
+  const isTeto=maxV>=10;
+  return{val:fmtV(avg),sub:`máx: ${fmtV(maxV)} | ${pinks.length} rosas${isTeto?' ⚠️ TETO ATING.':''}`};
+}
+
+// ── RENDER ANALYSIS (chamado a cada updateStats) ──
+let lastAnalysisToast=0;
+function renderAnalysis(){
+  const cs30=getRecent30();
+
+  const ciclo=analyzeCiclo(cs30);
+  document.getElementById('anCicloVal').textContent=ciclo.tipo;
+  document.getElementById('anCicloSub').textContent=ciclo.sub;
+  document.getElementById('anCiclo').className='an-box '+(ciclo.cls||'');
+
+  const min=analyzeMinutagem(cs30);
+  document.getElementById('anMinVal').textContent=min.val;
+  document.getElementById('anMinSub').textContent=min.sub;
+  document.getElementById('anMin').className='an-box '+(min.cls||'');
+
+  const pad2=analyzePadroes(cs30);
+  document.getElementById('anPadraoVal').textContent=pad2.val;
+  document.getElementById('anPadraoSub').textContent=pad2.sub;
+  document.getElementById('anPadrao').className='an-box '+(pad2.cls||'');
+
+  const med=analyzeMedRosa(cs30);
+  document.getElementById('anMedVal').textContent=med.val;
+  document.getElementById('anMedSub').textContent=med.sub;
+
+  const chips=analyzeGatilhos(STATE.candles);
+  const lista=document.getElementById('gatilhosList');
+  lista.innerHTML='';
+  if(!chips.length){
+    lista.innerHTML='<span style="font-size:.52rem;color:var(--text-dim)">Nenhum gatilho detectado</span>';
+  } else {
+    chips.forEach(g=>{
+      const el=document.createElement('span');
+      el.className='gat-chip '+g.cls;
+      el.textContent=g.txt;
+      lista.appendChild(el);
+    });
+  }
+
+  // Toast se minuto pagante ativo ou gatilho de alerta
+  const nowMs=Date.now();
+  if(nowMs-lastAnalysisToast>18000){
+    const alertChip=chips.find(g=>g.cls==='g-alert');
+    if(min.cls==='min-confirmado'){
+      lastAnalysisToast=nowMs;
+      showToastAnalise(`⏱ Minuto ${min.val} — ENTRADA!`,min.sub);
+    } else if(alertChip){
+      lastAnalysisToast=nowMs;
+      showToastAnalise(`🎯 ${alertChip.txt}`,`Gatilho de alta probabilidade`);
+    }
+  }
+}
+function showToastAnalise(titulo,msg){
+  const t=document.getElementById('toast');
+  document.getElementById('ttit').textContent=titulo;
+  document.getElementById('ttit').style.color='#ffd700';
+  document.getElementById('tmsg').textContent=msg;
+  t.style.borderLeftColor='#ffd700';
+  t.classList.remove('on');void t.offsetWidth;t.classList.add('on');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),9000);
+}
+
 
 function updateStats(){
   const cs=STATE.candles;if(!cs.length)return;
@@ -688,6 +1058,7 @@ function updateStats(){
   document.getElementById('sU').textContent=pH.length||'0';
   document.getElementById('sUhour').textContent=hl;
   calcProb();
+  renderAnalysis();
   document.getElementById('seccnt').textContent=cs.length+' velas';
 }
 
