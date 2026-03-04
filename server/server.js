@@ -9,7 +9,7 @@ const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, {
   cors: { origin: "*" },
-  transports: ['polling', 'websocket'], // polling primeiro = mobile funciona
+  transports: ['polling', 'websocket'],
   pingTimeout: 30000,
   pingInterval: 10000
 });
@@ -20,20 +20,24 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
-// Health check — Render bate aqui para confirmar deploy
-app.get("/healthz", (req, res) => res.sendStatus(200));
+// ── HEALTH CHECK — responde ANTES do static ──
+app.get("/healthz", (req, res) => res.status(200).send("OK"));
+app.get("/health",  (req, res) => res.status(200).send("OK"));
 
-// Serve painel.html e estáticos
+// ── Serve arquivos estáticos ──
 app.use(express.static(__dirname));
+
+// ── Rota raiz explícita (fallback caso static não sirva) ──
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "painel.html"));
+});
 
 let history = [];
 
-// PING — evita Render dormir
 app.get("/api/ping", (req, res) => {
-  res.json({ ok: true, ts: Date.now() });
+  res.status(200).json({ ok: true, ts: Date.now() });
 });
 
-// CANDLE — recebe multiplier + color_rgb + round da extensão
 app.post("/api/candle", (req, res) => {
   const { multiplier, color_rgb, round } = req.body;
   if (!multiplier) return res.sendStatus(400);
@@ -49,7 +53,6 @@ app.post("/api/candle", (req, res) => {
   res.sendStatus(200);
 });
 
-// LOGIN
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
@@ -57,13 +60,9 @@ app.post("/api/login", (req, res) => {
   res.json({ ok: true, msg: "Conectado! Aguardando velas do Aviator..." });
 });
 
-// SOCKET.IO
 io.on("connection", (socket) => {
-  // Envia histórico ao conectar
   socket.emit("history", history);
   socket.emit("status", { connected: true, source: "Aviator — Sortenabet" });
-
-  // Responde pedido explícito de histórico (fix mobile reconexão)
   socket.on("requestHistory", () => {
     socket.emit("history", history);
   });
