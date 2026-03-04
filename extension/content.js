@@ -32,76 +32,42 @@ function extractRgb(el) {
   return null;
 }
 
-// ── RODADA — 4 estratégias progressivas ──
+// ── RODADA ──
+// DOM real: <span _ngcontent-xnt-c45="" class="text-uppercase ng-tns-c45-3"> Rodada 3438356 </span>
+// O prefixo (_ngcontent-xnt / uns / abc) muda a cada build, mas a CLASSE é estável
 function extractRound() {
   try {
-    // Estratégia 1: span.text-uppercase com texto "Rodada XXXXXXX"
+    // Método DIRETO: span com classe text-uppercase E ng-tns-c45- (padrão confirmado)
+    const direct = document.querySelectorAll("span.text-uppercase[class*='ng-tns-c45-']");
+    for (const s of direct) {
+      const t = (s.innerText || s.textContent || "").trim();
+      const m = t.match(/\d{5,}/);
+      if (m) { console.log("[Rodada] ✅", m[0]); return m[0]; }
+    }
+
+    // Fallback 1: qualquer span.text-uppercase com número longo (sem exigir ng-tns)
     const spans = document.querySelectorAll("span.text-uppercase");
     for (const s of spans) {
       const t = (s.innerText || s.textContent || "").trim();
       if (/rodada|round/i.test(t)) {
-        const m = t.match(/\d{4,}/);
-        if (m) { console.log("[Rodada] método 1:", m[0]); return m[0]; }
+        const m = t.match(/\d{5,}/);
+        if (m) { console.log("[Rodada] fallback1:", m[0]); return m[0]; }
       }
     }
 
-    // Estratégia 2: qualquer elemento com ng-tns-c45 na classe
-    const ngEls = document.querySelectorAll("[class*='ng-tns-c45']");
+    // Fallback 2: qualquer elemento com ng-tns-c45- na classe
+    const ngEls = document.querySelectorAll("[class*='ng-tns-c45-']");
     for (const el of ngEls) {
       const t = (el.innerText || el.textContent || "").trim();
-      if (/rodada|round/i.test(t)) {
-        const m = t.match(/\d{4,}/);
-        if (m) { console.log("[Rodada] método 2:", m[0]); return m[0]; }
-      }
+      if (t.length > 30) continue; // ignora containers grandes
+      const m = t.match(/\d{5,}/);
+      if (m) { console.log("[Rodada] fallback2:", m[0]); return m[0]; }
     }
-
-    // Estratégia 3: busca texto curto que começa com "Rodada" em qualquer span/div
-    const all = document.querySelectorAll("span, div, p, h1, h2, h3, label");
-    for (const el of all) {
-      if (el.children.length > 1) continue;
-      const t = (el.innerText || "").trim();
-      if (t.length < 5 || t.length > 30) continue;
-      if (/^(rodada|round)\s*#?\s*\d{4,}/i.test(t)) {
-        const m = t.match(/\d{4,}/);
-        if (m) { console.log("[Rodada] método 3:", m[0]); return m[0]; }
-      }
-    }
-
-    // Estratégia 4: procura número longo (6-8 dígitos) próximo a payout
-    //   Muitos jogos colocam o ID da rodada como texto próximo ao multiplicador
-    const payoutEl = document.querySelector(".payout");
-    if (payoutEl) {
-      // Busca no pai e avôs até 4 níveis
-      let node = payoutEl.parentElement;
-      for (let i = 0; i < 4 && node; i++, node = node.parentElement) {
-        const t = (node.innerText || "").substring(0, 200);
-        const m = t.match(/\b(\d{6,8})\b/);
-        if (m) { console.log("[Rodada] método 4 (ancestral):", m[1]); return m[1]; }
-      }
-    }
-  } catch(e) {
-    console.log("[Rodada] erro:", e.message);
-  }
+  } catch(e) {}
   return null;
 }
 
-// ── LOG DE DEBUG: roda uma vez no início para mapear o DOM ──
-function debugDOM() {
-  console.log("[Debug] Mapeando elementos de rodada no DOM...");
-  // Imprime todos os spans text-uppercase
-  const spans = document.querySelectorAll("span.text-uppercase");
-  spans.forEach((s,i) => {
-    const t = (s.innerText||"").trim();
-    if (t) console.log(`[Debug] span.text-uppercase[${i}]: "${t}" | class="${s.className}"`);
-  });
-  // Imprime ng-tns-c45
-  const ngEls = document.querySelectorAll("[class*='ng-tns-c45']");
-  ngEls.forEach((el,i) => {
-    const t = (el.innerText||"").trim().substring(0,50);
-    if (t) console.log(`[Debug] ng-tns[${i}]: "${t}" | class="${el.className}"`);
-  });
-}
-setTimeout(debugDOM, 5000); // roda 5s após load
+
 
 // ── CAPTURE ──
 function capture() {
