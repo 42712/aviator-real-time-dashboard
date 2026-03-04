@@ -20,16 +20,20 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
-// ── HEALTH CHECK — responde ANTES do static ──
+// Estrutura: /server/server.js → /client/index.html
+const CLIENT = path.join(__dirname, "..", "client");
+console.log(`[Server] CLIENT: ${CLIENT}`);
+
+// ── HEALTH CHECK ──
 app.get("/healthz", (req, res) => res.status(200).send("OK"));
 app.get("/health",  (req, res) => res.status(200).send("OK"));
 
-// ── Serve arquivos estáticos ──
-app.use(express.static(__dirname));
+// ── Arquivos estáticos da pasta /client ──
+app.use(express.static(CLIENT));
 
-// ── Rota raiz explícita (fallback caso static não sirva) ──
+// ── Rota raiz → /client/index.html ──
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "painel.html"));
+  res.sendFile(path.join(CLIENT, "index.html"));
 });
 
 let history = [];
@@ -63,9 +67,7 @@ app.post("/api/login", (req, res) => {
 io.on("connection", (socket) => {
   socket.emit("history", history);
   socket.emit("status", { connected: true, source: "Aviator — Sortenabet" });
-  socket.on("requestHistory", () => {
-    socket.emit("history", history);
-  });
+  socket.on("requestHistory", () => socket.emit("history", history));
 });
 
 const PORT = process.env.PORT || 3333;
