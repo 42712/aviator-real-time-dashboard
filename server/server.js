@@ -15,16 +15,21 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
+// ── HEALTH CHECK — Render bate nesta rota para confirmar deploy ──
+// Deve responder 200 ANTES do static (que pode demorar)
+app.get("/healthz", (req, res) => res.sendStatus(200));
+
+// ── Serve painel.html e arquivos estáticos ──
 app.use(express.static(__dirname));
 
 let history = [];
 
-// PING
+// PING — evita Render dormir
 app.get("/api/ping", (req, res) => {
   res.json({ ok: true, ts: Date.now() });
 });
 
-// CANDLE — recebe multiplier + color_rgb + round
+// CANDLE — recebe multiplier + color_rgb + round da extensão
 app.post("/api/candle", (req, res) => {
   const { multiplier, color_rgb, round } = req.body;
   if (!multiplier) return res.sendStatus(400);
@@ -55,4 +60,6 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3333;
-server.listen(PORT, () => console.log("Servidor rodando na porta", PORT));
+server.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
