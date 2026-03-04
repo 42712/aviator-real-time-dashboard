@@ -7,7 +7,12 @@ import { fileURLToPath } from "url";
 
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server, { cors: { origin: "*" } });
+const io     = new Server(server, {
+  cors: { origin: "*" },
+  transports: ['polling', 'websocket'], // polling primeiro = mobile funciona
+  pingTimeout: 30000,
+  pingInterval: 10000
+});
 
 app.use(cors());
 app.use(express.json());
@@ -15,11 +20,10 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
-// ── HEALTH CHECK — Render bate nesta rota para confirmar deploy ──
-// Deve responder 200 ANTES do static (que pode demorar)
+// Health check — Render bate aqui para confirmar deploy
 app.get("/healthz", (req, res) => res.sendStatus(200));
 
-// ── Serve painel.html e arquivos estáticos ──
+// Serve painel.html e estáticos
 app.use(express.static(__dirname));
 
 let history = [];
@@ -55,8 +59,14 @@ app.post("/api/login", (req, res) => {
 
 // SOCKET.IO
 io.on("connection", (socket) => {
+  // Envia histórico ao conectar
   socket.emit("history", history);
   socket.emit("status", { connected: true, source: "Aviator — Sortenabet" });
+
+  // Responde pedido explícito de histórico (fix mobile reconexão)
+  socket.on("requestHistory", () => {
+    socket.emit("history", history);
+  });
 });
 
 const PORT = process.env.PORT || 3333;
