@@ -717,31 +717,52 @@ function atualizarTudo() {
 // ── SOCKET ──
 function iniciarSocket() {
   socketIniciado = true;
-  try {
-    var sk = io('https://aviator-real-time-dashboard.onrender.com', { transports: ['polling', 'websocket'] });
-    sk.on('history', function(h) {
-      velas = h.map(function(cd) { cd._cor = getCor(cd); return cd; });
-      reconstruirGrade();
-      atualizarTudo();
-    });
-    sk.on('candle', function(cd) {
-      cd._cor = getCor(cd);
-      velas.unshift(cd);
-      if (velas.length > 500) velas.pop();
-      adicionarCard(cd);
-      atualizarTudo();
-    });
-    sk.on('connect', function() {
-      onlineNum = Math.floor(Math.random() * 8) + 2;
-      var el = _('qtd-online');
-      if (el) el.textContent = '👥 ' + onlineNum;
-    });
-  } catch (e) { console.warn(e); }
-  setInterval(function() {
-    onlineNum = Math.max(1, onlineNum + (Math.random() > .5 ? 1 : -1));
-    var el = _('qtd-online');
-    if (el) el.textContent = '👥 ' + onlineNum;
-  }, 15000);
+  var SK = null;
+  function conectar() {
+    try {
+      SK = io('https://aviator-real-time-dashboard.onrender.com', {
+        transports: ['polling', 'websocket'],
+        reconnection: true,
+        reconnectionDelay: 3000,
+        reconnectionAttempts: Infinity,
+        timeout: 20000
+      });
+      SK.on('connect', function() {
+        console.log('[MEGATRON] Socket conectado:', SK.id);
+        var dot = document.querySelector('.sp.on .dot');
+        if (dot) dot.style.background = 'var(--green)';
+        SK.emit('requestHistory');
+      });
+      SK.on('disconnect', function(reason) {
+        console.log('[MEGATRON] Socket desconectado:', reason);
+      });
+      SK.on('history', function(h) {
+        velas = h.map(function(cd) { cd._cor = getCor(cd); return cd; });
+        reconstruirGrade();
+        atualizarTudo();
+      });
+      SK.on('candle', function(cd) {
+        cd._cor = getCor(cd);
+        velas.unshift(cd);
+        if (velas.length > 500) velas.pop();
+        adicionarCard(cd);
+        atualizarTudo();
+      });
+      SK.on('online', function(n) {
+        onlineNum = n;
+        var el = _('qtd-online');
+        if (el) el.textContent = '👥 ' + onlineNum + ' online';
+      });
+      SK.on('status', function(s) {
+        if (s.online) {
+          onlineNum = s.online;
+          var el = _('qtd-online');
+          if (el) el.textContent = '👥 ' + onlineNum + ' online';
+        }
+      });
+    } catch (e) { console.warn('[MEGATRON] Socket erro:', e); }
+  }
+  conectar();
 }
 
 // ── MODAL ──
