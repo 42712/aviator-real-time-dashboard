@@ -1,32 +1,41 @@
 {
-  "manifest_version": 3,
-  "name": "Aviator Live Capture",
-  "version": "2.0",
-  "description": "Captura multiplicadores do Aviator — anti-throttle ativo.",
+  "manifest_version": 2,
+  "name": "Megatron Aviator",
+  "version": "3.0",
+  "description": "Captura velas do Aviator — Kiwi Browser Android",
+
   "permissions": [
     "activeTab",
-    "scripting",
-    "alarms",
-    "background"
-  ],
-  "host_permissions": [
+    "storage",
+    "background",
     "https://*.spribegaming.com/*",
     "https://*.sortenabet.bet.br/*",
+    "https://*.sortebet.bet.br/*",
+    "https://*.aposta.bet.br/*",
     "https://aviator-real-time-dashboard.onrender.com/*"
   ],
+
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "scripts": ["background.js"],
+    "persistent": true
   },
+
   "content_scripts": [
     {
       "matches": [
         "https://*.spribegaming.com/*",
-        "https://*.sortenabet.bet.br/*"
+        "https://*.sortenabet.bet.br/*",
+        "https://*.sortebet.bet.br/*",
+        "https://*.aposta.bet.br/*"
       ],
       "js": ["content.js"],
       "all_frames": true,
       "run_at": "document_idle"
     }
-  ]
+  ],
+
+  "browser_action": {
+    "default_title": "Megatron",
+    "default_popup": "popup.html"
+  }
 }
