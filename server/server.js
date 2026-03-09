@@ -47,7 +47,7 @@ app.get("/", (req, res) => {
 });
 
 // ── Estado global ──
-let history     = [];   // até 500 velas
+let history     = [];   // até 1000 velas
 let onlineUsers = 0;
 
 // ── Health checks (Render keep-alive) ──
@@ -84,7 +84,7 @@ app.post("/api/candle", (req, res) => {
   };
 
   history.unshift(candle);
-  if (history.length > 500) history.pop();
+  if (history.length > 1000) history.pop();
 
   // Emite para TODOS os clientes conectados
   io.emit("candle", candle);
