@@ -63,6 +63,9 @@ body.na{border-color:var(--yellow);box-shadow:inset 0 0 40px #ffd60012,0 0 60px 
 #badge-casa.vd{color:var(--green);border-color:var(--green);background:#00e67612;box-shadow:0 0 16px #00e67640}
 #badge-casa.vm{color:var(--red);border-color:var(--red);background:#ff174412;box-shadow:0 0 16px #ff174440}
 #badge-casa.am{color:var(--yellow);border-color:var(--yellow);background:#ffd60012;box-shadow:0 0 16px #ffd60040}
+#badge-casa.roxo{color:var(--purple);border-color:var(--purple);background:#b845ff12;box-shadow:0 0 16px #b845ff40;animation:piscaap .9s infinite}
+#badge-casa.recolhendo{color:#ff9800;border-color:#ff9800;background:#ff6d0012;box-shadow:0 0 16px #ff6d0040}
+#badge-casa.falso{color:var(--red);border-color:var(--red);background:#ff174418;box-shadow:0 0 20px #ff174460;animation:piscaap .5s infinite}
 
 /* CONTEÚDO */
 #conteudo{padding:6px 4px;max-width:980px;margin:0 auto}
@@ -1040,12 +1043,77 @@ function atualizarTudo(){
   var vrx=_('conf20-verd-roxa');if(vrx){vrx.className='conf20-veredicto '+c20.verdRoxa;vrx.textContent=c20.txtRoxa;}
   var vrs=_('conf20-verd-rosa');if(vrs){vrs.className='conf20-veredicto '+c20.verdRosa;vrs.textContent=c20.txtRosa;}
 
-  // Badge casa
-  var badge=_('badge-casa'),p1=calcP1(),p17=calcP17();
-  if(p17.score_roxa>=10){badge.className='vm';badge.innerHTML='🔴 EXAUSTÃO';setNeon('vermelho');}
-  else if(p1.score_roxa>=8){badge.className='vd';badge.innerHTML='🟢 PAGANDO';setNeon('verde');}
-  else if(p1.score_roxa>=6){badge.className='am';badge.innerHTML='🟡 FASE FRIA';setNeon('amarelo');}
-  else{badge.className='vd';badge.innerHTML='🟢 NORMAL';setNeon('verde');}
+  // ── BADGE DA CASA ──
+  // Regras:
+  // ⏸ AGUARDAR      → menos de 3 confirmações
+  // 🟠 RECOLHENDO   → exatamente 3 confirmações (sinal apareceu, aguardando 4º)
+  // 🟢 PAGANDO       → 4+ confirmações rosa sem falhar
+  // 💜 PAGANDO ROXA  → 4+ confirmações roxa sem falhar
+  // ⚠ FALSO PAGTO   → houve ≥3 sinais mas próxima vela foi baixa (<2x) → reseta
+  // 🔴 EXAUSTÃO      → P17 ≥10 velas seguidas <2x
+  var badge=_('badge-casa');
+  var cRosaB=calcConfluenciaRosa();
+  var cRoxaB=calcConfluenciaRoxa();
+  var p17b=calcP17();
+  var scoreRosa=cRosaB.score;
+  var scoreRoxa=cRoxaB.score;
+  var melhor=Math.max(scoreRosa,scoreRoxa);
+
+  // Memória de sinal: detecta se houve sinal (≥3) E a próxima vela foi baixa
+  // Só marca FALSO se: havia sinal antes E agora escore caiu E última vela foi baixa
+  var falsoPagto=false;
+  if(velas.length>=2){
+    var v0=velas[0].multiplier;   // vela mais recente
+    var v1=velas[1].multiplier;   // vela anterior
+    // Falso pagamento: sinal estava ativo (v1 gerou ≥3 confirmações → badge estava em RECOLHENDO/PAGANDO)
+    // mas a vela seguinte (v0) foi baixa (<2x) E agora o score voltou para <3
+    // Usamos _sinalizouAntes como memória entre ciclos
+    if(window._scoreAnterior!==undefined&&window._scoreAnterior>=3&&melhor<3&&v0<2.0){
+      falsoPagto=true;
+    }
+    // Falso pagamento forte: estava em PAGANDO (≥4) mas vela foi <1.5x
+    if(window._scoreAnterior!==undefined&&window._scoreAnterior>=4&&v0<1.5){
+      falsoPagto=true;
+    }
+  }
+  // Salva score atual como anterior para próxima rodada
+  window._scoreAnterior=melhor;
+
+  // Aplica estado
+  if(p17b.score_roxa>=10){
+    badge.className='vm';
+    badge.innerHTML='🔴 EXAUSTÃO';
+    setNeon('vermelho');
+  } else if(falsoPagto){
+    badge.className='falso';
+    badge.innerHTML='⚠ FALSO PAGTO';
+    setNeon('vermelho');
+    // Reseta após 2 velas para não ficar travado
+    if(!window._falsoTimer){
+      window._falsoTimer=setTimeout(function(){
+        window._falsoTimer=null;
+        window._scoreAnterior=0;
+      },12000);
+    }
+  } else if(scoreRoxa>=4&&scoreRoxa>=scoreRosa){
+    badge.className='roxo';
+    badge.innerHTML='💜 PAGANDO ROXA';
+    setNeon('verde');
+    window._falsoTimer&&clearTimeout(window._falsoTimer);window._falsoTimer=null;
+  } else if(scoreRosa>=4){
+    badge.className='vd';
+    badge.innerHTML='🟢 PAGANDO';
+    setNeon('verde');
+    window._falsoTimer&&clearTimeout(window._falsoTimer);window._falsoTimer=null;
+  } else if(melhor===3){
+    badge.className='recolhendo';
+    badge.innerHTML='🟠 RECOLHENDO';
+    setNeon('amarelo');
+  } else {
+    badge.className='am';
+    badge.innerHTML='⏸ AGUARDAR';
+    setNeon('amarelo');
+  }
 
   // Barra de status
   var comp=calcCompressao(),ciclos=calcCiclos(),probR=calcProbRosa(),seq=calcSequencia();
