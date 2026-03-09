@@ -767,14 +767,17 @@ function atualizarBarraVelas() {
 }
 
 function reconectarSocket() {
-  if (SK) { try { SK.disconnect(); } catch(e) {} }
-  SK = null;
+  // Para tudo e reinicia
+  if (SK) { try { SK.disconnect(); } catch(e) {} SK = null; }
+  socketIniciado = false;
   setSocketStatus('conectando', 'Reconectando...');
-  setTimeout(iniciarSocket, 800);
+  setTimeout(iniciarSocket, 500);
 }
 
 function processCandle(cd) {
   if (!cd || !cd.multiplier) return;
+  // Anti-duplicata no painel: nao adiciona se ja existe com mesmo timestamp
+  if (velas.length > 0 && velas[0].timestamp === cd.timestamp) return;
   cd._cor = getCor(cd);
   velas.unshift(cd);
   if (velas.length > MAX_VELAS) velas.pop();
@@ -789,60 +792,108 @@ function processHistory(h) {
   reconstruirGrade();
   atualizarTudo();
   atualizarBarraVelas();
-  setSocketStatus('conectado', 'Online — ' + velas.length + ' velas carregadas');
+  setSocketStatus('conectado', 'Online -- ' + velas.length + ' velas');
+}
+
+// ── POLLING SIMPLES: busca /api/history a cada 3s ──
+// Usado JUNTO com socket como backup. Nao gera duplicatas pois
+// processCandle checa o timestamp antes de inserir.
+var _lastTs = '';
+var _pollingAtivo = false;
+function iniciarPolling() {
+  if (_pollingAtivo) return;
+  _pollingAtivo = true;
+  function tick() {
+    fetch('https://aviator-real-time-dashboard.onrender.com/api/history')
+      .then(function(r) { return r.json(); })
+      .then(function(h) {
+        if (!h || !h.length) return;
+        // Verifica se chegou vela nova comparando o timestamp do topo
+        var novoTs = h[0] ? h[0].timestamp : '';
+        if (novoTs && novoTs !== _lastTs) {
+          _lastTs = novoTs;
+          // So adiciona velas que nao existem localmente
+          for (var i = 0; i < h.length; i++) {
+            var cd = h[i];
+            if (!cd || !cd.multiplier) continue;
+            // Verifica se ja existe
+            var existe = false;
+            for (var j = 0; j < velas.length; j++) {
+              if (velas[j].timestamp === cd.timestamp) { existe = true; break; }
+            }
+            if (!existe && i === 0) {
+              // Apenas a vela mais nova (posicao 0) que nao existe localmente
+              processCandle(cd);
+              setSocketStatus('conectado', '🕯 ' + cd.multiplier.toFixed(2) + 'x');
+            }
+          }
+        }
+      })
+      .catch(function() {
+        setSocketStatus('erro', 'Sem conexao com servidor');
+      });
+    setTimeout(tick, 3000);
+  }
+  // Carrega historico completo primeiro
+  fetch('https://aviator-real-time-dashboard.onrender.com/api/history')
+    .then(function(r) { return r.json(); })
+    .then(function(h) {
+      if (h && h.length) {
+        _lastTs = h[0] ? h[0].timestamp : '';
+        processHistory(h);
+      }
+      setTimeout(tick, 3000);
+    })
+    .catch(function() {
+      setSocketStatus('erro', 'Servidor offline');
+      setTimeout(tick, 5000);
+    });
 }
 
 function iniciarSocket() {
+  if (socketIniciado) return;
   socketIniciado = true;
-  setSocketStatus('conectando', 'Conectando ao servidor...');
+  setSocketStatus('conectando', 'Conectando...');
+
+  // Inicia polling imediatamente -- garante atualizacao mesmo sem WS
+  iniciarPolling();
+
   try {
     SK = io('https://aviator-real-time-dashboard.onrender.com', {
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: Infinity,
-      timeout: 10000,
-      forceNew: true
+      reconnectionDelay: 2000,
+      reconnectionAttempts: 10,
+      timeout: 8000
     });
 
     SK.on('connect', function() {
-      setSocketStatus('conectado', 'Conectado! Carregando histórico...');
+      setSocketStatus('conectado', 'Socket OK');
       SK.emit('requestHistory');
     });
-
     SK.on('disconnect', function(r) {
-      setSocketStatus('desconectado', 'Desconectado (' + r + ')');
+      setSocketStatus('conectando', 'Socket perdido (' + r + ') -- polling ativo');
     });
-
-    SK.on('connect_error', function(e) {
-      setSocketStatus('erro', 'Erro: ' + e.message + ' — clique ↺ para reconectar');
+    SK.on('connect_error', function() {
+      setSocketStatus('conectando', 'Socket indisponivel -- polling ativo');
     });
-
     SK.on('history', function(h) {
-      processHistory(Array.isArray(h) ? h : []);
-    });
-
-    SK.on('candle', function(cd) {
-      processCandle(cd);
-      setSocketStatus('conectado', '🕯 Nova vela: ' + (cd && cd.multiplier ? cd.multiplier.toFixed(2) + 'x' : '—'));
-    });
-
-    SK.on('online', function(n) {
-      var el = _('qtd-online');
-      if (el) el.textContent = '👥 ' + n + ' online';
-    });
-
-    SK.on('status', function(s) {
-      if (s && s.online) {
-        var el = _('qtd-online');
-        if (el) el.textContent = '👥 ' + s.online + ' online';
+      if (Array.isArray(h) && h.length) {
+        _lastTs = h[0] ? h[0].timestamp : '';
+        processHistory(h);
       }
+    });
+    SK.on('candle', function(cd) {
+      if (cd && cd.timestamp) _lastTs = cd.timestamp;
+      processCandle(cd);
+      setSocketStatus('conectado', '🕯 ' + (cd && cd.multiplier ? cd.multiplier.toFixed(2) + 'x' : '--'));
+    });
+    SK.on('online', function(n) {
+      var el = _('qtd-online'); if (el) el.textContent = '👥 ' + n + ' online';
     });
 
   } catch(e) {
-    setSocketStatus('erro', 'Erro crítico: ' + e.message);
-    console.warn('[MEGATRON] Socket erro:', e);
+    setSocketStatus('conectando', 'Socket erro -- polling ativo');
   }
 }
 
