@@ -1,26 +1,24 @@
-(function () {
+(function(){
 
-const SERVER = "https://aviator-real-time-dashboard.onrender.com";
+const SERVER="https://aviator-real-time-dashboard.onrender.com";
 
-let prevMultiplier = null;
-let peakMultiplier = 1;
-let lastRound = null;
+let lastRound=null;
+let peak=1;
+let prev=null;
 
 function getMultiplier(){
 
- const els = document.querySelectorAll("div,span");
+ const els=document.querySelectorAll("div,span");
 
  for(let el of els){
 
-  const txt = el.innerText.trim();
+  const t=el.innerText.trim();
 
-  if(/^\d{1,4}\.\d{2}x?$/.test(txt)){
+  if(/^\d+\.\d{2}x?$/.test(t)){
 
-   let v = parseFloat(txt.replace("x",""));
+   let v=parseFloat(t.replace("x",""));
 
-   if(v >= 1 && v < 100000){
-    return v;
-   }
+   if(v>=1 && v<10000) return v;
 
   }
 
@@ -32,16 +30,18 @@ function getMultiplier(){
 
 function getRound(){
 
- const els = document.querySelectorAll("span,div");
+ const els=document.querySelectorAll("span,div");
 
  for(let el of els){
 
-  const txt = el.innerText.trim();
+  const txt=el.innerText;
 
-  const m = txt.match(/Rodada\s*(\d+)/i);
+  if(txt.includes("Rodada")){
 
-  if(m){
-   return m[1];
+   const m=txt.match(/(\d{5,})/);
+
+   if(m) return m[1];
+
   }
 
  }
@@ -50,39 +50,29 @@ function getRound(){
 
 }
 
-function isCrash(){
-
- if(/(flew away|voou|crash|fim)/i.test(document.body.innerText)){
-  return true;
- }
-
- return false;
-
-}
-
-async function send(mult, round){
+async function send(mult,round){
 
  try{
 
-  await fetch(SERVER+"/api/candle",{
-   method:"POST",
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({
-    multiplier:mult,
-    round:round
-   })
-  });
+ await fetch(SERVER+"/api/candle",{
+  method:"POST",
+  headers:{
+   "Content-Type":"application/json"
+  },
+  body:JSON.stringify({
+   multiplier:mult,
+   round:round
+  })
+ });
 
-  console.log("[MEGATRON] enviado",mult,"rodada",round);
-
-  chrome.runtime.sendMessage({
-   type:"CANDLE_CAPTURED",
-   data:{multiplier:mult,round:round}
-  });
+ chrome.runtime.sendMessage({
+  type:"CANDLE_CAPTURED",
+  data:{multiplier:mult,round:round}
+ });
 
  }catch(e){
 
-  console.log("[MEGATRON] erro envio");
+ console.log("erro envio");
 
  }
 
@@ -90,41 +80,31 @@ async function send(mult, round){
 
 function loop(){
 
- const mult = getMultiplier();
- const round = getRound();
+ const mult=getMultiplier();
+ const round=getRound();
 
- if(round){
-  lastRound = round;
- }
+ if(round) lastRound=round;
 
  if(mult){
 
-  if(mult > peakMultiplier){
-   peakMultiplier = mult;
-  }
+  if(mult>peak) peak=mult;
 
-  if(prevMultiplier){
+  if(prev && mult<=1.05 && prev>1.05){
 
-   if(mult <= 1.05 && prevMultiplier > 1.05){
+   send(parseFloat(peak.toFixed(2)),lastRound);
 
-    send(parseFloat(peakMultiplier.toFixed(2)), lastRound);
-
-    peakMultiplier = 1;
-
-   }
+   peak=1;
 
   }
 
-  prevMultiplier = mult;
+  prev=mult;
 
  }
 
- setTimeout(loop,500);
+ setTimeout(loop,800);
 
 }
 
-setTimeout(loop,3000);
-
-console.log("MEGATRON content carregado");
+setTimeout(loop,4000);
 
 })();
