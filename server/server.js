@@ -8,10 +8,10 @@ import { fileURLToPath } from "url";
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, {
-  cors: { origin: "*", methods: ["GET","POST"] },
+  cors: { origin: "*", methods: ["GET", "POST"] },
   transports: ["polling", "websocket"],
-  pingTimeout: 30000,
-  pingInterval: 10000,
+  pingTimeout: 60000,
+  pingInterval: 25000,
   allowEIO3: true
 });
 
@@ -21,23 +21,53 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
-// ── Serve /client ──
-const CLIENT = path.join(__dirname, "..", "client");
-console.log(`[Server] CLIENT: ${CLIENT}`);
+// ── Serve /client — tenta pasta irmã, senão pasta local ──
+// Estrutura esperada no GitHub:
+//   /server/server.js   ← este arquivo
+//   /client/index.html  ← painel
+const CLIENT_PATHS = [
+  path.join(__dirname, "..", "client"),   // /client (raiz do repo)
+  path.join(__dirname, "client"),         // /server/client
+  path.join(__dirname, "public"),         // /server/public
+  __dirname                               // fallback: mesma pasta
+];
+
+let CLIENT = CLIENT_PATHS[0];
+import { existsSync } from "fs";
+for (const p of CLIENT_PATHS) {
+  if (existsSync(p)) { CLIENT = p; break; }
+}
+console.log(`[Server] Servindo client em: ${CLIENT}`);
+
 app.use(express.static(CLIENT));
-app.get("/", (req, res) => res.sendFile(path.join(CLIENT, "index.html")));
+app.get("/", (req, res) => {
+  const idx = path.join(CLIENT, "index.html");
+  if (existsSync(idx)) return res.sendFile(idx);
+  res.send(`<h2>MEGATRON Server OK</h2><p>Coloque o index.html em /client/</p><p><a href="/api/ping">ping</a></p>`);
+});
 
 // ── Estado global ──
-let history    = [];          // até 200 velas
-let onlineUsers = 0;          // usuários conectados via socket
+let history     = [];   // até 500 velas
+let onlineUsers = 0;
 
 // ── Health checks (Render keep-alive) ──
 app.get("/healthz", (req, res) => res.status(200).send("OK"));
 app.get("/health",  (req, res) => res.status(200).send("OK"));
 
-// ── Ping (extensão keep-alive) ──
+// ── Ping ──
 app.get("/api/ping", (req, res) => {
-  res.status(200).json({ ok: true, ts: Date.now(), online: onlineUsers });
+  res.status(200).json({ ok: true, ts: Date.now(), online: onlineUsers, candles: history.length });
+});
+
+// ── Status geral ──
+app.get("/api/status", (req, res) => {
+  res.json({
+    ok: true,
+    online: onlineUsers,
+    candles: history.length,
+    last: history[0] || null,
+    uptime: process.uptime()
+  });
 });
 
 // ── Recebe velas da extensão ──
@@ -54,41 +84,55 @@ app.post("/api/candle", (req, res) => {
   };
 
   history.unshift(candle);
-  if (history.length > 200) history.pop();
+  if (history.length > 500) history.pop();
 
+  // Emite para TODOS os clientes conectados
   io.emit("candle", candle);
-  console.log(`[Candle] ${candle.multiplier}x | round=${candle.round} | rgb=${candle.color_rgb}`);
+  console.log(`[Candle] ${candle.multiplier}x | round=${candle.round} | total=${history.length}`);
   res.sendStatus(200);
 });
 
-// ── Login simples (compatibilidade) ──
+// ── Login simples ──
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
     return res.json({ ok: false, msg: "Preencha email e senha." });
-  res.json({ ok: true, msg: "Conectado! Aguardando velas do Aviator..." });
+  res.json({ ok: true, msg: "Conectado!" });
 });
 
 // ── Socket.io ──
 io.on("connection", (socket) => {
   onlineUsers++;
   io.emit("online", onlineUsers);
-  console.log(`[Socket] Conectado: ${socket.id} | Online: ${onlineUsers}`);
+  console.log(`[Socket] +Conectado: ${socket.id} | Online: ${onlineUsers}`);
 
-  // Envia histórico imediatamente
+  // Envia histórico imediatamente ao conectar
   socket.emit("history", history);
-  socket.emit("status", { connected: true, source: "Aviator — Sortenabet", online: onlineUsers });
+  socket.emit("status", {
+    connected: true,
+    online: onlineUsers,
+    candles: history.length
+  });
 
-  socket.on("requestHistory", () => socket.emit("history", history));
+  // Responde pedido manual de histórico
+  socket.on("requestHistory", () => {
+    console.log(`[Socket] requestHistory de ${socket.id} | ${history.length} velas`);
+    socket.emit("history", history);
+  });
 
-  socket.on("disconnect", () => {
+  socket.on("disconnect", (reason) => {
     onlineUsers = Math.max(0, onlineUsers - 1);
     io.emit("online", onlineUsers);
-    console.log(`[Socket] Desconectado: ${socket.id} | Online: ${onlineUsers}`);
+    console.log(`[Socket] -Desconectado: ${socket.id} | motivo: ${reason} | Online: ${onlineUsers}`);
+  });
+
+  socket.on("error", (err) => {
+    console.warn(`[Socket] Erro ${socket.id}:`, err.message);
   });
 });
 
 const PORT = process.env.PORT || 3333;
-server.listen(PORT, () => {
-  console.log(`[MEGATRON] Servidor rodando na porta ${PORT}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`[MEGATRON] Servidor na porta ${PORT}`);
+  console.log(`[MEGATRON] Client: ${CLIENT}`);
 });
