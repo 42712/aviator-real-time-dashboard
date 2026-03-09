@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -337,9 +336,8 @@ body.na{border-color:var(--yellow);box-shadow:inset 0 0 40px #ffd60012,0 0 60px 
       <div>
         <div class="htitle">MEGATRON v4</div>
         <div class="hst">
-          <span class="sp on"><span class="dot"></span>Online</span>
-          <span class="sp oc" id="qtd-online">👥 1</span>
-          <span class="sp ac"><span class="dot c"></span>Coleta</span>
+          <span class="sp" id="sp-socket" style="color:var(--yellow);border-color:var(--yellow);background:#ffd60010"><span class="dot" id="dot-socket" style="background:var(--yellow)"></span><span id="txt-socket">Conectando...</span></span>
+          <span class="sp oc" id="qtd-online">👥 —</span>
           <span class="sp us" id="nome-usuario">👤 —</span>
         </div>
       </div>
@@ -350,6 +348,11 @@ body.na{border-color:var(--yellow);box-shadow:inset 0 0 40px #ffd60012,0 0 60px 
     </div>
   </div>
 
+  <div id="barra-socket" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:4px 12px;background:#020810;border-bottom:1px solid #102030;font-family:Share Tech Mono,monospace;font-size:.6rem">
+    <span id="barra-sk-txt" style="color:var(--yellow)">⏳ Aguardando conexão com servidor...</span>
+    <span id="barra-sk-velas" style="color:var(--dim)">0 velas</span>
+    <button onclick="reconectarSocket()" style="background:none;border:1px solid var(--dim);color:var(--dim);padding:1px 8px;border-radius:3px;font-family:Share Tech Mono,monospace;font-size:.55rem;cursor:pointer" id="btn-reconectar">↺ RECONECTAR</button>
+  </div>
   <div id="barra-casa">
     <span style="color:var(--dim)">▶ CASA:</span>
     <div id="badge-casa" class="vd">🟢 &nbsp;PAGANDO</div>
@@ -1105,10 +1108,38 @@ function atualizarTudo(){
 // ══════════════════════════════════════════
 // SOCKET
 // ══════════════════════════════════════════
+var SK=null;
+function setSocketStatus(estado,txt){
+  // estado: 'conectando' | 'conectado' | 'erro' | 'desconectado'
+  var cores={conectando:['var(--yellow)','var(--yellow)','#ffd60010'],conectado:['var(--green)','var(--green)','#00e67610'],erro:['var(--red)','var(--red)','#ff174410'],desconectado:['var(--dim)','var(--dim)','#0a1e2e']};
+  var c=cores[estado]||cores.desconectado;
+  var sp=_('sp-socket'),dot=_('dot-socket'),lbl=_('txt-socket'),barra=_('barra-sk-txt');
+  if(sp){sp.style.color=c[0];sp.style.borderColor=c[1];sp.style.background=c[2];}
+  if(dot)dot.style.background=c[1];
+  if(lbl)lbl.textContent=txt;
+  if(barra)barra.style.color=c[0];
+  if(barra)barra.textContent=(estado==='conectado'?'✅ ':'estado'==='erro'?'❌ ':'⏳ ')+txt;
+}
+function atualizarBarraVelas(){
+  var el=_('barra-sk-velas');if(el)el.textContent=velas.length+' velas recebidas';
+}
+function reconectarSocket(){
+  if(SK){try{SK.disconnect();}catch(e){}}
+  SK=null;
+  setSocketStatus('conectando','Reconectando...');
+  setTimeout(iniciarSocket,500);
+}
 function iniciarSocket(){
   socketIniciado=true;
+  setSocketStatus('conectando','Conectando ao servidor...');
   try{
-    var SK=io('https://aviator-real-time-dashboard.onrender.com',{transports:['polling','websocket'],reconnection:true,reconnectionDelay:3000,reconnectionAttempts:Infinity,timeout:20000});
+    SK=io('https://aviator-real-time-dashboard.onrender.com',{
+      transports:['polling','websocket'],
+      reconnection:true,
+      reconnectionDelay:3000,
+      reconnectionAttempts:Infinity,
+      timeout:20000
+    });
 
     function processCandle(cd){
       if(!cd||!cd.multiplier)return;
@@ -1117,31 +1148,43 @@ function iniciarSocket(){
       if(velas.length>MAX_VELAS)velas.pop();
       adicionarCard(cd);
       atualizarTudo();
+      atualizarBarraVelas();
     }
     function processHistory(h){
       if(!h||!h.length)return;
       velas=h.map(function(cd){cd._cor=getCor(cd);return cd;}).slice(0,MAX_VELAS);
       reconstruirGrade();
       atualizarTudo();
+      atualizarBarraVelas();
+      setSocketStatus('conectado','Online — '+velas.length+' velas carregadas');
     }
 
     SK.on('connect',function(){
-      console.log('[MEGATRON] Conectado:',SK.id);
+      setSocketStatus('conectado','Conectado! Carregando histórico...');
       SK.emit('requestHistory');
     });
-    SK.on('disconnect',function(r){console.warn('[MEGATRON] Desconectado:',r);});
-    SK.on('connect_error',function(e){console.warn('[MEGATRON] Erro:',e.message);});
+    SK.on('disconnect',function(r){
+      setSocketStatus('desconectado','Desconectado ('+r+')');
+    });
+    SK.on('connect_error',function(e){
+      setSocketStatus('erro','Erro: '+e.message+' — clique ↺ para tentar novamente');
+    });
 
-    // Servidor emite 'history' (array) e 'candle' (objeto)
     SK.on('history',function(h){processHistory(Array.isArray(h)?h:[]);});
-    SK.on('candle',function(cd){processCandle(cd);});
+    SK.on('candle',function(cd){
+      processCandle(cd);
+      setSocketStatus('conectado','🕯 Nova vela: '+( cd&&cd.multiplier?cd.multiplier.toFixed(2)+'x':'—'));
+    });
 
     SK.on('online',function(n){var el=_('qtd-online');if(el)el.textContent='👥 '+n+' online';});
     SK.on('status',function(s){
       if(s&&s.online){var el=_('qtd-online');if(el)el.textContent='👥 '+s.online+' online';}
     });
 
-  }catch(e){console.warn('[MEGATRON v5] Socket erro:',e);}
+  }catch(e){
+    setSocketStatus('erro','Erro crítico: '+e.message);
+    console.warn('[MEGATRON] Socket erro:',e);
+  }
 }
 
 // ══════════════════════════════════════════
