@@ -1,11 +1,11 @@
 {
   "manifest_version": 2,
-  "name": "Megatron Aviator Capture",
-  "version": "3.3",
-  "description": "Captura multiplicador e rodada do Aviator",
+  "name": "Megatron Aviator",
+  "version": "3.4",
+  "description": "Captura rodada e multiplicador do Aviator",
   "permissions": [
-    "tabs",
     "activeTab",
+    "storage",
     "https://aviator-real-time-dashboard.onrender.com/*"
   ],
   "background": {
@@ -14,7 +14,11 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "*://*aviator*/*",
+        "*://*spribe*/*",
+        "*://*casino*/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
