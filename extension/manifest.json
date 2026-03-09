@@ -1,26 +1,41 @@
 {
   "manifest_version": 2,
   "name": "Megatron Aviator",
-  "version": "3.4",
-  "description": "Captura rodada e multiplicador do Aviator",
+  "version": "3.0",
+  "description": "Captura velas do Aviator — Kiwi Browser Android",
+
   "permissions": [
     "activeTab",
     "storage",
+    "background",
+    "https://*.spribegaming.com/*",
+    "https://*.sortenabet.bet.br/*",
+    "https://*.sortebet.bet.br/*",
+    "https://*.aposta.bet.br/*",
     "https://aviator-real-time-dashboard.onrender.com/*"
   ],
+
   "background": {
     "scripts": ["background.js"],
     "persistent": true
   },
+
   "content_scripts": [
     {
       "matches": [
-        "*://*aviator*/*",
-        "*://*spribe*/*",
-        "*://*casino*/*"
+        "https://*.spribegaming.com/*",
+        "https://*.sortenabet.bet.br/*",
+        "https://*.sortebet.bet.br/*",
+        "https://*.aposta.bet.br/*"
       ],
       "js": ["content.js"],
+      "all_frames": true,
       "run_at": "document_idle"
     }
-  ]
+  ],
+
+  "browser_action": {
+    "default_title": "Megatron",
+    "default_popup": "popup.html"
+  }
 }
