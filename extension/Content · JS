@@ -1,0 +1,148 @@
+// ═══════════════════════════════════════════
+//  MEGATRON — content.js v4.0
+//  Captura: multiplicador, cor RGB, rodada
+//  Método 1: seletores CSS de crash
+//  Método 2: queda do multiplicador (fallback)
+// ═══════════════════════════════════════════
+(function() {
+  "use strict";
+  var SERVER   = "https://aviator-real-time-dashboard.onrender.com";
+  var INTERVAL = 800;
+
+  var ultimoMult   = null;
+  var ultimaRodada = null;
+  var enviando     = false;
+  var pico         = 0;
+  var enviada      = false; // flag: rodada atual já foi enviada?
+
+  // ── Lê multiplicador ──
+  function getMult() {
+    var sels = [
+      '[class*="multiplier"]', '[class*="coefficient"]',
+      '[class*="crash-coeff"]', '[class*="current-multiplier"]',
+      '[data-cy="current-multiplier"]', '.jet-game__coefficient',
+      '.paycoeff', '.multiplier-value'
+    ];
+    for (var i = 0; i < sels.length; i++) {
+      var el = document.querySelector(sels[i]);
+      if (el) {
+        var v = parseFloat(el.textContent.replace(/[^0-9.]/g, ""));
+        if (!isNaN(v) && v >= 1) return v;
+      }
+    }
+    // Fallback: elemento folha com formato "1.23x" ou "1.23"
+    var all = document.querySelectorAll("div, span, p");
+    for (var j = 0; j < all.length; j++) {
+      if (all[j].children.length > 0) continue;
+      var txt = all[j].textContent.trim();
+      if (/^\d+[.,]\d{2}x?$/.test(txt)) {
+        var val = parseFloat(txt.replace(",", "."));
+        if (!isNaN(val) && val >= 1 && val <= 10000) return val;
+      }
+    }
+    return null;
+  }
+
+  // ── Lê número da rodada ──
+  function getRodada() {
+    // Prioridade 1: "Rodada XXXXXX" ou "Round XXXXXX"
+    var els = document.querySelectorAll("span, div, p");
+    for (var i = 0; i < els.length; i++) {
+      if (els[i].children.length > 0) continue;
+      var m = els[i].textContent.trim().match(/[Rr]o(?:dada|und)[^\d]*(\d{4,})/);
+      if (m) return m[1];
+    }
+    // Prioridade 2: ng-tns com número isolado de 5+ dígitos
+    var ng = document.querySelectorAll('[class*="ng-tns"]');
+    for (var j = 0; j < ng.length; j++) {
+      if (ng[j].children.length > 0) continue;
+      var m2 = ng[j].textContent.trim().match(/^(\d{5,})$/);
+      if (m2) return m2[1];
+    }
+    return null;
+  }
+
+  // ── Lê cor RGB ──
+  function getCor() {
+    var sels = ['[class*="plane"]','[class*="bird"]','[class*="rocket"]','[class*="jet"]','[class*="aviator"]'];
+    for (var i = 0; i < sels.length; i++) {
+      var el = document.querySelector(sels[i]);
+      if (!el) continue;
+      var bg = window.getComputedStyle(el).backgroundColor;
+      if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") return bg;
+    }
+    return null;
+  }
+
+  // ── Detecta crash por seletores ──
+  function crashado() {
+    var sels = ['[class*="crashed"]','[class*="fly-away"]','[class*="game-over"]','[class*="round-end"]'];
+    for (var i = 0; i < sels.length; i++) {
+      if (document.querySelector(sels[i])) return true;
+    }
+    return /(flew away|voou|crashed|fim de rodada)/i.test(document.body.textContent);
+  }
+
+  // ── Envia vela ──
+  function enviar(mult, rgb, rodada) {
+    if (enviando) return;
+    enviando = true;
+    fetch(SERVER + "/api/candle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ multiplier: mult, color_rgb: rgb, round: rodada })
+    })
+    .then(function(r) {
+      if (r.ok) {
+        console.log("[MEGATRON] ✅ " + mult + "x | rodada=" + rodada);
+        try { chrome.runtime.sendMessage({ type: "CANDLE_CAPTURED", data: { multiplier: mult, round: rodada } }); } catch(e) {}
+      }
+    })
+    .catch(function(e) { console.warn("[MEGATRON] ❌", e.message); })
+    .finally(function() { enviando = false; });
+  }
+
+  // ── Loop principal ──
+  var prevCrash = false;
+
+  function loop() {
+    var mult   = getMult();
+    var rodada = getRodada();
+    var crash  = crashado();
+
+    if (rodada) ultimaRodada = rodada;
+    if (mult !== null && mult > pico) pico = mult;
+
+    // MÉTODO 1: transição ativo → crash detectado por seletor
+    if (!prevCrash && crash && mult !== null && !enviada) {
+      enviada = true;
+      enviar(parseFloat(pico.toFixed(2)), getCor(), ultimaRodada);
+      pico = 0;
+    }
+
+    // MÉTODO 2: multiplicador caiu de volta pra base (Kiwi fallback)
+    if (ultimoMult !== null && ultimoMult > 1.05 && mult !== null && mult < 1.03 && !enviada) {
+      enviada = true;
+      enviar(parseFloat(pico.toFixed(2)), getCor(), ultimaRodada);
+      pico = 0;
+    }
+
+    // Nova rodada começando — reseta flag
+    if (ultimoMult !== null && ultimoMult < 1.03 && mult !== null && mult > 1.05) {
+      enviada = false;
+    }
+
+    prevCrash  = crash;
+    ultimoMult = mult;
+    setTimeout(loop, INTERVAL);
+  }
+
+  // ── Inicia ──
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function() { setTimeout(loop, 2000); });
+  } else {
+    setTimeout(loop, 2000);
+  }
+
+  console.log("[MEGATRON] content.js v4.0 carregado:", window.location.href);
+})();
