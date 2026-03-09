@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -416,7 +415,7 @@ body.na{border-color:var(--yellow);box-shadow:inset 0 0 40px #ffd60012,0 0 60px 
 
     <!-- Q-ALERTA CONFLUÊNCIA INTERNA -->
     <div style="display:flex;margin-bottom:6px">
-      <div class="quad q-alert" onclick="abrirModal(21)" style="display:inline-flex;min-width:0;flex:0 1 auto">
+      <div class="quad q-alert" onclick="abrirModal(21)" style="width:100%">
         <div class="q11corpo" id="corpo-q11"><div class="sem-alerta">Aguardando confluência de padrões...</div></div>
       </div>
     </div>
@@ -1110,11 +1109,46 @@ function iniciarSocket(){
   socketIniciado=true;
   try{
     var SK=io('https://aviator-real-time-dashboard.onrender.com',{transports:['polling','websocket'],reconnection:true,reconnectionDelay:3000,reconnectionAttempts:Infinity,timeout:20000});
-    SK.on('connect',function(){console.log('[MEGATRON v5] Conectado:',SK.id);SK.emit('requestHistory');});
-    SK.on('history',function(h){velas=h.map(function(cd){cd._cor=getCor(cd);return cd;}).slice(0,MAX_VELAS);reconstruirGrade();atualizarTudo();});
-    SK.on('candle',function(cd){cd._cor=getCor(cd);velas.unshift(cd);if(velas.length>MAX_VELAS)velas.pop();adicionarCard(cd);atualizarTudo();});
+
+    function processCandle(cd){
+      if(!cd||!cd.multiplier)return;
+      cd._cor=getCor(cd);
+      velas.unshift(cd);
+      if(velas.length>MAX_VELAS)velas.pop();
+      adicionarCard(cd);
+      atualizarTudo();
+    }
+    function processHistory(h){
+      if(!h||!h.length)return;
+      velas=h.map(function(cd){cd._cor=getCor(cd);return cd;}).slice(0,MAX_VELAS);
+      reconstruirGrade();
+      atualizarTudo();
+    }
+
+    SK.on('connect',function(){
+      console.log('[MEGATRON] Conectado:',SK.id);
+      SK.emit('requestHistory');
+      SK.emit('getHistory');
+      SK.emit('history');
+      SK.emit('subscribe');
+    });
+    SK.on('disconnect',function(r){console.warn('[MEGATRON] Desconectado:',r);});
+    SK.on('connect_error',function(e){console.warn('[MEGATRON] Erro conexão:',e.message);});
+
+    // Escutar todos os nomes possíveis de evento
+    ['history','historyData','data','candles','allCandles','init'].forEach(function(ev){
+      SK.on(ev,function(h){console.log('[MEGATRON] evento:',ev,h&&h.length);processHistory(Array.isArray(h)?h:(h&&h.data?h.data:[]));});
+    });
+    ['candle','newCandle','round','result','crash','roundResult','update','new_candle','new_round'].forEach(function(ev){
+      SK.on(ev,function(cd){console.log('[MEGATRON] candle evento:',ev,cd);processCandle(Array.isArray(cd)?cd[0]:cd);});
+    });
+
     SK.on('online',function(n){var el=_('qtd-online');if(el)el.textContent='👥 '+n+' online';});
-    SK.on('status',function(s){if(s.online){var el=_('qtd-online');if(el)el.textContent='👥 '+s.online+' online';}});
+    SK.on('status',function(s){if(s&&s.online){var el=_('qtd-online');if(el)el.textContent='👥 '+s.online+' online';}});
+
+    // Escutar qualquer evento desconhecido (debug)
+    SK.onAny&&SK.onAny(function(ev,data){console.log('[MEGATRON] onAny:',ev,data);});
+
   }catch(e){console.warn('[MEGATRON v5] Socket erro:',e);}
 }
 
