@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "Megatron — Aviator Live Capture",
-  "version": "4.0",
-  "description": "Captura multiplicadores e rodadas do Aviator em tempo real.",
+  "version": "3.0",
+  "description": "Captura multiplicadores, cores e rodadas do Aviator em tempo real.",
   "permissions": [
     "activeTab",
     "tabs",
