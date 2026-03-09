@@ -1,0 +1,27 @@
+// ═══════════════════════════════════════════
+//  MEGATRON — background.js v4.0 (MV2/Kiwi)
+// ═══════════════════════════════════════════
+var SERVER = "https://aviator-real-time-dashboard.onrender.com";
+
+// Ping a cada 4 min para manter o Render acordado
+setInterval(function() {
+  fetch(SERVER + "/api/ping")
+    .then(function(r) { return r.json(); })
+    .then(function(d) { console.log("[MEGATRON BG] Ping OK | velas:", d.candles); })
+    .catch(function() { console.log("[MEGATRON BG] Ping falhou"); });
+}, 4 * 60 * 1000);
+
+// Keep-alive log a cada 30s
+setInterval(function() {
+  console.log("[MEGATRON BG] Ativo:", new Date().toLocaleTimeString());
+}, 30000);
+
+chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
+  if (msg.type === "CANDLE_CAPTURED") {
+    console.log("[MEGATRON BG] Vela:", msg.data.multiplier + "x | rodada=" + msg.data.round);
+    sendResponse({ ok: true });
+  }
+  return true;
+});
+
+console.log("[MEGATRON BG] v4.0 ativo");
