@@ -1,21 +1,16 @@
 {
   "manifest_version": 2,
   "name": "Megatron — Aviator Capture",
-  "version": "4.1",
+  "version": "4.2",
   "description": "Captura multiplicadores do Aviator em tempo real.",
   "permissions": [
     "activeTab",
-    "tabs",
     "storage",
     "background",
-    "webRequest",
     "https://*.spribegaming.com/*",
     "https://*.sortenabet.bet.br/*",
-    "https://*.sortebet.bet.br/*",
-    "https://*.aposta.bet.br/*",
-    "https://aviator-real-time-dashboard.onrender.com/*",
-    "https://*.onrender.com/*",
-    "http://localhost/*"
+    "https://*.aviator.com/*",
+    "https://aviator-real-time-dashboard.onrender.com/*"
   ],
   "background": {
     "scripts": ["background.js"],
@@ -26,19 +21,20 @@
       "matches": [
         "https://*.spribegaming.com/*",
         "https://*.sortenabet.bet.br/*",
-        "https://*.sortebet.bet.br/*",
-        "https://*.aposta.bet.br/*",
         "https://*.aviator.com/*"
       ],
       "js": ["content.js"],
-      "all_frames": true,
       "run_at": "document_idle",
-      "match_about_blank": true
+      "all_frames": true
     }
   ],
-  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
   "browser_action": {
     "default_title": "Megatron Aviator",
-    "default_icon": "icon.png"
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
   }
 }
