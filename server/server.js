@@ -1,107 +1,179 @@
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import cors from 'cors';
+// ═══════════════════════════════════════════════
+//  MEGATRON — server.js v5.0 FINAL
+//  CommonJS (Render-safe), persistência em disco
+// ═══════════════════════════════════════════════
+const express    = require('express');
+const http       = require('http');
+const { Server } = require('socket.io');
+const cors       = require('cors');
+const path       = require('path');
+const fs         = require('fs');
 
-const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
+const app        = express();
+const httpServer = http.createServer(app);
+const io         = new Server(httpServer, {
+  cors: { origin: '*', methods: ['GET','POST','OPTIONS'], credentials: true },
+  transports: ['polling','websocket']
 });
 
 app.use(cors());
 app.use(express.json());
 
-// Armazenamento em memória
-let candles = [];
-const MAX_CANDLES = 1000;
-let onlineUsers = 0;
-
-// Rota de ping para manter o servidor acordado
-app.get('/api/ping', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    message: 'pong', 
-    timestamp: new Date().toISOString(),
-    candles: candles.length,
-    online: onlineUsers
-  });
+// ── Serve client ──
+const CLIENT_PATHS = [
+  path.join(__dirname, '..', 'client'),
+  path.join(__dirname, 'client'),
+  path.join(__dirname, 'public'),
+  __dirname
+];
+var CLIENT_DIR = __dirname;
+for (var i = 0; i < CLIENT_PATHS.length; i++) {
+  var p = CLIENT_PATHS[i];
+  if (fs.existsSync(p) && fs.existsSync(path.join(p, 'index.html'))) { CLIENT_DIR = p; break; }
+}
+console.log('[Server] Servindo cliente de:', CLIENT_DIR);
+app.use(express.static(CLIENT_DIR));
+app.get('/', function(req, res) {
+  var idx = path.join(CLIENT_DIR, 'index.html');
+  if (fs.existsSync(idx)) return res.sendFile(idx);
+  res.send('<h2>MEGATRON online</h2><a href="/api/status">status</a>');
 });
 
-// Rota de status
-app.get('/api/status', (req, res) => {
-  res.json({
-    online: onlineUsers,
-    candles: candles.length,
-    uptime: process.uptime(),
-    memory: process.memoryUsage()
-  });
+// ── Histórico em memória + disco ──
+const HIST_FILE = path.join(__dirname, 'history_cache.json');
+const MAX_HIST  = 1000;
+var candles     = [];
+var onlineUsers = 0;
+
+try {
+  if (fs.existsSync(HIST_FILE)) {
+    var raw = JSON.parse(fs.readFileSync(HIST_FILE, 'utf8'));
+    if (Array.isArray(raw) && raw.length > 0) {
+      candles = raw;
+      console.log('[History] ' + candles.length + ' velas carregadas do disco');
+    }
+  }
+} catch(e) { console.warn('[History] Erro ao carregar:', e.message); }
+
+function salvar() {
+  try { fs.writeFileSync(HIST_FILE, JSON.stringify(candles), 'utf8'); }
+  catch(e) { console.warn('[History] Erro ao salvar:', e.message); }
+}
+
+// ── Health ──
+app.get('/health',  function(req, res) { res.send('OK'); });
+app.get('/healthz', function(req, res) { res.send('OK'); });
+
+// ── Ping ──
+app.get('/api/ping', function(req, res) {
+  res.json({ status:'ok', message:'pong', timestamp: new Date().toISOString(), candles: candles.length, online: onlineUsers, uptime: process.uptime() });
 });
 
-// Rota para receber velas via HTTP (fallback)
-app.post('/api/candle', (req, res) => {
+// ── Status ──
+app.get('/api/status', function(req, res) {
+  res.json({ online: onlineUsers, candles: candles.length, lastCandle: candles[0]||null, uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
+// ── Debug ──
+app.get('/api/debug', function(req, res) {
+  res.json({ ok:true, total: candles.length, ultimas: candles.slice(0,5), online: onlineUsers });
+});
+
+// ── Histórico ──
+app.get('/api/history', function(req, res) { res.json(candles); });
+
+// ── Limpar ──
+app.delete('/api/history', function(req, res) {
+  candles = []; salvar();
+  res.json({ ok:true, msg:'Histórico limpo' });
+});
+
+// ── Vela de teste ──
+app.get('/api/test-candle', function(req, res) {
+  var mult = parseFloat(req.query.mult || '2.50');
+  var c = { multiplier: mult, color_rgb: null, round: 'TEST'+Date.now(), timestamp: new Date().toISOString() };
+  candles.unshift(c);
+  if (candles.length > MAX_HIST) candles.pop();
+  io.emit('candle', c);
+  console.log('[TEST] Vela injetada: '+mult+'x');
+  res.json({ ok:true, candle:c });
+});
+
+// ── Recebe vela da extensão ──
+app.post('/api/candle', function(req, res) {
   try {
-    const candle = req.body;
-    
-    // Validação básica
-    if (!candle || !candle.multiplier) {
-      return res.status(400).json({ error: 'Invalid candle data' });
+    var candle = req.body;
+    if (!candle || !candle.multiplier)
+      return res.status(400).json({ error: 'multiplier required' });
+
+    candle.multiplier = parseFloat(parseFloat(candle.multiplier).toFixed(2));
+    if (isNaN(candle.multiplier) || candle.multiplier < 1)
+      return res.status(400).json({ error: 'multiplier invalido' });
+
+    if (!candle.timestamp) candle.timestamp = new Date().toISOString();
+
+    // Anti-duplicata: mesma rodada ou mesmo mult nos últimos 8s
+    if (candles.length > 0) {
+      var ult = candles[0];
+      var tsUlt = new Date(ult.timestamp).getTime();
+      var mesmaRodada = candle.round && ult.round && String(ult.round) === String(candle.round);
+      var mesmoMult   = Math.abs(ult.multiplier - candle.multiplier) < 0.01;
+      var recente     = (Date.now() - tsUlt) < 8000;
+      if ((mesmaRodada || mesmoMult) && recente) {
+        console.log('[Candle] Duplicata bloqueada: '+candle.multiplier+'x rodada='+candle.round);
+        return res.sendStatus(200);
+      }
     }
 
-    // Adiciona timestamp se não veio
-    if (!candle.timestamp) {
-      candle.timestamp = new Date().toISOString();
-    }
-
-    // Adiciona ao histórico
     candles.unshift(candle);
-    if (candles.length > MAX_CANDLES) {
-      candles.pop();
-    }
+    if (candles.length > MAX_HIST) candles.pop();
+    salvar();
 
-    // Emite para todos os clientes conectados
     io.emit('candle', candle);
+    console.log('[Candle] ✅ '+candle.multiplier+'x | round='+candle.round+' | cor='+candle.color_rgb+' | total='+candles.length);
+    res.json({ success:true, received: candle, total: candles.length });
 
-    console.log(`📊 Nova vela: ${candle.multiplier}x | Total: ${candles.length}`);
-    
-    res.json({ success: true, received: candle });
-  } catch (error) {
-    console.error('Erro ao processar candle:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  } catch(err) {
+    console.error('[Candle] Erro:', err);
+    res.status(500).json({ error: 'Erro interno' });
   }
 });
 
-// Rota para histórico
-app.get('/api/history', (req, res) => {
-  res.json(candles);
-});
-
-// Socket.IO
-io.on('connection', (socket) => {
+// ── Socket.IO ──
+io.on('connection', function(socket) {
   onlineUsers++;
-  console.log(`🔌 Cliente conectado. Total: ${onlineUsers}`);
-
-  // Envia histórico para o novo cliente
-  socket.emit('history', candles);
-  
-  // Atualiza contagem para todos
   io.emit('online', onlineUsers);
+  console.log('[Socket] +'+socket.id+' | Online:'+onlineUsers+' | Velas:'+candles.length);
 
-  socket.on('requestHistory', () => {
+  socket.emit('history', candles);
+  socket.emit('status', { connected:true, online:onlineUsers, candles:candles.length });
+
+  socket.on('requestHistory', function() {
     socket.emit('history', candles);
   });
-
-  socket.on('disconnect', () => {
+  socket.on('requestStatus', function() {
+    socket.emit('status', { online:onlineUsers, candles:candles.length });
+  });
+  socket.on('disconnect', function(reason) {
     onlineUsers = Math.max(0, onlineUsers - 1);
     io.emit('online', onlineUsers);
-    console.log(`🔌 Cliente desconectado. Total: ${onlineUsers}`);
+    console.log('[Socket] -'+socket.id+' | '+reason);
   });
 });
 
-const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+// Backup a cada 5min
+setInterval(salvar, 5 * 60 * 1000);
+
+// Heartbeat log
+setInterval(function() {
+  console.log('💓 Online:'+onlineUsers+' | Velas:'+candles.length);
+}, 5 * 60 * 1000);
+
+var PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, '0.0.0.0', function() {
+  console.log('\n╔══════════════════════════════════════╗');
+  console.log('║  🚀 MEGATRON SERVER v5.0             ║');
+  console.log('║  📡 Porta: '+PORT+'                       ║');
+  console.log('║  📊 Velas: '+candles.length+'                        ║');
+  console.log('╚══════════════════════════════════════╝\n');
 });
