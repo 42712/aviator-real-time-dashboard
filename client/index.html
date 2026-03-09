@@ -566,6 +566,7 @@ function criarCard(cd,num){
   el.innerHTML='<div class="vnum">'+z(num)+'</div><div class="vicone">'+iconeVela(cd)+'</div>'+
     '<div class="vval">'+fmt(cd.multiplier)+'</div>'+
     '<div class="vsoma">Σ=<b>'+somaDigitos(cd.multiplier)+'</b></div>'+
+    '<div class="vtempo">'+fmtT(cd.timestamp)+'</div>'+
     '<div class="vrodada">'+(cd.round||'—')+'</div>';
   el.onclick=function(){
     var g=_('grade-velas');if(!g)return;
@@ -765,6 +766,31 @@ function atualizarBarraVelas() {
   if (el) el.textContent = velas.length + ' velas recebidas';
 }
 
+// -- POLLING HTTP BACKUP --
+// Se socket demorar, busca via HTTP a cada 8s
+var _ultimaVelaTs = 0;
+var _pollingTimer = null;
+function pollingBackup() {
+  _pollingTimer = setInterval(function() {
+    // So busca se passou mais de 12s sem nova vela via socket
+    if (Date.now() - _ultimaVelaTs < 12000) return;
+    // Busca ultima vela via HTTP
+    fetch('https://aviator-real-time-dashboard.onrender.com/api/history')
+      .then(function(r){ return r.json(); })
+      .then(function(h) {
+        if (!h || !h.length) return;
+        // Verifica se a vela mais recente ja esta no array local
+        var nova = h[0];
+        if (!nova || !nova.multiplier) return;
+        if (velas.length > 0 && velas[0].timestamp === nova.timestamp) return;
+        // Tem vela nova -- atualiza tudo
+        processHistory(h);
+        setSocketStatus('conectado', 'HTTP sync: ' + velas.length + ' velas');
+      })
+      .catch(function(){});
+  }, 8000);
+}
+
 function reconectarSocket() {
   if (SK) { try { SK.disconnect(); } catch(e) {} }
   SK = null;
@@ -775,6 +801,7 @@ function reconectarSocket() {
 function processCandle(cd) {
   if (!cd || !cd.multiplier) return;
   cd._cor = getCor(cd);
+  _ultimaVelaTs = Date.now();
   velas.unshift(cd);
   if (velas.length > MAX_VELAS) velas.pop();
   adicionarCard(cd);
@@ -796,11 +823,13 @@ function iniciarSocket() {
   setSocketStatus('conectando', 'Conectando ao servidor...');
   try {
     SK = io('https://aviator-real-time-dashboard.onrender.com', {
-      transports: ['polling', 'websocket'],
+      transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionDelay: 3000,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
       reconnectionAttempts: Infinity,
-      timeout: 20000
+      timeout: 10000,
+      forceNew: true
     });
 
     SK.on('connect', function() {
@@ -913,7 +942,7 @@ _('botao-entrar').onclick=function(){
   var nome=u.indexOf('@')>-1?u.split('@')[0]:u;
   _('tela-login').style.display='none';_('tela-app').style.display='block';
   _('nome-usuario').textContent='👤 '+nome;
-  if(!socketIniciado)iniciarSocket();
+  if(!socketIniciado){ iniciarSocket(); pollingBackup(); }
   setInterval(atualizarTudo,1000);atualizarTudo();
 };
 _('campo-senha').onkeydown=function(e){if(e.key==='Enter')_('botao-entrar').onclick();};
