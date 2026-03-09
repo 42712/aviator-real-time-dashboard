@@ -763,7 +763,7 @@ function iniciarSocket(){
   socketIniciado=true;
   setSocketStatus('conectando','Conectando ao servidor...');
   try{
-    SK=io('https://aviator-real-time-dashboard.onrender.com',{transports:['polling','websocket'],reconnection:true,reconnectionDelay:3000,reconnectionAttempts:Infinity,timeout:20000});
+    SK=io('https://aviator-real-time-dashboard-1.onrender.com',{transports:['polling','websocket'],reconnection:true,reconnectionDelay:3000,reconnectionAttempts:Infinity,timeout:20000});
     SK.on('connect',function(){setSocketStatus('conectado','Conectado! Carregando histórico...');SK.emit('requestHistory');});
     SK.on('disconnect',function(r){setSocketStatus('desconectado','Desconectado ('+r+')');});
     SK.on('connect_error',function(e){setSocketStatus('erro','Erro: '+e.message+' — clique ↺ para reconectar');});
