@@ -496,7 +496,7 @@ body.na{border-color:var(--yellow);box-shadow:inset 0 0 40px #ffd60012,0 0 60px 
     <div class="hist-header">
       <p class="sec" style="margin-bottom:0">▸ HISTÓRICO DE VELAS</p>
       <div style="display:flex;align-items:center;gap:8px">
-        <span class="hist-contador" id="hist-contador">0 / 500</span>
+        <span class="hist-contador" id="hist-contador">0 / 1000</span>
         <div class="hist-filtros">
           <button class="hist-btn ativo" id="btn-todas" onclick="filtrarVelas('todas')">TODAS</button>
           <button class="hist-btn" id="btn-rosa" onclick="filtrarVelas('pink')">🌸</button>
@@ -538,7 +538,7 @@ var velas = [];
 var socketIniciado = false;
 var planoSelecionado = 1;
 var filtroAtual = 'todas';
-var MAX_VELAS = 500;
+var MAX_VELAS = 1000;
 
 // ── HELPERS ──
 function z(v){return String(v).padStart(2,'0');}
