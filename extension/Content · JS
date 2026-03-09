@@ -1,206 +1,245 @@
 // ═══════════════════════════════════════════════
-//  MEGATRON — content.js v4.2
-//  Fix: captura de rodada mais agressiva
-//  Fix: anti-duplicata robusto
+//  MEGATRON — content.js v5.0
+//  BASE: v3.0 original (que funcionava)
+//  + Fix duplicata + Fix captura rodada
 // ═══════════════════════════════════════════════
-(function() {
+(function () {
   "use strict";
-  var SERVER   = "https://aviator-real-time-dashboard.onrender.com";
-  var INTERVAL = 1000;
+  const SERVER      = "https://aviator-real-time-dashboard.onrender.com";
+  const INTERVAL_MS = 800;
 
-  var ultimoMult    = null;
-  var ultimaRodada  = null;
-  var enviando      = false;
-  var pico          = 0;
-  var enviada       = false;
-  var tsUltimoEnvio = 0;
+  let lastMultiplier = null;
+  let lastRound      = null;
+  let sending        = false;
+  let rodadaEnviada  = false;   // evita duplo envio por rodada
+  let picoRodada     = 0;       // maior multiplicador da rodada atual
+  let tsUltimoEnvio  = 0;       // timestamp do último envio
 
-  // ── Lê multiplicador ──
-  function getMult() {
-    var sels = [
-      '[class*="multiplier"]','[class*="coefficient"]',
-      '[class*="crash-coeff"]','[class*="current-multiplier"]',
-      '[data-cy="current-multiplier"]','.jet-game__coefficient',
-      '.paycoeff','.multiplier-value'
+  // ══════════════════════════════════════════
+  //  MULTIPLICADOR — igual ao v3.0 original
+  // ══════════════════════════════════════════
+  function getMultiplier() {
+    const selectors = [
+      '[class*="multiplier"]',
+      '[class*="coefficient"]',
+      '[class*="crash-coeff"]',
+      '[class*="current-multiplier"]',
+      '[data-cy="current-multiplier"]',
+      '.jet-game__coefficient',
+      '.paycoeff',
+      '.multiplier-value',
     ];
-    for (var i = 0; i < sels.length; i++) {
-      var el = document.querySelector(sels[i]);
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
       if (el) {
-        var v = parseFloat(el.textContent.replace(/[^0-9.]/g,""));
+        const txt = el.textContent.replace(/[^0-9.]/g, "").trim();
+        const v   = parseFloat(txt);
         if (!isNaN(v) && v >= 1) return v;
       }
     }
-    var all = document.querySelectorAll("div,span,p");
-    for (var j = 0; j < all.length; j++) {
-      if (all[j].children.length > 0) continue;
-      var txt = all[j].textContent.trim();
+    // Fallback: qualquer elemento folha com padrão "1.23x" ou "1.23"
+    const all = document.querySelectorAll("*");
+    for (const el of all) {
+      if (el.children.length > 0) continue;
+      const txt = el.textContent.trim();
       if (/^\d+[.,]\d{2}x?$/.test(txt)) {
-        var val = parseFloat(txt.replace(",","."));
-        if (!isNaN(val) && val >= 1 && val <= 10000) return val;
+        const v = parseFloat(txt.replace(",", "."));
+        if (!isNaN(v) && v >= 1 && v <= 10000) return v;
       }
     }
     return null;
   }
 
-  // ── Lê rodada — VERSÃO AGRESSIVA ──
-  // Tenta 6 estratégias diferentes para garantir pegar o número
-  function getRodada() {
-
-    // ESTRATÉGIA 1: texto "Rodada 3449963" ou "Round 3449963"
-    var els = document.querySelectorAll("span,div,p,label,h1,h2,h3,h4,small");
-    for (var i = 0; i < els.length; i++) {
-      var txt = els[i].textContent.trim();
-      var m = txt.match(/[Rr]o(?:dada|und)[^\d]*(\d{4,})/);
-      if (m) return m[1];
-    }
-
-    // ESTRATÉGIA 2: elemento ng-tns com número de 5+ dígitos isolado
-    var ng = document.querySelectorAll('[class*="ng-tns"]');
-    for (var j = 0; j < ng.length; j++) {
-      var t2 = ng[j].textContent.trim();
-      var m2 = t2.match(/(\d{5,})/);
-      if (m2) return m2[1];
-    }
-
-    // ESTRATÉGIA 3: qualquer elemento com class "round" ou "game-id"
-    var rEls = document.querySelectorAll(
-      '[class*="round"],[class*="game-id"],[class*="gameid"],[class*="game_id"],' +
-      '[class*="round-id"],[class*="roundid"],[class*="round_id"],' +
-      '[id*="round"],[id*="game-id"],[data-round],[data-game-id]'
-    );
-    for (var k = 0; k < rEls.length; k++) {
-      var t3 = (rEls[k].textContent || rEls[k].getAttribute('data-round') || rEls[k].getAttribute('data-game-id') || '').trim();
-      var m3 = t3.match(/(\d{4,})/);
-      if (m3) return m3[1];
-    }
-
-    // ESTRATÉGIA 4: qualquer texto que contenha "#" + número (ex: "#3449963")
-    var all = document.querySelectorAll("span,div,p,small");
-    for (var l = 0; l < all.length; l++) {
-      if (all[l].children.length > 0) continue;
-      var t4 = all[l].textContent.trim();
-      var m4 = t4.match(/#\s*(\d{4,})/);
-      if (m4) return m4[1];
-    }
-
-    // ESTRATÉGIA 5: texto com "ID" + número
-    for (var n = 0; n < all.length; n++) {
-      if (all[n].children.length > 0) continue;
-      var t5 = all[n].textContent.trim();
-      var m5 = t5.match(/\bID[:\s#]*(\d{4,})/i);
-      if (m5) return m5[1];
-    }
-
-    // ESTRATÉGIA 6: qualquer número isolado de 6+ dígitos em elemento pequeno
-    for (var o = 0; o < all.length; o++) {
-      if (all[o].children.length > 0) continue;
-      var t6 = all[o].textContent.trim();
-      if (/^\d{6,}$/.test(t6)) return t6;
-    }
-
-    return null;
-  }
-
-  // ── Lê cor RGB ──
-  function getCor() {
-    var sels = ['[class*="plane"]','[class*="bird"]','[class*="rocket"]','[class*="jet"]','[class*="aviator"]'];
-    for (var i = 0; i < sels.length; i++) {
-      var el = document.querySelector(sels[i]);
+  // ══════════════════════════════════════════
+  //  COR RGB — igual ao v3.0 original
+  // ══════════════════════════════════════════
+  function getColorRGB() {
+    const colorSelectors = [
+      '[class*="plane"]',
+      '[class*="bird"]',
+      '[class*="rocket"]',
+      '[class*="jet"]',
+      '[class*="craft"]',
+      'canvas',
+      '[class*="aviator"]',
+    ];
+    for (const sel of colorSelectors) {
+      const el = document.querySelector(sel);
       if (!el) continue;
-      var bg = window.getComputedStyle(el).backgroundColor;
+      const style = window.getComputedStyle(el);
+      const bg    = style.backgroundColor || style.color || style.fill;
       if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") return bg;
     }
     return null;
   }
 
-  // ── Detecta crash ──
-  function crashado() {
-    var sels = ['[class*="crashed"]','[class*="fly-away"]','[class*="game-over"]','[class*="round-end"]'];
-    for (var i = 0; i < sels.length; i++) {
-      if (document.querySelector(sels[i])) return true;
+  // ══════════════════════════════════════════
+  //  RODADA — v3.0 original + estratégias extras
+  // ══════════════════════════════════════════
+  function getRound() {
+    // ORIGINAL v3.0: busca "Rodada XXXXX" ou "Round XXXXX"
+    const allSpans = document.querySelectorAll("span, div, p");
+    for (const el of allSpans) {
+      if (el.children.length > 0) continue;
+      const txt   = el.textContent.trim();
+      const match = txt.match(/[Rr]o(?:dada|und)\s+(\d+)/);
+      if (match) return match[1];
     }
-    return /(flew away|voou|crashed|fim de rodada)/i.test(document.body.textContent);
+
+    // ORIGINAL v3.0: ng-tns com número de 5+ dígitos
+    const ngEls = document.querySelectorAll('[class*="ng-tns"]');
+    for (const el of ngEls) {
+      if (el.children.length > 0) continue;
+      const txt   = el.textContent.trim();
+      const match = txt.match(/(\d{5,})/);
+      if (match) return match[1];
+    }
+
+    // ORIGINAL v3.0: atributos data-
+    const dataEls = document.querySelectorAll('[data-round], [data-game-id], [data-id]');
+    for (const el of dataEls) {
+      const v = el.dataset.round || el.dataset.gameId || el.dataset.id;
+      if (v && /^\d+$/.test(v)) return v;
+    }
+
+    // EXTRA: classes com "round-id", "game_id", etc
+    const extraEls = document.querySelectorAll(
+      '[class*="round-id"],[class*="roundid"],[class*="game-id"],[class*="gameid"],' +
+      '[id*="round"],[id*="game-id"]'
+    );
+    for (const el of extraEls) {
+      const txt   = el.textContent.trim();
+      const match = txt.match(/(\d{4,})/);
+      if (match) return match[1];
+    }
+
+    // EXTRA: texto com "#XXXXXX"
+    const all = document.querySelectorAll("span,div,p,small");
+    for (const el of all) {
+      if (el.children.length > 0) continue;
+      const txt   = el.textContent.trim();
+      const match = txt.match(/#\s*(\d{4,})/);
+      if (match) return match[1];
+    }
+
+    // EXTRA: número isolado de 6+ dígitos
+    for (const el of all) {
+      if (el.children.length > 0) continue;
+      const txt = el.textContent.trim();
+      if (/^\d{6,}$/.test(txt)) return txt;
+    }
+
+    return null;
   }
 
-  // ── Envia vela ──
-  function enviar(mult, rgb, rodada) {
-    if (enviando)  return;
-    if (enviada)   return;
+  // ══════════════════════════════════════════
+  //  CRASH — igual ao v3.0 original
+  // ══════════════════════════════════════════
+  function isCrashed() {
+    const crashSelectors = [
+      '[class*="crashed"]',
+      '[class*="fly-away"]',
+      '[class*="game-over"]',
+      '[class*="cashout"]',
+      '[class*="round-end"]',
+    ];
+    for (const sel of crashSelectors) {
+      if (document.querySelector(sel)) return true;
+    }
+    const body = document.body.textContent;
+    if (/(flew away|voou|crashed|fim de rodada)/i.test(body)) return true;
+    return false;
+  }
+
+  // ══════════════════════════════════════════
+  //  ENVIO — com anti-duplicata
+  // ══════════════════════════════════════════
+  async function sendCandle(multiplier, color_rgb, round) {
+    if (sending)     return;
+    if (rodadaEnviada) return;
+    // Bloqueia envios com menos de 8s de diferença
     if (Date.now() - tsUltimoEnvio < 8000) {
       console.log("[MEGATRON] ⏭ Bloqueado — muito recente");
       return;
     }
-    if (mult < 1.01) return;
+    if (!multiplier || multiplier < 1.01) return;
 
-    enviando      = true;
-    enviada       = true;
-    tsUltimoEnvio = Date.now();
+    sending        = true;
+    rodadaEnviada  = true;
+    tsUltimoEnvio  = Date.now();
 
-    console.log("[MEGATRON] 📤 " + mult + "x | rodada=" + (rodada || "—"));
-
-    fetch(SERVER + "/api/candle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ multiplier: mult, color_rgb: rgb, round: rodada })
-    })
-    .then(function(r) {
-      if (r.ok) {
-        console.log("[MEGATRON] ✅ Enviado!");
-        try { chrome.runtime.sendMessage({ type: "CANDLE_CAPTURED", data: { multiplier: mult, round: rodada } }); } catch(e) {}
+    try {
+      const resp = await fetch(`${SERVER}/api/candle`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ multiplier, color_rgb, round }),
+      });
+      if (resp.ok) {
+        console.log(`[MEGATRON] ✅ ${multiplier}x | rodada=${round} | rgb=${color_rgb}`);
+        try { chrome.runtime.sendMessage({ type: "CANDLE_CAPTURED", data: { multiplier, round } }); } catch (_) {}
       } else {
-        console.warn("[MEGATRON] ⚠ Server:", r.status);
+        console.warn("[MEGATRON] ⚠ Servidor:", resp.status);
       }
-    })
-    .catch(function(e) { console.warn("[MEGATRON] ❌", e.message); })
-    .finally(function() { enviando = false; });
+    } catch (err) {
+      console.warn("[MEGATRON] ❌ Erro:", err.message);
+    } finally {
+      sending = false;
+    }
   }
 
-  // ── Loop principal ──
-  var prevCrash = false;
+  // ══════════════════════════════════════════
+  //  LOOP PRINCIPAL
+  // ══════════════════════════════════════════
+  let prevCrashed = false;
 
   function loop() {
-    var mult   = getMult();
-    var rodada = getRodada();
-    var crash  = crashado();
+    const crashed = isCrashed();
+    const mult    = getMultiplier();
+    const round   = getRound();
 
-    // Sempre atualiza rodada se encontrou
-    if (rodada) ultimaRodada = rodada;
+    // Sempre atualiza rodada e pico se disponíveis
+    if (round) lastRound = round;
+    if (mult !== null && mult > picoRodada) picoRodada = mult;
 
-    // Atualiza pico
-    if (mult !== null && mult > 1.03 && mult > pico) pico = mult;
-
-    // MÉTODO 1: crash por seletor CSS
-    if (!prevCrash && crash && !enviada) {
-      var v1 = pico > 1.01 ? parseFloat(pico.toFixed(2)) : (mult || 1.00);
-      enviar(v1, getCor(), ultimaRodada);
-      pico = 0;
+    // ── MÉTODO 1 (original v3.0): crash detectado por seletor ──
+    if (!prevCrashed && crashed && mult !== null && !rodadaEnviada) {
+      const roundId = round || lastRound || null;
+      const pico    = picoRodada > 1.01 ? parseFloat(picoRodada.toFixed(2)) : mult;
+      console.log(`[MEGATRON] 🎯 Crash! ${pico}x | rodada=${roundId}`);
+      sendCandle(pico, getColorRGB(), roundId);
+      picoRodada = 0;
     }
 
-    // MÉTODO 2: queda do multiplicador (fallback Kiwi)
-    if (!enviada && ultimoMult !== null && ultimoMult > 1.10 && mult !== null && mult < 1.03) {
-      var v2 = pico > 1.01 ? parseFloat(pico.toFixed(2)) : parseFloat(ultimoMult.toFixed(2));
-      enviar(v2, getCor(), ultimaRodada);
-      pico = 0;
+    // ── MÉTODO 2 (Kiwi fallback): queda do multiplicador ──
+    // Estava acima de 1.05 e caiu abaixo de 1.03 → rodada encerrou
+    if (!rodadaEnviada && lastMultiplier !== null && lastMultiplier > 1.05 && mult !== null && mult < 1.03) {
+      const roundId = round || lastRound || null;
+      const pico    = picoRodada > 1.01 ? parseFloat(picoRodada.toFixed(2)) : parseFloat(lastMultiplier.toFixed(2));
+      console.log(`[MEGATRON] 🎯 Queda! ${pico}x | rodada=${roundId}`);
+      sendCandle(pico, getColorRGB(), roundId);
+      picoRodada = 0;
     }
 
-    // Reset: nova rodada
-    if (ultimoMult !== null && ultimoMult < 1.05 && mult !== null && mult > 1.10) {
-      enviada = false;
-      pico    = 0;
-      console.log("[MEGATRON] 🔄 Nova rodada | rodada=" + (ultimaRodada || "—"));
+    // ── Reset: nova rodada começando ──
+    // Mult estava na base e voltou a subir → nova rodada
+    if (lastMultiplier !== null && lastMultiplier < 1.03 && mult !== null && mult > 1.05) {
+      if (rodadaEnviada) console.log("[MEGATRON] 🔄 Nova rodada — reset | rodada=" + (round || "?"));
+      rodadaEnviada = false;
+      picoRodada    = 0;
     }
 
-    prevCrash  = crash;
-    ultimoMult = mult;
-    setTimeout(loop, INTERVAL);
+    prevCrashed    = crashed;
+    lastMultiplier = mult;
+
+    setTimeout(loop, INTERVAL_MS);
   }
 
   // ── Inicia ──
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function() { setTimeout(loop, 2500); });
+    document.addEventListener("DOMContentLoaded", () => setTimeout(loop, 2000));
   } else {
-    setTimeout(loop, 2500);
+    setTimeout(loop, 2000);
   }
 
-  console.log("[MEGATRON] v4.2 carregado em:", window.location.href);
+  console.log("[MEGATRON] ✅ content.js v5.0 carregado em:", window.location.href);
 })();
