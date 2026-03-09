@@ -1,167 +1,302 @@
-// content.js - Versão otimizada para Kiwi Browser
-(function() {
-  'use strict';
-  
-  const SERVER = "https://aviator-real-time-dashboard.onrender.com";
-  
-  let lastMultiplier = null;
-  let sending = false;
-  let lastRound = null;
-  
-  // FUNÇÃO PARA CAPTURAR MULTIPLICADOR
+// ═══════════════════════════════════════════════
+//  MEGATRON — content.js v7.0 FINAL
+//  Site: sortenabet.bet.br/games/spribe/aviator
+//  Captura: multiplicador, cor RGB, rodada
+//  Anti-duplicata, retry, 4 métodos de detecção
+// ═══════════════════════════════════════════════
+(function () {
+  "use strict";
+
+  var SERVER      = "https://aviator-real-time-dashboard.onrender.com";
+  var INTERVAL_MS = 500;
+
+  var lastMultiplier    = null;
+  var lastRound         = null;
+  var sending           = false;
+  var rodadaEnviada     = false;
+  var picoRodada        = 0;
+  var lastValidMult     = null;
+  var lastCrashTime     = 0;
+  var stableCount       = 0;
+  var ultimoEnvio       = 0;
+  var prevCrashed       = false;
+
+  // ════════════════════════════════════════════
+  //  MULTIPLICADOR
+  // ════════════════════════════════════════════
   function getMultiplier() {
-    // Seletores específicos para o Aviator
-    const elements = document.querySelectorAll(
-      'div[class*="multiplier"], span[class*="multiplier"], ' +
-      '[class*="coefficient"], .multiplier-value, .paycoeff'
-    );
-    
-    for (let el of elements) {
-      let text = el.textContent || el.innerText || '';
-      let match = text.match(/(\d+[.,]\d+)/);
-      if (match) {
-        let val = parseFloat(match[1].replace(',', '.'));
-        if (val >= 1.0 && val <= 1000) return val;
-      }
+    var selectors = [
+      'div[class*="multiplier"]', 'span[class*="multiplier"]',
+      'div[class*="coefficient"]', 'span[class*="coefficient"]',
+      '[class*="crash-coeff"]', '[class*="current-multiplier"]',
+      '[data-cy="current-multiplier"]', '.jet-game__coefficient',
+      '.paycoeff', '.multiplier-value', '.crash-multiplier',
+      '.coefficient', '.multiplier', '.game-multiplier',
+    ];
+    for (var i = 0; i < selectors.length; i++) {
+      try {
+        var els = document.querySelectorAll(selectors[i]);
+        for (var j = 0; j < els.length; j++) {
+          var el = els[j];
+          if (!el || el.children.length > 0) continue;
+          var txt = (el.textContent || el.innerText || '').trim();
+          var m = txt.match(/(\d+[.,]\d+)\s*x?/i);
+          if (m) {
+            var v = parseFloat(m[1].replace(',', '.'));
+            if (!isNaN(v) && v >= 1.0 && v <= 10000) return v;
+          }
+        }
+      } catch(e) {}
     }
-    
-    // Fallback: qualquer texto com número
-    let all = document.querySelectorAll('span, div, p');
-    for (let el of all) {
-      if (el.children.length) continue;
-      let text = el.textContent.trim();
-      if (/^\d+[.,]\d{2}x?$/.test(text)) {
-        let val = parseFloat(text.replace(/[^0-9.]/g, ''));
-        if (val >= 1.0) return val;
-      }
-    }
-    
-    return null;
-  }
-  
-  // FUNÇÃO PARA CAPTURAR COR
-  function getColor() {
-    // Tenta encontrar o elemento do avião
-    let plane = document.querySelector(
-      '[class*="plane"], [class*="bird"], [class*="rocket"], canvas'
-    );
-    
-    if (plane) {
-      let style = window.getComputedStyle(plane);
-      return style.backgroundColor || style.color || 'rgba(255,45,120,1)';
-    }
-    
-    return 'rgba(255,45,120,1)'; // cor padrão rosa
-  }
-  
-  // FUNÇÃO PARA CAPTURAR RODADA
-  function getRound() {
-    // Procura por "Rodada XXXXX"
-    let text = document.body.textContent;
-    let match = text.match(/[Rr]odada\s*:?\s*(\d+)/) || 
-                text.match(/[Rr]ound\s*:?\s*(\d+)/);
-    
-    if (match) return match[1];
-    
-    // Procura por número de 6+ dígitos
-    let all = document.querySelectorAll('span, div');
-    for (let el of all) {
-      if (el.children.length) continue;
-      let txt = el.textContent.trim();
-      if (/^\d{6,}$/.test(txt)) return txt;
-    }
-    
-    return null;
-  }
-  
-  // FUNÇÃO PARA DETECTAR CRASH
-  function isCrashed() {
-    // Verifica se tem texto de crash
-    let text = document.body.textContent;
-    if (/flew away|voou|crashed|fim de rodada/i.test(text)) {
-      return true;
-    }
-    
-    // Verifica se tem elemento de game over
-    if (document.querySelector('[class*="crashed"], [class*="game-over"]')) {
-      return true;
-    }
-    
-    return false;
-  }
-  
-  // FUNÇÃO PARA ENVIAR VELA
-  async function sendCandle(mult, color, round) {
-    if (sending) return;
-    if (!mult || mult < 1.01) return;
-    
-    sending = true;
-    
+    // Fallback: qualquer elemento folha visível com "1.23x"
     try {
-      let response = await fetch(SERVER + '/api/candle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          multiplier: parseFloat(mult.toFixed(2)),
-          color_rgb: color,
-          round: round || 'unknown',
-          timestamp: new Date().toISOString()
-        })
+      var all = document.querySelectorAll('span, div, p, strong, b, h1, h2, h3');
+      for (var k = 0; k < all.length; k++) {
+        var el2 = all[k];
+        if (el2.children.length > 0) continue;
+        var t = (el2.textContent || '').trim();
+        var m2 = t.match(/^(\d+[.,]\d{1,2})\s*x?$/i);
+        if (m2) {
+          var v2 = parseFloat(m2[1].replace(',', '.'));
+          if (!isNaN(v2) && v2 >= 1.0 && v2 <= 10000) {
+            var st = window.getComputedStyle(el2);
+            if (st.display !== 'none' && st.visibility !== 'hidden' && st.opacity !== '0') {
+              return v2;
+            }
+          }
+        }
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  // ════════════════════════════════════════════
+  //  COR RGB
+  // ════════════════════════════════════════════
+  function getColorRGB() {
+    var targets = [
+      '[class*="plane"]','[class*="bird"]','[class*="rocket"]',
+      '[class*="jet"]','[class*="craft"]','[class*="fly"]',
+      '[class*="flight"]','[class*="trace"]','[class*="graph"]',
+      '[class*="aviator"]','[class*="game-container"]',
+    ];
+    for (var i = 0; i < targets.length; i++) {
+      try {
+        var el = document.querySelector(targets[i]);
+        if (!el) continue;
+        var style = window.getComputedStyle(el);
+        var props = [style.backgroundColor, style.color, style.fill, style.stroke];
+        for (var j = 0; j < props.length; j++) {
+          var p = props[j];
+          if (p && p !== 'rgba(0, 0, 0, 0)' && p !== 'transparent' && p.indexOf('0, 0, 0, 0') === -1) {
+            if (p.indexOf('rgb(') === 0) return p.replace('rgb(', 'rgba(').replace(')', ', 1)');
+            if (p.indexOf('rgba(') === 0) return p;
+          }
+        }
+      } catch(e) {}
+    }
+    // Fallback canvas — pega pixel central
+    try {
+      var canvas = document.querySelector('canvas');
+      if (canvas && canvas.width > 0) {
+        var ctx = canvas.getContext('2d');
+        if (ctx) {
+          var px = ctx.getImageData(Math.floor(canvas.width * 0.7), Math.floor(canvas.height * 0.3), 1, 1).data;
+          if (px[3] > 0) return 'rgba('+px[0]+','+px[1]+','+px[2]+','+(px[3]/255).toFixed(2)+')';
+        }
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  // ════════════════════════════════════════════
+  //  RODADA
+  // ════════════════════════════════════════════
+  function getRound() {
+    var patterns = [
+      /[Rr]odada\s*[#:]?\s*(\d{4,})/,
+      /[Rr]ound\s*[#:]?\s*(\d{4,})/,
+      /[Gg]ame\s*[#:]?\s*(\d{4,})/,
+      /[Ii][Dd]\s*[#:]?\s*(\d{4,})/,
+      /#\s*(\d{5,})/,
+      /ID:\s*(\d{5,})/i,
+    ];
+    // Busca em todos os elementos texto
+    var elements = document.querySelectorAll('span, div, p, small, label, h4, h5, td, li');
+    for (var i = 0; i < elements.length; i++) {
+      var el = elements[i];
+      if (el.children.length > 0) continue;
+      var text = (el.textContent || '').trim();
+      if (!text) continue;
+      for (var p = 0; p < patterns.length; p++) {
+        var m = text.match(patterns[p]);
+        if (m && m[1] && m[1].length >= 4) return m[1];
+      }
+      // ng-tns — seletor original que funcionava
+      if (el.className && el.className.indexOf('ng-tns') !== -1) {
+        var m2 = text.match(/(\d{5,})/);
+        if (m2) return m2[1];
+      }
+      // Número isolado 6+ dígitos
+      if (/^\d{6,}$/.test(text)) return text;
+    }
+    // Atributos data-
+    var dataEls = document.querySelectorAll('[data-round],[data-game-id],[data-id],[data-session]');
+    for (var d = 0; d < dataEls.length; d++) {
+      var v = dataEls[d].dataset.round || dataEls[d].dataset.gameId || dataEls[d].dataset.id;
+      if (v && /^\d{4,}$/.test(v)) return v;
+    }
+    return lastRound || null;
+  }
+
+  // ════════════════════════════════════════════
+  //  CRASH
+  // ════════════════════════════════════════════
+  function isCrashed() {
+    var sels = [
+      '[class*="crashed"]','[class*="fly-away"]','[class*="game-over"]',
+      '[class*="round-end"]','[class*="finished"]','[class*="ended"]',
+      '.game-over','.round-ended',
+      '[data-state="crashed"]','[data-state="ended"]',
+    ];
+    for (var i = 0; i < sels.length; i++) {
+      if (document.querySelector(sels[i])) return true;
+    }
+    var txt = document.body.textContent || '';
+    return /(flew away|voou|crashed|fim de rodada|round ended|game over|acabou)/i.test(txt);
+  }
+
+  // ════════════════════════════════════════════
+  //  ENVIA VELA (com retry automático)
+  // ════════════════════════════════════════════
+  function sendCandle(multiplier, color_rgb, round) {
+    var agora = Date.now();
+    if (sending)        return;
+    if (rodadaEnviada)  return;
+    if (agora - ultimoEnvio < 3000) { console.log('[MEGATRON] ⏭ Muito recente'); return; }
+    if (!multiplier || multiplier < 1.01) return;
+
+    sending       = true;
+    rodadaEnviada = true;
+    ultimoEnvio   = agora;
+    lastCrashTime = agora;
+
+    var payload = {
+      multiplier: parseFloat(multiplier.toFixed(2)),
+      color_rgb:  color_rgb || null,
+      round:      round || null,
+    };
+
+    console.log('[MEGATRON] 📤 Enviando: '+payload.multiplier+'x | rodada='+payload.round+' | cor='+payload.color_rgb);
+
+    function tentarEnvio(n) {
+      fetch(SERVER + '/api/candle', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body:    JSON.stringify(payload),
+        mode:    'cors'
+      })
+      .then(function(r) {
+        if (r.ok) {
+          console.log('[MEGATRON] ✅ '+payload.multiplier+'x enviado! rodada='+payload.round);
+          try { chrome.runtime.sendMessage({ type:'CANDLE_CAPTURED', data:{ multiplier:payload.multiplier, round:payload.round, color:payload.color_rgb } }); } catch(e) {}
+          sending = false;
+        } else {
+          console.warn('[MEGATRON] ⚠ HTTP '+r.status+' | tentativa '+n+'/3');
+          if (n < 3) setTimeout(function(){ tentarEnvio(n+1); }, 1500 * n);
+          else { rodadaEnviada = false; sending = false; }
+        }
+      })
+      .catch(function(err) {
+        console.warn('[MEGATRON] ❌ Tentativa '+n+'/3:', err.message);
+        if (n < 3) setTimeout(function(){ tentarEnvio(n+1); }, 1500 * n);
+        else { rodadaEnviada = false; sending = false; }
       });
-      
-      if (response.ok) {
-        console.log('[MEGATRON] ✅ Vela enviada:', mult.toFixed(2) + 'x');
-        chrome.runtime.sendMessage({ 
-          type: "CANDLE_CAPTURED", 
-          data: { multiplier: mult, round: round } 
+    }
+    tentarEnvio(1);
+  }
+
+  // ════════════════════════════════════════════
+  //  LOOP PRINCIPAL
+  // ════════════════════════════════════════════
+  function loop() {
+    var crashed = isCrashed();
+    var mult    = getMultiplier();
+    var round   = getRound();
+
+    if (round) lastRound = round;
+    if (mult !== null && mult > 1.0) {
+      if (mult > picoRodada) { picoRodada = mult; lastValidMult = mult; }
+      stableCount = (lastMultiplier !== null && Math.abs(mult - lastMultiplier) < 0.01) ? stableCount + 1 : 0;
+    }
+
+    // MÉTODO 1: crash por seletor CSS
+    if (!prevCrashed && crashed && !rodadaEnviada) {
+      var p1 = picoRodada > 1.01 ? picoRodada : (lastValidMult || mult || 1.0);
+      console.log('[MEGATRON] 🎯 CRASH! '+p1.toFixed(2)+'x | rodada='+(round||lastRound));
+      sendCandle(p1, getColorRGB(), round || lastRound);
+      picoRodada = 0;
+    }
+
+    // MÉTODO 2: queda do multiplicador (fallback Kiwi)
+    else if (!rodadaEnviada && lastMultiplier !== null && lastMultiplier > 1.10 && mult !== null && mult < 1.05 && mult > 0) {
+      var p2 = picoRodada > 1.01 ? picoRodada : lastMultiplier;
+      console.log('[MEGATRON] 🎯 QUEDA! '+p2.toFixed(2)+'x | rodada='+(round||lastRound));
+      sendCandle(p2, getColorRGB(), round || lastRound);
+      picoRodada = 0;
+    }
+
+    // MÉTODO 3: multiplicador estável 5+ ciclos (travou no resultado)
+    else if (!rodadaEnviada && stableCount >= 5 && picoRodada > 1.1) {
+      console.log('[MEGATRON] 🎯 ESTÁVEL! '+picoRodada.toFixed(2)+'x');
+      sendCandle(picoRodada, getColorRGB(), round || lastRound);
+      picoRodada  = 0;
+      stableCount = 0;
+    }
+
+    // RESET: nova rodada
+    if (lastMultiplier !== null && lastMultiplier < 1.10 && mult !== null && mult > 1.10) {
+      console.log('[MEGATRON] 🔄 Nova rodada | '+(round||'?'));
+      rodadaEnviada = false;
+      picoRodada    = 0;
+      stableCount   = 0;
+      lastValidMult = null;
+    }
+
+    prevCrashed    = crashed;
+    lastMultiplier = mult;
+
+    setTimeout(loop, INTERVAL_MS);
+  }
+
+  // ════════════════════════════════════════════
+  //  RESPONDE TESTE DO POPUP
+  // ════════════════════════════════════════════
+  try {
+    chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
+      if (msg && msg.type === 'TEST_CAPTURE') {
+        sendResponse({
+          status:     'OK',
+          multiplier: getMultiplier(),
+          round:      getRound(),
+          color:      getColorRGB(),
+          url:        window.location.href
         });
       }
-    } catch (err) {
-      console.log('[MEGATRON] Erro ao enviar:', err.message);
-    } finally {
-      sending = false;
-    }
+      return true;
+    });
+  } catch(e) {}
+
+  // ════════════════════════════════════════════
+  //  INICIA
+  // ════════════════════════════════════════════
+  console.log('[MEGATRON] 🚀 v7.0 carregado em:', window.location.href);
+  fetch(SERVER + '/api/ping').catch(function(){});
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(loop, 3000); });
+  } else {
+    setTimeout(loop, 3000);
   }
-  
-  // LOOP PRINCIPAL
-  let picoRodada = 0;
-  let rodadaEnviada = false;
-  let crashed = false;
-  
-  setInterval(() => {
-    let mult = getMultiplier();
-    let round = getRound();
-    let crashNow = isCrashed();
-    
-    if (round) lastRound = round;
-    if (mult && mult > picoRodada) picoRodada = mult;
-    
-    // Detecta crash
-    if (!crashed && crashNow && !rodadaEnviada) {
-      console.log('[MEGATRON] CRASH! Pico:', picoRodada);
-      sendCandle(picoRodada, getColor(), round || lastRound);
-      rodadaEnviada = true;
-      picoRodada = 0;
-    }
-    
-    // Detecta queda brusca (fallback)
-    if (!rodadaEnviada && lastMultiplier && lastMultiplier > 1.5 && mult && mult < 1.1) {
-      console.log('[MEGATRON] QUEDA! Pico:', picoRodada);
-      sendCandle(picoRodada, getColor(), round || lastRound);
-      rodadaEnviada = true;
-      picoRodada = 0;
-    }
-    
-    // Nova rodada
-    if (lastMultiplier && lastMultiplier < 1.1 && mult && mult > 1.5) {
-      rodadaEnviada = false;
-      picoRodada = 0;
-    }
-    
-    crashed = crashNow;
-    lastMultiplier = mult;
-    
-  }, 800); // Verifica a cada 800ms
-  
-  console.log('[MEGATRON] Content script carregado');
+
 })();
