@@ -1,28 +1,1503 @@
-// ═══════════════════════════════════════════════
-//  Megatron — background.js v4.0 (MV2 Kiwi)
-// ═══════════════════════════════════════════════
-var SERVER = "https://aviator-real-time-dashboard.onrender.com";
 
-// Ping a cada 4 min para manter o Render acordado
-setInterval(function(){
-  fetch(SERVER + "/api/ping")
-    .then(function(r){ return r.json(); })
-    .then(function(d){ console.log("[MEGATRON BG] Ping OK | velas:", d.candles, "| online:", d.online); })
-    .catch(function(){ console.log("[MEGATRON BG] Ping falhou — servidor dormindo"); });
-}, 4 * 60 * 1000);
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MEGATRON v4</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#03060c;--panel:#070f1a;--border:#102030;--cyan:#00e5ff;--pink:#ff2d78;--purple:#b845ff;--blue:#2979ff;--green:#00e676;--yellow:#ffd600;--red:#ff1744;--text:#c8e0f5;--dim:#3a6a8a;--orange:#ff6d00}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:"Rajdhani",sans-serif;overflow-x:hidden}
+body{border:3px solid var(--green);transition:border-color .5s,box-shadow .5s}
+body.nv{border-color:var(--green);box-shadow:inset 0 0 40px #00e67612,0 0 60px #00e67640}
+body.nr{border-color:var(--red);box-shadow:inset 0 0 40px #ff174412,0 0 60px #ff174440}
+body.na{border-color:var(--yellow);box-shadow:inset 0 0 40px #ffd60012,0 0 60px #ffd60040}
 
-// Log de atividade
-setInterval(function(){
-  console.log("[MEGATRON BG] Ativo:", new Date().toLocaleTimeString());
-}, 30000);
+/* LOGIN */
+#tela-login{position:fixed;inset:0;z-index:999;background:radial-gradient(ellipse at center,#010d1a,#000407);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.logo-wrap{position:relative;margin-bottom:16px}
+.logo-img{width:120px;height:120px;object-fit:cover;border-radius:50%;border:3px solid var(--cyan);box-shadow:0 0 40px #00e5ff80;animation:lp 3s ease-in-out infinite;display:block}
+@keyframes lp{0%,100%{box-shadow:0 0 40px #00e5ff80}50%{box-shadow:0 0 70px #00e5ffcc}}
+.ring{position:absolute;top:50%;left:50%;border-radius:50%;border:2px solid transparent;animation:sp 4s linear infinite}
+.r1{width:150px;height:150px;margin:-75px 0 0 -75px;border-top-color:var(--cyan);border-bottom-color:var(--cyan)}
+.r2{width:166px;height:166px;margin:-83px 0 0 -83px;border-left-color:var(--pink);border-right-color:var(--pink);animation-direction:reverse;animation-duration:6s}
+@keyframes sp{to{transform:rotate(360deg)}}
+.titulo{font-family:"Orbitron",monospace;font-size:1.4rem;font-weight:900;color:var(--cyan);text-shadow:0 0 30px var(--cyan);letter-spacing:4px;text-align:center;margin-bottom:3px}
+.subtit{font-family:"Share Tech Mono",monospace;font-size:.68rem;color:var(--dim);letter-spacing:3px;text-align:center;margin-bottom:20px}
+.card{background:rgba(7,15,26,.96);border:1px solid var(--border);border-radius:10px;padding:22px 24px;width:100%;max-width:340px}
+.card h2{font-family:"Orbitron",monospace;font-size:.73rem;color:var(--cyan);letter-spacing:2px;margin-bottom:16px;text-align:center}
+.campo{margin-bottom:13px}
+.campo label{display:block;font-family:"Share Tech Mono",monospace;font-size:.6rem;color:var(--dim);letter-spacing:1px;margin-bottom:5px;text-transform:uppercase}
+.campo input{width:100%;background:#030c18;border:1px solid var(--border);border-radius:5px;padding:10px 12px;color:var(--text);font-family:"Share Tech Mono",monospace;font-size:.82rem;outline:none}
+.campo input:focus{border-color:var(--cyan)}
+.btn-entrar{width:100%;padding:13px;background:linear-gradient(135deg,#00b8d4,#007aa0);border:none;border-radius:6px;color:#000;font-family:"Orbitron",monospace;font-size:.82rem;font-weight:900;letter-spacing:2px;cursor:pointer;margin-top:4px}
+.btn-entrar:hover{filter:brightness(1.15)}
+.msg-erro{font-family:"Share Tech Mono",monospace;font-size:.68rem;color:var(--red);text-align:center;margin-top:8px;min-height:18px}
+.rodape-link{font-family:"Share Tech Mono",monospace;font-size:.65rem;color:var(--dim);text-align:center;margin-top:12px}
+.rodape-link a{color:var(--cyan);cursor:pointer;text-decoration:underline}
+#tela-cadastro{display:none;position:fixed;inset:0;z-index:1000;background:radial-gradient(ellipse at center,#010d1a,#000407);overflow-y:auto;padding:20px}
+#tela-app{display:none}
 
-// Recebe mensagens do content.js
-chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse){
-  if(msg.type === "CANDLE_CAPTURED"){
-    console.log("[MEGATRON BG] Vela:", msg.data.multiplier + "x | rodada=" + msg.data.round);
+/* HEADER */
+#hdr{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:linear-gradient(90deg,#000c18,#001525,#000c18);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.hlogo{display:flex;align-items:center;gap:8px}
+.hlogo img{width:28px;height:28px;border-radius:50%;border:1px solid var(--cyan);box-shadow:0 0 10px #00e5ff60}
+.htitle{font-family:"Orbitron",monospace;font-size:.8rem;font-weight:900;color:var(--cyan);text-shadow:0 0 12px var(--cyan);letter-spacing:2px}
+.hst{display:flex;gap:6px;margin-top:2px;flex-wrap:wrap}
+.sp{font-family:"Share Tech Mono",monospace;font-size:.57rem;padding:1px 7px;border-radius:12px;border:1px solid;display:flex;align-items:center;gap:4px}
+.sp.on{color:var(--green);border-color:var(--green);background:#00e67610}
+.sp.ac{color:var(--cyan);border-color:var(--cyan);background:#00e5ff10}
+.sp.oc{color:var(--purple);border-color:var(--purple);background:#b845ff10}
+.sp.us{color:var(--yellow);border-color:var(--yellow);background:#ffd60010}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:bk 1.3s infinite;display:inline-block}
+.dot.c{background:var(--cyan)}
+@keyframes bk{0%,100%{opacity:1}50%{opacity:.15}}
+.hright{display:flex;align-items:center;gap:8px}
+#relogio{font-family:"Orbitron",monospace;font-size:.9rem;font-weight:700;color:var(--cyan);text-shadow:0 0 12px var(--cyan);letter-spacing:3px}
+.btn-sair{background:none;border:1px solid var(--border);color:var(--dim);padding:2px 8px;border-radius:4px;font-family:"Share Tech Mono",monospace;font-size:.58rem;cursor:pointer}
+.btn-sair:hover{border-color:var(--red);color:var(--red)}
+#barra-casa{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;padding:5px 12px;background:#030a11;border-bottom:1px solid var(--border);font-family:"Share Tech Mono",monospace;font-size:.64rem}
+#badge-casa{display:flex;align-items:center;gap:5px;padding:3px 12px;border-radius:4px;border:2px solid;font-weight:700;font-size:.72rem;letter-spacing:1px;transition:all .4s}
+#badge-casa.vd{color:var(--green);border-color:var(--green);background:#00e67612;box-shadow:0 0 16px #00e67640}
+#badge-casa.vm{color:var(--red);border-color:var(--red);background:#ff174412;box-shadow:0 0 16px #ff174440}
+#badge-casa.am{color:var(--yellow);border-color:var(--yellow);background:#ffd60012;box-shadow:0 0 16px #ffd60040}
+#badge-casa.roxo{color:var(--purple);border-color:var(--purple);background:#b845ff12;box-shadow:0 0 16px #b845ff40;animation:piscaap .9s infinite}
+#badge-casa.recolhendo{color:#ff9800;border-color:#ff9800;background:#ff6d0012;box-shadow:0 0 16px #ff6d0040}
+#badge-casa.falso{color:var(--red);border-color:var(--red);background:#ff174418;box-shadow:0 0 20px #ff174460;animation:piscaap .5s infinite}
+
+/* CONTEÚDO */
+#conteudo{padding:6px 4px;max-width:980px;margin:0 auto}
+.sec{font-family:"Orbitron",monospace;font-size:.48rem;color:var(--dim);letter-spacing:3px;text-transform:uppercase;margin-bottom:5px}
+
+/* GRADE DE QUADROS — mesma largura das velas do histórico */
+.grade-quad{display:grid;grid-template-columns:repeat(11,1fr);gap:3px;margin-bottom:8px}
+@media(max-width:700px){.grade-quad{grid-template-columns:repeat(6,1fr)}}
+@media(max-width:420px){.grade-quad{grid-template-columns:repeat(4,1fr)}}
+.quad{background:var(--panel);border:1px solid var(--border);border-radius:4px;overflow:hidden;cursor:pointer;position:relative;transition:border-color .2s,background .2s;aspect-ratio:1/1}
+.quad::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:var(--ac,var(--cyan))}
+.quad:hover{border-color:var(--ac,var(--cyan));background:#070f1acc}
+.qi{padding:2px 3px 2px;height:100%;display:flex;flex-direction:column;justify-content:space-between}
+.qtopo{display:flex;align-items:center;justify-content:space-between;margin-bottom:0}
+.qnum{font-family:"Orbitron",monospace;font-size:.3rem;color:var(--ac,var(--cyan));opacity:.6;letter-spacing:1px}
+.qico{font-size:.5rem;opacity:.7}
+.qnome{font-family:"Orbitron",monospace;font-size:.33rem;font-weight:700;color:var(--text);line-height:1.1;margin-bottom:1px;opacity:.85}
+.qinfo{font-family:"Share Tech Mono",monospace;font-size:.42rem;color:var(--dim);line-height:1.3}
+
+/* CORES DOS QUADS Q1-Q26 */
+.q1{--ac:var(--purple)}.q2{--ac:var(--cyan)}.q3{--ac:var(--green)}.q4{--ac:var(--yellow)}.q5{--ac:var(--pink)}.q6{--ac:var(--cyan)}.q7{--ac:var(--purple)}.q8{--ac:#ff9800}.q9{--ac:var(--pink)}.q10{--ac:var(--blue)}
+.q11{--ac:var(--green)}.q12{--ac:var(--cyan)}.q13{--ac:var(--yellow)}.q14{--ac:var(--purple)}.q15{--ac:var(--pink)}.q16{--ac:var(--cyan)}.q17{--ac:var(--red)}.q18{--ac:#ff9800}.q19{--ac:var(--green)}.q20{--ac:var(--pink)}
+.q21{--ac:#ff6d00}.q22{--ac:var(--cyan)}.q23{--ac:var(--yellow)}.q24{--ac:var(--green)}.q25{--ac:var(--purple)}.q26{--ac:var(--pink)}
+
+/* Q11 ALERTA */
+.q-alert{--ac:var(--pink);margin-bottom:6px;aspect-ratio:unset!important;height:auto!important}
+.q-alert::before{background:var(--pink);box-shadow:0 0 10px var(--pink)}
+.q11corpo{padding:5px 10px;transition:padding .3s;display:flex;align-items:center;gap:8px;min-height:30px}
+.q11corpo.expandido{padding:9px 11px;display:block;min-height:unset}
+.alerta-titulo{font-family:"Orbitron",monospace;font-size:.72rem;font-weight:900;color:var(--pink);text-shadow:0 0 14px var(--pink);text-align:center;letter-spacing:2px;animation:piscaap 1.5s infinite}
+@keyframes piscaap{0%,100%{opacity:1}50%{opacity:.5}}
+.grade-al{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-top:7px}
+@media(max-width:460px){.grade-al{grid-template-columns:1fr}}
+.item-al{display:flex;align-items:center;gap:6px;font-family:"Share Tech Mono",monospace;font-size:.62rem;padding:4px 8px;border-radius:3px;border:1px solid}
+.item-al.on{color:var(--green);border-color:#00e67635;background:#00140518}
+.item-al.off{color:var(--dim);border-color:var(--border)}
+.barra-score{display:flex;align-items:center;gap:8px;margin-top:7px}
+.barra-trilha{flex:1;height:5px;background:#0a1e2e;border-radius:3px;overflow:hidden}
+.barra-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--pink));transition:width .5s}
+.barra-lbl{font-family:"Share Tech Mono",monospace;font-size:.6rem;color:var(--dim);white-space:nowrap}
+.alerta-rodape{margin-top:9px;text-align:center;font-family:"Orbitron",monospace;font-size:.72rem;font-weight:700;color:var(--yellow);text-shadow:0 0 10px var(--yellow);letter-spacing:2px}
+.sem-alerta{font-family:"Share Tech Mono",monospace;font-size:.67rem;color:var(--dim);text-align:center;padding:6px 0}
+
+/* FIGURAS */
+.figura-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 6px;background:#030c18;border:2px solid var(--border);border-radius:5px;cursor:pointer;transition:border-color .2s,background .2s,box-shadow .2s;min-width:42px}
+.figura-btn:hover{border-color:var(--cyan);background:#001825}
+.figura-btn.selecionada{border-color:var(--yellow);background:#1a1400;box-shadow:0 0 10px #ffd60040}
+.figura-btn.correspondente{border-color:var(--cyan);background:#001825;box-shadow:0 0 6px #00e5ff30;animation:piscaap .9s infinite}
+.fig-emoji{font-size:.9rem}
+.fig-nome{font-family:Share Tech Mono,monospace;font-size:.42rem;color:var(--dim);text-align:center;letter-spacing:1px}
+.figura-btn.selecionada .fig-nome,.figura-btn.correspondente .fig-nome{color:var(--text)}
+.grade-confluencia{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px}
+@media(max-width:460px){.grade-confluencia{grid-template-columns:1fr}}
+.quad-conf{background:var(--panel);border:2px solid;border-radius:8px;overflow:hidden;cursor:pointer;position:relative}
+.quad-conf-rosa{border-color:var(--pink);box-shadow:0 0 14px #ff2d7840}
+.quad-conf-roxa{border-color:var(--purple);box-shadow:0 0 14px #b845ff40}
+.conf-header{padding:7px 10px;border-bottom:1px solid;display:flex;align-items:center;justify-content:space-between}
+.quad-conf-rosa .conf-header{border-bottom-color:#ff2d7830;background:#1a000e}
+.quad-conf-roxa .conf-header{border-bottom-color:#b845ff30;background:#0d0020}
+.conf-titulo{font-family:"Orbitron",monospace;font-size:.65rem;font-weight:900;letter-spacing:2px}
+.quad-conf-rosa .conf-titulo{color:var(--pink);text-shadow:0 0 8px var(--pink)}
+.quad-conf-roxa .conf-titulo{color:var(--purple);text-shadow:0 0 8px var(--purple)}
+.conf-score{font-family:"Orbitron",monospace;font-size:.8rem;font-weight:900}
+.conf-corpo{padding:8px 10px}
+.conf-item{display:flex;justify-content:space-between;font-family:"Share Tech Mono",monospace;font-size:.6rem;padding:2px 0;border-bottom:1px solid #0a1e2e}
+.conf-item:last-child{border-bottom:none}
+.conf-item .cl{color:var(--dim)}
+.conf-item .cv{font-weight:700}
+.conf-sinal{margin-top:6px;padding:7px;border-radius:5px;text-align:center;font-family:"Orbitron",monospace;font-size:.65rem;font-weight:900;letter-spacing:2px}
+.conf-sinal.enter{background:#00140518;border:1px solid var(--green);color:var(--green);animation:piscaap 1s infinite}
+.conf-sinal.wait{background:#1a0a0010;border:1px solid var(--yellow);color:var(--yellow)}
+.conf-sinal.stop{background:#1a000010;border:1px solid var(--red);color:var(--red)}
+.conf-barra{height:4px;border-radius:2px;margin-top:6px;overflow:hidden;background:#0a1e2e}
+.conf-barra-fill{height:100%;border-radius:2px;transition:width .6s}
+.quad-conf-rosa .conf-barra-fill{background:linear-gradient(90deg,#ff2d7860,var(--pink))}
+.quad-conf-roxa .conf-barra-fill{background:linear-gradient(90deg,#b845ff60,var(--purple))}
+/* ALERTA ENTRADA ROXA — igual ao da rosa */
+.conf-entrada-roxa{margin-top:6px;padding:6px 8px;border-radius:4px;background:#0d0020;border:1px solid var(--purple);font-family:"Orbitron",monospace;font-size:.62rem;font-weight:700;color:var(--purple);text-align:center;letter-spacing:1px}
+.conf-entrada-roxa.ativo{border-color:var(--green);color:var(--green);background:#001405;animation:piscaap 1s infinite}
+
+/* PAINEL DE CONFLUÊNCIA 20 PADRÕES */
+.conf20-wrap{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:9px}
+.conf20-titulo{font-family:"Orbitron",monospace;font-size:.62rem;color:var(--cyan);letter-spacing:2px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.conf20-grade{display:grid;grid-template-columns:repeat(13,1fr);gap:3px;margin-bottom:8px}
+@media(max-width:500px){.conf20-grade{grid-template-columns:repeat(7,1fr)}}
+.conf20-pat{background:#030c18;border:1px solid var(--border);border-radius:4px;padding:4px 5px;text-align:center;position:relative}
+.conf20-pat.ativo-rosa{border-color:#ff2d7860;background:#1a000e}
+.conf20-pat.ativo-roxa{border-color:#b845ff60;background:#0d0020}
+.conf20-pat.ativo-ambos{border-color:#ffd60060;background:#1a1400}
+.conf20-pnum{font-family:"Orbitron",monospace;font-size:.38rem;color:var(--dim);letter-spacing:1px}
+.conf20-pscore{display:flex;gap:3px;justify-content:center;margin-top:2px}
+.conf20-sr{font-family:"Orbitron",monospace;font-size:.52rem;font-weight:700;color:var(--pink)}
+.conf20-sx{font-family:"Orbitron",monospace;font-size:.52rem;font-weight:700;color:var(--purple)}
+.conf20-barras{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.conf20-bar-wrap{padding:8px;border-radius:5px}
+.conf20-bar-wrap.rosa-bg{background:#1a000e;border:1px solid #ff2d7850}
+.conf20-bar-wrap.roxa-bg{background:#0d0020;border:1px solid #b845ff50}
+.conf20-bar-label{font-family:"Orbitron",monospace;font-size:.58rem;font-weight:900;margin-bottom:5px}
+.conf20-bar-label.rosa-c{color:var(--pink)}
+.conf20-bar-label.roxa-c{color:var(--purple)}
+.conf20-bar-track{height:14px;background:#0a1e2e;border-radius:7px;overflow:hidden;position:relative}
+.conf20-bar-fill{height:100%;border-radius:7px;transition:width .7s ease}
+.conf20-bar-fill.rosa-f{background:linear-gradient(90deg,#ff2d7870,var(--pink))}
+.conf20-bar-fill.roxa-f{background:linear-gradient(90deg,#b845ff70,var(--purple))}
+.conf20-bar-pct{font-family:"Orbitron",monospace;font-size:.72rem;font-weight:900;text-align:center;margin-top:4px}
+.conf20-veredicto{padding:8px;border-radius:5px;text-align:center;font-family:"Orbitron",monospace;font-size:.68rem;font-weight:900;letter-spacing:2px;margin-top:4px}
+.conf20-veredicto.v-baixa{border:1px solid var(--dim);color:var(--dim);background:#020810}
+.conf20-veredicto.v-obs{border:1px solid var(--yellow);color:var(--yellow);background:#1a140010}
+.conf20-veredicto.v-forte{border:1px solid var(--green);color:var(--green);background:#00140510;animation:piscaap 1.2s infinite}
+.conf20-veredicto.v-alta{border:1px solid var(--pink);color:var(--pink);background:#1a000e18;animation:piscaap .8s infinite}
+
+/* VELAS */
+.grade-velas{display:grid;grid-template-columns:repeat(11,1fr);gap:4px}
+@media(max-width:700px){.grade-velas{grid-template-columns:repeat(6,1fr)}}
+@media(max-width:420px){.grade-velas{grid-template-columns:repeat(4,1fr)}}
+.vela{border-radius:6px;border:1px solid;padding:5px 5px 4px;text-align:center;position:relative;cursor:pointer;transition:transform .15s;animation:velain .3s ease}
+@keyframes velain{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
+.vela:hover{transform:scale(1.04)}
+.vela.blue{background:#0c1e35;border-color:#1a4060}
+.vela.purple{background:#150825;border-color:#5a1580}
+.vela.pink{background:#1f0014;border-color:var(--pink);box-shadow:0 0 12px #ff2d7855}
+.vnum{position:absolute;top:2px;left:4px;font-family:"Orbitron",monospace;font-size:.39rem;color:var(--dim);opacity:.6}
+.vicone{position:absolute;top:1px;right:3px;font-size:.6rem}
+.vval{font-family:"Orbitron",monospace;font-weight:700;line-height:1.1;margin-top:5px}
+.vela.blue .vval{font-size:.75rem;color:#7ec8ff}
+.vela.purple .vval{font-size:.75rem;color:#d9aaff}
+.vela.pink .vval{font-size:.79rem;color:var(--pink);text-shadow:0 0 8px var(--pink)}
+.vsoma{font-family:"Share Tech Mono",monospace;font-size:.54rem;color:var(--dim);margin-top:2px}
+.vsoma b{color:var(--yellow)}
+.vtempo{font-family:"Share Tech Mono",monospace;font-size:.52rem;color:var(--dim);margin-top:1px}
+.vrodada{font-size:.48rem;font-family:"Share Tech Mono",monospace;margin-top:3px;padding-top:3px;border-top:1px solid;opacity:.7}
+.vela.blue .vrodada{border-color:#1a4060;color:#3a7aaa}
+.vela.purple .vrodada{border-color:#5a1580;color:#9a4abf}
+.vela.pink .vrodada{border-color:#ff2d7844;color:#ff6a9d}
+.vela.selecionada{box-shadow:0 0 18px #ff2d78cc!important;transform:scale(1.06)!important;z-index:2}
+.vela.desfocada{opacity:.25;filter:grayscale(.8)}
+
+/* MODAL */
+#fundo-modal{display:none;position:fixed;inset:0;z-index:500;background:#000408ee;backdrop-filter:blur(6px);justify-content:center;align-items:center}
+#fundo-modal.aberto{display:flex}
+#caixa-modal{background:var(--panel);border:1px solid var(--mc,var(--cyan));border-radius:8px;width:93%;max-width:680px;max-height:88vh;overflow-y:auto;animation:aparecer .2s ease}
+@keyframes aparecer{from{opacity:0;transform:scale(.92)}to{opacity:1}}
+#cabec-modal{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);background:#030c14;position:sticky;top:0}
+#titulo-modal{font-family:"Orbitron",monospace;font-size:.73rem;font-weight:700;color:var(--mc,var(--cyan));letter-spacing:2px}
+#btn-fechar-modal{background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;padding:3px 9px;border-radius:4px;font-family:"Orbitron",monospace;font-size:.66rem}
+#btn-fechar-modal:hover{border-color:var(--red);color:var(--red)}
+#corpo-modal{padding:16px}
+
+/* UTILITÁRIOS */
+.tb{width:100%;border-collapse:collapse;font-family:"Share Tech Mono",monospace;font-size:.69rem}
+.tb th{color:var(--dim);font-size:.57rem;padding:4px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;text-align:left}
+.tb td{padding:4px 8px;border-bottom:1px solid #0a1e2e;color:var(--text)}
+.tb tr:last-child td{border-bottom:none}
+.cp{color:var(--pink);font-weight:700}.cpu{color:var(--purple)}.cc{color:var(--cyan)}.cg{color:var(--green)}.cy{color:var(--yellow)}
+.linha{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #0a1e2e;font-family:"Share Tech Mono",monospace;font-size:.71rem}
+.linha:last-child{border-bottom:none}.ll{color:var(--dim)}.lv{color:var(--cyan);font-weight:700}
+.lv.pk{color:var(--pink)}.lv.gn{color:var(--green)}.lv.yw{color:var(--yellow)}
+.barra{display:flex;align-items:center;gap:7px;margin:4px 0}
+.barra-label{font-family:"Share Tech Mono",monospace;font-size:.63rem;color:var(--dim);width:30px;text-align:right;flex-shrink:0}
+.barra-track{flex:1;height:8px;background:#0a1e2e;border-radius:4px;overflow:hidden}
+.barra-prog{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--cyan),#0060cc);transition:width .5s}
+.barra-prog.quente{background:linear-gradient(90deg,var(--pink),#ff6b9d)}
+.barra-cont{font-family:"Share Tech Mono",monospace;font-size:.61rem;color:var(--dim);width:20px}
+.div-sep{border:none;border-top:1px solid var(--border);margin:9px 0}
+.vazio{font-family:"Share Tech Mono",monospace;font-size:.7rem;color:var(--dim);text-align:center;padding:18px 0}
+.pilula{font-family:"Share Tech Mono",monospace;font-size:.67rem;padding:3px 8px;border-radius:3px;background:#0d2035;border:1px solid #1e4d7a;color:#64b5f6}
+.pilula.quente{background:#2d001a;border-color:var(--pink);color:var(--pink)}
+.grupo-pilulas{display:flex;flex-wrap:wrap;gap:5px;padding:3px 0}
+.gatilho-item{background:#1a0a0022;border:1px solid var(--yellow);border-radius:4px;padding:6px 10px;margin-bottom:5px;font-family:"Share Tech Mono",monospace;font-size:.69rem;color:var(--yellow)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* HISTÓRICO */
+.hist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.hist-contador{font-family:"Share Tech Mono",monospace;font-size:.6rem;padding:2px 8px;border-radius:3px;border:1px solid var(--cyan);color:var(--cyan);background:#001525}
+.hist-filtros{display:flex;gap:5px}
+.hist-btn{font-family:"Share Tech Mono",monospace;font-size:.55rem;padding:2px 7px;border-radius:3px;border:1px solid var(--border);color:var(--dim);cursor:pointer;background:none}
+.hist-btn.ativo{border-color:var(--cyan);color:var(--cyan);background:#001525}
+
+/* CAIXAS DE CÁLCULO */
+.ciclo-box{padding:8px 10px;border-radius:5px;margin-bottom:6px;font-family:"Share Tech Mono",monospace;font-size:.65rem}
+.ciclo-box.compressao{border:1px solid var(--purple);background:#0d0020}
+.ciclo-box.neutro{border:1px solid var(--border);background:#030c18}
+.ciclo-box.ativo{border:1px solid var(--green);background:#001405}
+.ciclo-box .ciclo-titulo{font-family:"Orbitron",monospace;font-size:.55rem;color:var(--dim);letter-spacing:1px;margin-bottom:4px}
+.ciclo-box .ciclo-valor{font-family:"Orbitron",monospace;font-size:.85rem;font-weight:700}
+.seq-visual{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.seq-dot{width:18px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:"Orbitron",monospace;font-size:.5rem;font-weight:700}
+.seq-dot.s1{background:#0d2035;color:#7ec8ff}
+.seq-dot.s2{background:#1a0529;color:#d9aaff}
+.seq-dot.s3{background:#001a00;color:var(--green)}
+.seq-dot.s4{background:#2d001a;color:var(--pink)}
+.seq-dot.s5{background:#1a0a00;color:#ff9800}
+.prob-meter{margin:8px 0;padding:8px;border:1px solid var(--border);border-radius:5px}
+.prob-titulo{font-family:"Orbitron",monospace;font-size:.55rem;color:var(--dim);letter-spacing:1px;margin-bottom:5px}
+.prob-barra{height:10px;background:#0a1e2e;border-radius:5px;overflow:hidden}
+.prob-fill{height:100%;border-radius:5px;transition:width .6s ease}
+.prob-fill.baixa{background:linear-gradient(90deg,#0060cc,var(--cyan))}
+.prob-fill.media{background:linear-gradient(90deg,var(--cyan),var(--yellow))}
+.prob-fill.alta{background:linear-gradient(90deg,var(--yellow),var(--pink))}
+.prob-fill.critica{background:linear-gradient(90deg,var(--pink),#ff0088);animation:piscaap .8s infinite}
+.prob-texto{font-family:"Orbitron",monospace;font-size:.72rem;font-weight:700;text-align:center;margin-top:3px}
+</style>
+<body class="nv">
+
+<!-- TELA LOGIN -->
+<div id="tela-login">
+  <div class="logo-wrap">
+    <div class="ring r1"></div>
+    <div class="ring r2"></div>
+    <img class="logo-img" id="logo-login" src="" alt="M"/>
+  </div>
+  <div class="titulo">MEGATRON</div>
+  <div class="subtit">PAINEL ANALÍTICO DE VELAS v4.0</div>
+  <div class="card">
+    <h2>▸ ACESSO AO SISTEMA</h2>
+    <div class="campo"><label>Email ou Usuário</label><input type="text" id="campo-usuario" placeholder="seu@email.com"/></div>
+    <div class="campo"><label>Senha</label><input type="password" id="campo-senha" placeholder="••••••••"/></div>
+    <button class="btn-entrar" id="botao-entrar">▶ ENTRAR NO PAINEL</button>
+    <div class="msg-erro" id="erro-login"></div>
+    <div class="rodape-link">Quer se cadastrar? <a id="link-cadastro">Criar conta</a></div>
+  </div>
+</div>
+
+<!-- TELA CADASTRO -->
+<div id="tela-cadastro">
+  <div style="display:flex;flex-direction:column;align-items:center;padding:20px 0;min-height:100vh">
+    <img id="logo-cad" src="" style="width:80px;height:80px;object-fit:cover;border-radius:50%;border:2px solid var(--cyan);box-shadow:0 0 30px #00e5ff60;margin-bottom:12px" alt="M"/>
+    <div class="titulo" style="font-size:1.1rem">MEGATRON</div>
+    <div class="subtit">CRIAR CADASTRO</div>
+    <div class="card" style="max-width:400px">
+      <h2>▸ NOVO CADASTRO</h2>
+      <div class="campo"><label>Nome completo</label><input type="text" id="cad-nome" placeholder="Seu nome completo"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="campo"><label>WhatsApp</label><input type="tel" id="cad-tel" placeholder="(62) 99999-9999"/></div>
+        <div class="campo"><label>Idade</label><input type="number" id="cad-idade" placeholder="25" min="18" max="99"/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="campo"><label>Nascimento</label><input type="date" id="cad-nasc"/></div>
+        <div class="campo"><label>Email</label><input type="email" id="cad-email" placeholder="seu@email.com"/></div>
+      </div>
+      <div class="campo"><label>Senha</label><input type="password" id="cad-senha" placeholder="Mínimo 6 caracteres"/></div>
+      <div class="campo">
+        <label>Plano</label>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:5px">
+          <div class="plano-opt" data-meses="1" style="border:2px solid var(--cyan);border-radius:6px;padding:8px 4px;text-align:center;cursor:pointer;background:#001829">
+            <div style="font-family:Orbitron,monospace;font-size:.6rem;color:var(--cyan)">1 MÊS</div>
+            <div style="font-family:Share Tech Mono,monospace;font-size:.8rem;color:var(--yellow);font-weight:700">R$ 60</div>
+          </div>
+          <div class="plano-opt" data-meses="6" style="border:1px solid var(--border);border-radius:6px;padding:8px 4px;text-align:center;cursor:pointer;background:#03090f">
+            <div style="font-family:Orbitron,monospace;font-size:.6rem;color:var(--cyan)">6 MESES</div>
+            <div style="font-family:Share Tech Mono,monospace;font-size:.8rem;color:var(--yellow);font-weight:700">R$ 330</div>
+          </div>
+          <div class="plano-opt" data-meses="12" style="border:1px solid var(--border);border-radius:6px;padding:8px 4px;text-align:center;cursor:pointer;background:#03090f">
+            <div style="font-family:Orbitron,monospace;font-size:.6rem;color:var(--cyan)">12 MESES</div>
+            <div style="font-family:Share Tech Mono,monospace;font-size:.8rem;color:var(--yellow);font-weight:700">R$ 600</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn-entrar" id="botao-cadastrar">ENVIAR CADASTRO</button>
+      <div class="msg-erro" id="erro-cad"></div>
+      <div id="ok-cad" style="font-family:Share Tech Mono,monospace;font-size:.68rem;color:var(--green);text-align:center;margin-top:8px;min-height:18px"></div>
+      <div class="rodape-link" style="margin-top:10px">Já tem conta? <a id="link-login-2">Fazer login</a></div>
+    </div>
+  </div>
+</div>
+<!-- TELA APP -->
+<div id="tela-app">
+  <div id="hdr">
+    <div class="hlogo">
+      <img id="logo-hdr" src="" alt="M"/>
+      <div>
+        <div class="htitle">MEGATRON v4</div>
+        <div class="hst">
+          <span class="sp" id="sp-socket" style="color:var(--yellow);border-color:var(--yellow);background:#ffd60010"><span class="dot" id="dot-socket" style="background:var(--yellow)"></span><span id="txt-socket">Conectando...</span></span>
+          <span class="sp oc" id="qtd-online">👥 —</span>
+          <span class="sp us" id="nome-usuario">👤 —</span>
+        </div>
+      </div>
+    </div>
+    <div class="hright">
+      <div id="relogio">--:--:--</div>
+      <button class="btn-sair" id="botao-sair">SAIR</button>
+    </div>
+  </div>
+
+  <div id="barra-socket" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:4px 12px;background:#020810;border-bottom:1px solid #102030;font-family:Share Tech Mono,monospace;font-size:.6rem">
+    <span id="barra-sk-txt" style="color:var(--yellow)">⏳ Aguardando conexão com servidor...</span>
+    <span id="barra-sk-velas" style="color:var(--dim)">0 velas</span>
+    <button onclick="reconectarSocket()" style="background:none;border:1px solid var(--dim);color:var(--dim);padding:1px 8px;border-radius:3px;font-family:Share Tech Mono,monospace;font-size:.55rem;cursor:pointer" id="btn-reconectar">↺ RECONECTAR</button>
+  </div>
+  <div id="barra-casa">
+    <span style="color:var(--dim)">▶ CASA:</span>
+    <div id="badge-casa" class="vd">🟢 &nbsp;PAGANDO</div>
+    <span style="color:var(--dim)">|</span>
+    <span style="font-family:Share Tech Mono,monospace;font-size:.62rem;color:var(--dim)">Pos: <span id="txt-pos" style="color:var(--cyan)">—</span> · Padrão: <span id="txt-pat" style="color:var(--cyan)">—</span></span>
+    <span style="font-family:Share Tech Mono,monospace;font-size:.6rem;color:var(--dim)">C=<span id="txt-comp" style="color:var(--yellow)">—</span> R=<span id="txt-seq" style="color:var(--purple)">—</span> P=<span id="txt-prob" style="color:var(--green)">—</span></span>
+  </div>
+  <div id="conteudo">
+    <p class="sec">▸ PAINÉIS ANALÍTICOS — 26 PADRÕES</p>
+    <div class="grade-quad">
+      <div class="quad q1"  onclick="abrirModal(1)"><div class="qi"><div class="qtopo"><span class="qnum">Q-01</span><span class="qico">📉</span></div><div class="qnome">COMPRESSÃO</div><div class="qinfo" id="info-1">—</div></div></div>
+      <div class="quad q2"  onclick="abrirModal(2)"><div class="qi"><div class="qtopo"><span class="qnum">Q-02</span><span class="qico">🔁</span></div><div class="qnome">ECO</div><div class="qinfo" id="info-2">—</div></div></div>
+      <div class="quad q3"  onclick="abrirModal(3)"><div class="qi"><div class="qtopo"><span class="qnum">Q-03</span><span class="qico">🧩</span></div><div class="qnome">CÓD.NUMÉRICO</div><div class="qinfo" id="info-3">—</div></div></div>
+      <div class="quad q4"  onclick="abrirModal(4)"><div class="qi"><div class="qtopo"><span class="qnum">Q-04</span><span class="qico">📊</span></div><div class="qnome">DISTRIBUIÇÃO</div><div class="qinfo" id="info-4">—</div></div></div>
+      <div class="quad q5"  onclick="abrirModal(5)"><div class="qi"><div class="qtopo"><span class="qnum">Q-05</span><span class="qico">〰</span></div><div class="qnome">VOLATILIDADE</div><div class="qinfo" id="info-5">—</div></div></div>
+      <div class="quad q6"  onclick="abrirModal(6)"><div class="qi"><div class="qtopo"><span class="qnum">Q-06</span><span class="qico">📈</span></div><div class="qnome">MÉDIA MÓVEL</div><div class="qinfo" id="info-6">—</div></div></div>
+      <div class="quad q7"  onclick="abrirModal(7)"><div class="qi"><div class="qtopo"><span class="qnum">Q-07</span><span class="qico">🔄</span></div><div class="qnome">CICLO 7</div><div class="qinfo" id="info-7">—</div></div></div>
+      <div class="quad q8"  onclick="abrirModal(8)"><div class="qi"><div class="qtopo"><span class="qnum">Q-08</span><span class="qico">↩</span></div><div class="qnome">PÓS PICO</div><div class="qinfo" id="info-8">—</div></div></div>
+      <div class="quad q9"  onclick="abrirModal(9)"><div class="qi"><div class="qtopo"><span class="qnum">Q-09</span><span class="qico">⚡</span></div><div class="qnome">VOL.DINÂMICA</div><div class="qinfo" id="info-9">—</div></div></div>
+      <div class="quad q10" onclick="abrirModal(10)"><div class="qi"><div class="qtopo"><span class="qnum">Q-10</span><span class="qico">📏</span></div><div class="qnome">DIST.PICO</div><div class="qinfo" id="info-10">—</div></div></div>
+      <div class="quad q11" onclick="abrirModal(11)"><div class="qi"><div class="qtopo"><span class="qnum">Q-11</span><span class="qico">💥</span></div><div class="qnome">QUEBRA SEQ</div><div class="qinfo" id="info-11">—</div></div></div>
+      <div class="quad q12" onclick="abrirModal(12)"><div class="qi"><div class="qtopo"><span class="qnum">Q-12</span><span class="qico">⏳</span></div><div class="qnome">SEM ROXA</div><div class="qinfo" id="info-12">—</div></div></div>
+      <div class="quad q13" onclick="abrirModal(13)"><div class="qi"><div class="qtopo"><span class="qnum">Q-13</span><span class="qico">🔵</span></div><div class="qnome">CLUSTER BAIXO</div><div class="qinfo" id="info-13">—</div></div></div>
+      <div class="quad q14" onclick="abrirModal(14)"><div class="qi"><div class="qtopo"><span class="qnum">Q-14</span><span class="qico">🎯</span></div><div class="qnome">PICO MÉDIO</div><div class="qinfo" id="info-14">—</div></div></div>
+      <div class="quad q15" onclick="abrirModal(15)"><div class="qi"><div class="qtopo"><span class="qnum">Q-15</span><span class="qico">📐</span></div><div class="qnome">GRADIENTE</div><div class="qinfo" id="info-15">—</div></div></div>
+      <div class="quad q16" onclick="abrirModal(16)"><div class="qi"><div class="qtopo"><span class="qnum">Q-16</span><span class="qico">🔢</span></div><div class="qnome">FREQ.MÉDIOS</div><div class="qinfo" id="info-16">—</div></div></div>
+      <div class="quad q17" onclick="abrirModal(17)"><div class="qi"><div class="qtopo"><span class="qnum">Q-17</span><span class="qico">🆘</span></div><div class="qnome">EXAUSTÃO</div><div class="qinfo" id="info-17">—</div></div></div>
+      <div class="quad q18" onclick="abrirModal(18)"><div class="qi"><div class="qtopo"><span class="qnum">Q-18</span><span class="qico">🌐</span></div><div class="qnome">ENTROPIA</div><div class="qinfo" id="info-18">—</div></div></div>
+      <div class="quad q19" onclick="abrirModal(19)"><div class="qi"><div class="qtopo"><span class="qnum">Q-19</span><span class="qico">🚀</span></div><div class="qnome">MOMENTUM</div><div class="qinfo" id="info-19">—</div></div></div>
+      <div class="quad q20" onclick="abrirModal(20)"><div class="qi"><div class="qtopo"><span class="qnum">Q-20</span><span class="qico">⚠</span></div><div class="qnome">ANOMALIA</div><div class="qinfo" id="info-20">—</div></div></div>
+      <div class="quad q21" onclick="abrirModal(101)"><div class="qi"><div class="qtopo"><span class="qnum">Q-21</span><span class="qico">♟️</span></div><div class="qnome">XADREZ</div><div class="qinfo" id="info-21">—</div></div></div>
+      <div class="quad q22" onclick="abrirModal(102)"><div class="qi"><div class="qtopo"><span class="qnum">Q-22</span><span class="qico">📉</span></div><div class="qnome">DECRESCENTE</div><div class="qinfo" id="info-22">—</div></div></div>
+      <div class="quad q23" onclick="abrirModal(103)"><div class="qi"><div class="qtopo"><span class="qnum">Q-23</span><span class="qico">📈</span></div><div class="qnome">CRESCENTE</div><div class="qinfo" id="info-23">—</div></div></div>
+      <div class="quad q24" onclick="abrirModal(104)"><div class="qi"><div class="qtopo"><span class="qnum">Q-24</span><span class="qico">⚖️</span></div><div class="qnome">IGUAL</div><div class="qinfo" id="info-24">—</div></div></div>
+      <div class="quad q25" onclick="abrirModal(105)"><div class="qi"><div class="qtopo"><span class="qnum">Q-25</span><span class="qico">🌌</span></div><div class="qnome">GRAVIDADE</div><div class="qinfo" id="info-25">—</div></div></div>
+      <div class="quad q26" onclick="abrirModal(106)"><div class="qi"><div class="qtopo"><span class="qnum">Q-26</span><span class="qico">🤖</span></div><div class="qnome">MEGATRON</div><div class="qinfo" id="info-26">—</div></div></div>
+    </div>
+
+    <!-- PAINEL DE CONFLUÊNCIA 20 PADRÕES -->
+    <div class="conf20-wrap">
+      <div class="conf20-titulo">
+        <span>▸ CONFLUÊNCIA — 26 PADRÕES</span>
+        <span style="font-family:Share Tech Mono,monospace;font-size:.55rem;color:var(--dim)">Total: <span id="conf20-total-roxa" style="color:var(--purple)">0</span>px / <span id="conf20-total-rosa" style="color:var(--pink)">0</span>px</span>
+      </div>
+      <div class="conf20-grade" id="conf20-grade">
+        <!-- preenchido por JS -->
+      </div>
+      <div class="conf20-barras">
+        <div class="conf20-bar-wrap rosa-bg">
+          <div class="conf20-bar-label rosa-c">🌸 PROBABILIDADE ROSA</div>
+          <div class="conf20-bar-track"><div class="conf20-bar-fill rosa-f" id="conf20-bar-rosa" style="width:0%"></div></div>
+          <div class="conf20-bar-pct" id="conf20-pct-rosa" style="color:var(--pink)">0%</div>
+          <div class="conf20-veredicto v-baixa" id="conf20-verd-rosa">⏸ AGUARDAR</div>
+        </div>
+        <div class="conf20-bar-wrap roxa-bg">
+          <div class="conf20-bar-label roxa-c">💜 PROBABILIDADE ROXA</div>
+          <div class="conf20-bar-track"><div class="conf20-bar-fill roxa-f" id="conf20-bar-roxa" style="width:0%"></div></div>
+          <div class="conf20-bar-pct" id="conf20-pct-roxa" style="color:var(--purple)">0%</div>
+          <div class="conf20-veredicto v-baixa" id="conf20-verd-roxa">⏸ AGUARDAR</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q-ALERTA CONFLUÊNCIA INTERNA -->
+    <div style="display:flex;margin-bottom:6px">
+      <div class="quad q-alert" onclick="abrirModal(21)" style="width:100%">
+        <div class="q11corpo" id="corpo-q11"><div class="sem-alerta">Aguardando confluência de padrões...</div></div>
+      </div>
+    </div>
+
+    <!-- CONFLUÊNCIA ROSA E ROXA -->
+    <p class="sec">▸ CONFLUÊNCIA DE ENTRADA</p>
+    <div class="grade-confluencia">
+      <div class="quad-conf quad-conf-rosa" onclick="abrirModal(22)">
+        <div class="conf-header">
+          <span class="conf-titulo">🌸 CONFLUÊNCIA ROSA</span>
+          <span class="conf-score" id="conf-rosa-score" style="color:var(--pink)">0/7</span>
+          <span id="conf-rosa-alerta" style="display:none;font-family:Orbitron,monospace;font-size:.55rem;color:var(--pink);animation:piscaap .8s infinite;letter-spacing:1px">⚠ ENTRAR PRÓXIMA</span>
+        </div>
+        <div class="conf-corpo" id="conf-rosa-corpo">
+          <div class="conf-item"><span class="cl">Compressão C≤1.4</span><span class="cv" id="crf-comp">—</span></div>
+          <div class="conf-item"><span class="cl">Seq baixas R≥6</span><span class="cv" id="crf-seq">—</span></div>
+          <div class="conf-item"><span class="cl">Probabilidade P</span><span class="cv" id="crf-prob">—</span></div>
+          <div class="conf-item"><span class="cl">Ciclo 7/13/21</span><span class="cv" id="crf-ciclo">—</span></div>
+          <div class="conf-item"><span class="cl">Padrão seq ativo</span><span class="cv" id="crf-esc">—</span></div>
+          <div class="conf-item"><span class="cl">Hora pagadora</span><span class="cv" id="crf-hora">—</span></div>
+          <div class="conf-item"><span class="cl">Gatilho 4-7</span><span class="cv" id="crf-min">—</span></div>
+          <div class="conf-barra"><div class="conf-barra-fill" id="crf-bar" style="width:0%"></div></div>
+          <div class="conf-sinal stop" id="crf-sinal">⏸ AGUARDAR</div>
+        </div>
+      </div>
+      <div class="quad-conf quad-conf-roxa" onclick="abrirModal(23)">
+        <div class="conf-header">
+          <span class="conf-titulo">💜 CONFLUÊNCIA ROXA</span>
+          <span class="conf-score" id="conf-roxa-score" style="color:var(--purple)">0/7</span>
+          <span id="conf-roxa-alerta" style="display:none;font-family:Orbitron,monospace;font-size:.55rem;color:var(--yellow);animation:piscaap .8s infinite;letter-spacing:1px">⚠ PRÓX. VELA</span>
+        </div>
+        <div class="conf-corpo" id="conf-roxa-corpo">
+          <div class="conf-item"><span class="cl">Velas médias seq</span><span class="cv" id="crx-med">—</span></div>
+          <div class="conf-item"><span class="cl">Padrão 1-1-2-1-3</span><span class="cv" id="crx-pat">—</span></div>
+          <div class="conf-item"><span class="cl">Zig-zag detectado</span><span class="cv" id="crx-zz">—</span></div>
+          <div class="conf-item"><span class="cl">Ciclo 4-7 rodadas</span><span class="cv" id="crx-ciclo">—</span></div>
+          <div class="conf-item"><span class="cl">Hora pagadora roxa</span><span class="cv" id="crx-hora">—</span></div>
+          <div class="conf-item"><span class="cl">Eco dígito ativo</span><span class="cv" id="crx-pos">—</span></div>
+          <div class="conf-item"><span class="cl">Compressão fraca</span><span class="cv" id="crx-comp">—</span></div>
+          <div class="conf-barra"><div class="conf-barra-fill" id="crx-bar" style="width:0%"></div></div>
+          <div class="conf-sinal stop" id="crx-sinal">⏸ AGUARDAR</div>
+          <div class="conf-entrada-roxa" id="crx-entrada">💜 AGUARDANDO CONFLUÊNCIA...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ÁREA DAS FIGURAS -->
+    <p class="sec" style="margin-top:8px">▸ ÁREA DAS FIGURAS — INDICADORES VISUAIS</p>
+    <div id="area-figuras" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;padding:8px;background:var(--panel);border:1px solid var(--border);border-radius:6px">
+      <div class="figura-btn" data-fig="coroa" onclick="selecionarFigura('coroa')" title="Vela alta ≥8x — Pico do ciclo">
+        <span class="fig-emoji">👑</span><span class="fig-nome">Coroa</span>
+      </div>
+      <div class="figura-btn" data-fig="estrela" onclick="selecionarFigura('estrela')" title="Ponto de destaque — Possível reversão">
+        <span class="fig-emoji">⭐</span><span class="fig-nome">Estrela</span>
+      </div>
+      <div class="figura-btn" data-fig="circular" onclick="selecionarFigura('circular')" title="Reinício de padrão — Novo ciclo">
+        <span class="fig-emoji">🔄</span><span class="fig-nome">Circular</span>
+      </div>
+      <div class="figura-btn" data-fig="seta" onclick="selecionarFigura('seta')" title="Vela muito baixa (próxima de 1.00x)">
+        <span class="fig-emoji">➡️</span><span class="fig-nome">Traço/Seta</span>
+      </div>
+      <div class="figura-btn" data-fig="amarela" onclick="selecionarFigura('amarela')" title="Tentativa de subida">
+        <span class="fig-emoji">⬆️</span><span class="fig-nome">Seta Amarela</span>
+      </div>
+      <div class="figura-btn" data-fig="quadrado" onclick="selecionarFigura('quadrado')" title="Ponto de observação">
+        <span class="fig-emoji">🟨</span><span class="fig-nome">Quadrado</span>
+      </div>
+    </div>
+    <div id="figura-info" style="display:none;padding:8px 10px;background:#030c18;border:1px solid var(--border);border-radius:5px;font-family:Share Tech Mono,monospace;font-size:.65rem;color:var(--dim);margin-bottom:8px"></div>
+
+    <!-- HISTÓRICO DE VELAS -->
+    <div class="hist-header">
+      <p class="sec" style="margin-bottom:0">▸ HISTÓRICO DE VELAS</p>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="hist-contador" id="hist-contador">0 / 1000</span>
+        <div class="hist-filtros">
+          <button class="hist-btn ativo" id="btn-todas" onclick="filtrarVelas('todas')">TODAS</button>
+          <button class="hist-btn" id="btn-rosa" onclick="filtrarVelas('pink')">🌸</button>
+          <button class="hist-btn" id="btn-roxa" onclick="filtrarVelas('purple')">💜</button>
+        </div>
+      </div>
+    </div>
+    <div class="grade-velas" id="grade-velas"></div>
+  </div>
+
+  <div id="footer" style="text-align:center;padding:14px 10px;margin-top:18px;border-top:1px solid var(--border);font-family:Share Tech Mono,monospace;font-size:.62rem;color:var(--dim);background:#020810">
+    ⚡ <span style="color:var(--cyan)">MEGATRON v5</span> &nbsp;·&nbsp; Dev <span style="color:var(--yellow)">Marcos Duarte</span> &nbsp;·&nbsp; 2026
+  </div>
+</div>
+
+<div id="fundo-modal" onclick="if(event.target===this)fecharModal()">
+  <div id="caixa-modal">
+    <div id="cabec-modal"><span id="titulo-modal">QUADRO</span><button id="btn-fechar-modal" onclick="fecharModal()">✕ FECHAR</button></div>
+    <div id="corpo-modal"></div>
+  </div>
+</div>
+<script>
+// ══════════════════════════════════════════
+// MEGATRON v5 — 20 PADRÕES ANALÍTICOS
+// ══════════════════════════════════════════
+// MEGATRON v4 — MOTOR ANALÍTICO COMPLETO
+// ══════════════════════════════════════════
+
+// Logo embutido (base64)
+var LOGO_B64 = "data:image/png;base64,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";
+document.addEventListener('DOMContentLoaded', function() {
+  ['logo-login','logo-cad','logo-hdr'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.src = LOGO_B64;
+  });
+});
+// ── VARIÁVEIS GLOBAIS ──
+var velas = [];
+var socketIniciado = false;
+var planoSelecionado = 1;
+var filtroAtual = 'todas';
+var MAX_VELAS = 1000;
+
+// ── HELPERS ──
+function z(v){return String(v).padStart(2,'0');}
+function fmt(v){return v.toFixed(2)+'x';}
+function fmtT(ts){var d=new Date(ts);return z(d.getHours())+':'+z(d.getMinutes())+':'+z(d.getSeconds());}
+function fmtE(ts){var s=Math.floor((Date.now()-ts)/1000);return z(Math.floor(s/3600))+':'+z(Math.floor((s%3600)/60))+':'+z(s%60);}
+function somaDigitos(v){return String(v.toFixed(2)).replace('.','').split('').map(Number).reduce(function(a,b){return a+b;},0);}
+function ultimoDigito(v){var s=v.toFixed(2).replace('.','');return parseInt(s[s.length-1]);}
+function setNeon(t){document.body.className=t==='verde'?'nv':t==='vermelho'?'nr':'na';}
+function _(id){return document.getElementById(id);}
+function media(arr){return arr.length?arr.reduce(function(a,b){return a+b;},0)/arr.length:0;}
+function desvio(arr){var m=media(arr);return arr.length?Math.sqrt(arr.map(function(x){return Math.pow(x-m,2);}).reduce(function(a,b){return a+b;},0)/arr.length):0;}
+
+// ── COR DAS VELAS ──
+function getCor(cd){
+  // Cor por color_rgb se a extensão enviar
+  if(cd.color_rgb){
+    var pt=cd.color_rgb.replace(/[^0-9,]/g,'').split(',').map(Number);
+    if(pt.length>=3){
+      var r=pt[0],g=pt[1],b=pt[2];
+      if(r>150&&g<100&&b<100)return'pink';   // vermelho/rosa
+      if(r>80&&b>100&&g<100)return'purple';  // roxo/azul escuro
+    }
   }
-  sendResponse({ok: true});
-  return true;
+  // Classificação por multiplicador — padrão MEGATRON:
+  // Rosa (pink)   = >= 2x  (qualquer vela que pagou)
+  // Roxa (purple) = >= 1.5x e < 2x  (vela média)
+  // Azul (blue)   = < 1.5x  (vela baixa / crash precoce)
+  var v=cd.multiplier;
+  if(v>=2)return'pink';
+  if(v>=1.5)return'purple';
+  return'blue';
+}
+
+// ── CLASSIFICAÇÃO ──
+function classeVela(v){
+  if(v<2)return 1;if(v<5)return 2;if(v<10)return 3;if(v<=50)return 4;return 5;
+}
+
+// ── ÍCONE DAS VELAS (corrigido) ──
+function iconeVela(cd){
+  var v=cd.multiplier;
+  if(v>=10)return'👑';if(v>=5)return'⭐';if(v>=2)return'🔄';if(v>=1.5)return'⬆️';return'➡️';
+}
+
+// ── CARD VELA ──
+function criarCard(cd,num){
+  var cor=cd._cor,soma=somaDigitos(cd.multiplier),el=document.createElement('div');
+  el.className='vela '+cor;
+  var ico=iconeVela(cd);
+  el.innerHTML='<div class="vnum">'+z(num)+'</div><div class="vicone">'+ico+'</div>'+
+    '<div class="vval">'+fmt(cd.multiplier)+'</div>'+
+    '<div class="vsoma">Σ=<b>'+soma+'</b></div>'+
+    '<div class="vtempo">'+fmtT(cd.timestamp)+'</div>'+
+    '<div class="vrodada">'+(cd.round||'—')+'</div>';
+  el.onclick=function(){
+    var g=_('grade-velas');if(!g)return;
+    var ja=el.classList.contains('selecionada');
+    g.querySelectorAll('.vela').forEach(function(v){v.classList.remove('selecionada','desfocada');});
+    if(!ja){
+      if(cor==='pink'){
+        // Selecionar TODAS as velas rosas
+        g.querySelectorAll('.vela.pink').forEach(function(v){v.classList.add('selecionada');});
+        g.querySelectorAll('.vela:not(.pink)').forEach(function(v){v.classList.add('desfocada');});
+      } else {
+        el.classList.add('selecionada');
+        g.querySelectorAll('.vela:not(.selecionada)').forEach(function(v){v.classList.add('desfocada');});
+      }
+    }
+  };
+  return el;
+}
+function adicionarCard(cd){
+  var g=_('grade-velas');if(!g)return;
+  var vis=(filtroAtual==='todas')||(filtroAtual===cd._cor);
+  if(!vis)return;
+  g.insertBefore(criarCard(cd,velas.length),g.firstChild);
+  while(g.children.length>MAX_VELAS)g.removeChild(g.lastChild);
+  if(_('hist-contador'))_('hist-contador').textContent=velas.length+' / '+MAX_VELAS;
+}
+function reconstruirGrade(){
+  var g=_('grade-velas');if(!g)return;g.innerHTML='';
+  var lista=filtroAtual==='todas'?velas:velas.filter(function(c){return c._cor===filtroAtual;});
+  lista.forEach(function(cd,i){g.appendChild(criarCard(cd,velas.length-i));});
+  if(_('hist-contador'))_('hist-contador').textContent=velas.length+' / '+MAX_VELAS;
+}
+function filtrarVelas(tipo){
+  filtroAtual=tipo;
+  ['btn-todas','btn-rosa','btn-roxa'].forEach(function(id){var el=_(id);if(el)el.classList.remove('ativo');});
+  var mapa={todas:'btn-todas',pink:'btn-rosa',purple:'btn-roxa'};
+  if(_(mapa[tipo]))_(mapa[tipo]).classList.add('ativo');
+  reconstruirGrade();
+}
+
+// ══════════════════════════════════════════
+// MOTOR — 20 PADRÕES DE CÁLCULO
+// ══════════════════════════════════════════
+
+// Extrair multiplicadores das últimas N velas
+function mults(n){return velas.slice(0,Math.min(n,velas.length)).map(function(c){return c.multiplier;});}
+
+// P1 — COMPRESSÃO: qtd velas <2 nas últimas 10
+function calcP1(){
+  var m=mults(10),c=m.filter(function(v){return v<2;}).length;
+  var sr=c>=9?10:c>=8?8:c>=7?6:0;
+  var sx=c>=7?10:c>=6?8:c>=5?6:0;
+  return{score_rosa:sr,score_roxa:sx,c:c,label:'Compressão',info:c+'/<2'};
+}
+// P2 — ECO: 3+ valores entre 1.20–1.40 nas últimas 10
+function calcP2(){
+  var m=mults(10),eco=m.filter(function(v){return v>=1.20&&v<=1.40;}).length;
+  var ativo=eco>=3;
+  return{score_rosa:ativo?4:0,score_roxa:ativo?7:0,eco:eco,label:'Eco',info:eco+'x1.2-1.4'};
+}
+// P3 — CÓDIGO NUMÉRICO: 5 classe 1 seguidas
+function calcP3(){
+  var cls=velas.slice(0,5).map(function(c){return classeVela(c.multiplier);});
+  var c5=cls.length===5&&cls.every(function(v){return v===1;});
+  var padrao112=cls.length>=5&&[1,1,2,1,3].every(function(v,i){return cls[i]===v;});
+  var sc_rosa=c5?5:padrao112?4:0,sc_roxa=c5?8:padrao112?6:0;
+  return{score_rosa:sc_rosa,score_roxa:sc_roxa,seq:cls,c5:c5,padrao112:padrao112,label:'Cód.Num',info:cls.slice(0,5).join('-')};
+}
+// P4 — DISTRIBUIÇÃO: >85% <2 nas últimas 20
+function calcP4(){
+  var m=mults(20),bx=m.filter(function(v){return v<2;}).length;
+  var pct=m.length?Math.round(bx/m.length*100):0;
+  var ativo=pct>85;
+  return{score_rosa:ativo?6:0,score_roxa:ativo?9:0,pct:pct,label:'Distrib.',info:pct+'%<2x'};
+}
+// P5 — VOLATILIDADE: desvio padrão <0.8 nas últimas 15
+function calcP5(){
+  var m=mults(15),d=desvio(m);
+  var ativo=m.length>=5&&d<0.8;
+  return{score_rosa:ativo?5:0,score_roxa:ativo?7:0,d:d.toFixed(2),label:'Volatil.',info:'σ='+d.toFixed(2)};
+}
+// P6 — MÉDIA MÓVEL: MM5 > MM10
+function calcP6(){
+  var m=mults(10);
+  if(m.length<10)return{score_rosa:0,score_roxa:0,label:'MM5>10',info:'Aguard.'};
+  var mm5=media(m.slice(0,5)),mm10=media(m);
+  var ativo=mm5>mm10;
+  return{score_rosa:ativo?3:0,score_roxa:ativo?6:0,mm5:mm5.toFixed(2),mm10:mm10.toFixed(2),label:'Méd.Móv',info:'MM5='+mm5.toFixed(1)};
+}
+// P7 — CICLO 7: distância 7–9 desde último pico >10
+function calcP7(){
+  var lp=velas.find(function(c){return c.multiplier>10;});
+  var dist=lp?velas.indexOf(lp):0;
+  var ativo=dist>=7&&dist<=9;
+  return{score_rosa:ativo?4:0,score_roxa:ativo?6:0,dist:dist,label:'Ciclo 7',info:dist+'ª casa'};
+}
+// P8 — RECUPERAÇÃO PÓS PICO: pico>10 seguido de 3 velas <2
+function calcP8(){
+  var ativo=false;
+  for(var i=0;i<velas.length-3;i++){
+    if(velas[i].multiplier>10){
+      var prox=velas.slice(i+1,i+4);
+      if(prox.length===3&&prox.every(function(c){return c.multiplier<2;})){ativo=true;break;}
+    }
+  }
+  return{score_rosa:ativo?4:0,score_roxa:ativo?7:0,label:'PósPico',info:ativo?'✔ Detect.':'—'};
+}
+// P9 — VOL DINÂMICA: desvio10 > desvio20
+function calcP9(){
+  var m10=mults(10),m20=mults(20);
+  if(m20.length<10)return{score_rosa:0,score_roxa:0,label:'VolDin.',info:'Aguard.'};
+  var v10=desvio(m10),v20=desvio(m20);
+  var ativo=v10>v20;
+  return{score_rosa:ativo?5:0,score_roxa:ativo?7:0,v10:v10.toFixed(2),v20:v20.toFixed(2),label:'VolDin.',info:'σ10>σ20'};
+}
+// P10 — DISTÂNCIA ÚLTIMO PICO ALTO
+function calcP10(){
+  var lp=velas.find(function(c){return c.multiplier>10;});
+  var dist=lp?velas.indexOf(lp):0;
+  var sr=dist>=30?8:0;
+  var sx=dist>=25?10:dist>=18?8:dist>=12?6:0;
+  return{score_rosa:sr,score_roxa:sx,dist:dist,label:'Dist.Pico',info:dist+'ª casa'};
+}
+// P11 — QUEBRA DE SEQUÊNCIA: 5 velas 1.10–1.50, depois >2.5
+function calcP11(){
+  if(velas.length<6)return{score_rosa:0,score_roxa:0,label:'QuebraSeq',info:'Aguard.'};
+  var ult6=velas.slice(0,6);
+  var est=ult6.slice(1,6).every(function(c){return c.multiplier>=1.10&&c.multiplier<=1.50;});
+  var quebra=est&&ult6[0].multiplier>2.5;
+  return{score_rosa:quebra?3:0,score_roxa:quebra?6:0,label:'QuebraSeq',info:quebra?'✔ Quebra':'—'};
+}
+// P12 — TEMPO SEM ROXA: rodadas desde mult >10
+function calcP12(){
+  var lp=velas.find(function(c){return c.multiplier>10;});
+  var dist=lp?velas.indexOf(lp):0;
+  var ativo=dist>=20;
+  return{score_rosa:ativo?6:0,score_roxa:ativo?8:0,dist:dist,label:'SemRoxa',info:dist+'ª'};
+}
+// P13 — CLUSTER DE BAIXOS: 6 velas 1.10–1.40
+function calcP13(){
+  var m=mults(10),cl=m.filter(function(v){return v>=1.10&&v<=1.40;}).length;
+  var ativo=cl>=6;
+  return{score_rosa:ativo?7:0,score_roxa:ativo?9:0,cl:cl,label:'Cluster',info:cl+'x1.1-1.4'};
+}
+// P14 — PICO MÉDIO ANTES DO PICO: 5x–9x após compressão
+function calcP14(){
+  var ativo=false;
+  if(velas.length>=3){
+    var v0=velas[0].multiplier,v1=velas[1].multiplier;
+    var antComp=mults(5).slice(1).every(function(v){return v<2;});
+    ativo=v0>=5&&v0<10&&antComp;
+  }
+  return{score_rosa:ativo?5:0,score_roxa:ativo?7:0,label:'PicoMéd.',info:ativo?'✔ Detect.':'—'};
+}
+// P15 — GRADIENTE: 4 valores crescentes seguidos
+function calcP15(){
+  var m=mults(6);
+  var grad=false;
+  for(var i=0;i<=m.length-4;i++){
+    if(m[i]<m[i+1]&&m[i+1]<m[i+2]&&m[i+2]<m[i+3]){grad=true;break;}
+  }
+  return{score_rosa:grad?4:0,score_roxa:grad?6:0,label:'Gradient',info:grad?'✔ 4 cres.':'—'};
+}
+// P16 — FREQUÊNCIA MÉDIOS: >=4 valores 3x–5x nas últimas 10
+function calcP16(){
+  var m=mults(10),med=m.filter(function(v){return v>=3&&v<=5;}).length;
+  var ativo=med>=4;
+  return{score_rosa:ativo?4:0,score_roxa:ativo?6:0,med:med,label:'Freq.Med.',info:med+'x(3-5x)'};
+}
+// P17 — ZONA DE EXAUSTÃO: 10 velas <2
+function calcP17(){
+  var m=mults(12),seq=0;
+  for(var i=0;i<m.length;i++){if(m[i]<2)seq++;else break;}
+  var ativo=seq>=10;
+  return{score_rosa:ativo?7:0,score_roxa:ativo?10:0,seq:seq,label:'Exaustão',info:seq+'x<2'};
+}
+// P18 — ENTROPY SCORE: H = -Σ(p log2 p) nas classes das últimas 20
+function calcP18(){
+  var m=mults(20);
+  if(m.length<10)return{score_rosa:0,score_roxa:0,label:'Entropia',info:'Aguard.'};
+  var freq={};
+  m.forEach(function(v){var c=classeVela(v);freq[c]=(freq[c]||0)+1;});
+  var H=0,n=m.length;
+  Object.values(freq).forEach(function(f){var p=f/n;H-=p*Math.log2(p);});
+  var ativo=H<1;
+  return{score_rosa:ativo?6:0,score_roxa:ativo?9:0,H:H.toFixed(2),label:'Entropia',info:'H='+H.toFixed(2)};
+}
+// P19 — MOMENTUM: média3 − média10 > 0.5
+function calcP19(){
+  var m10=mults(10);
+  if(m10.length<10)return{score_rosa:0,score_roxa:0,label:'Momentum',info:'Aguard.'};
+  var m3=media(m10.slice(0,3)),m10v=media(m10),mom=m3-m10v;
+  var ativo=mom>0.5;
+  return{score_rosa:ativo?4:0,score_roxa:ativo?7:0,mom:mom.toFixed(2),label:'Momentum',info:'M='+mom.toFixed(2)};
+}
+// P20 — ANOMALIA: |valor − media20| > 2×desvio20
+function calcP20(){
+  var m=mults(20);
+  if(m.length<10)return{score_rosa:0,score_roxa:0,label:'Anomalia',info:'Aguard.'};
+  var med=media(m),desv=desvio(m),ultimo=m[0];
+  var ativo=Math.abs(ultimo-med)>2*desv;
+  return{score_rosa:ativo?6:0,score_roxa:ativo?8:0,ativo:ativo,label:'Anomalia',info:ativo?'✔ Anomal':'—'};
+}
+
+// P21 — XADREZ
+function calcPXadrez(){
+  var m=mults(7);
+  if(m.length<5)return{score_rosa:0,score_roxa:0,label:'Xadrez',info:'Aguard.',padrao:'—'};
+  function classVela(v,prev){if(!prev)return v>1.5?'VELA':'VELA_INVERTIDA';return v>prev?'VELA':'VELA_INVERTIDA';}
+  var tipos=[];for(var i=0;i<m.length-1;i++)tipos.push(classVela(m[i],m[i+1]));
+  // Padrão 5 velas: VELA,VELA,VELA,INVERTIDA,INVERTIDA
+  var padrao5=tipos.length>=5&&tipos[0]==='VELA'&&tipos[1]==='VELA'&&tipos[2]==='VELA'&&tipos[3]==='VELA_INVERTIDA'&&tipos[4]==='VELA_INVERTIDA';
+  // Padrão invertido: INVERTIDA,INVERTIDA,VELA,VELA,VELA
+  var padrao5inv=tipos.length>=5&&tipos[0]==='VELA_INVERTIDA'&&tipos[1]==='VELA_INVERTIDA'&&tipos[2]==='VELA'&&tipos[3]==='VELA'&&tipos[4]==='VELA';
+  // Padrão 7: VELA,VELA,VELA,INV,INV,VELA,VELA
+  var padrao7=tipos.length>=7&&tipos[0]==='VELA'&&tipos[1]==='VELA'&&tipos[2]==='VELA'&&tipos[3]==='VELA_INVERTIDA'&&tipos[4]==='VELA_INVERTIDA'&&tipos[5]==='VELA'&&tipos[6]==='VELA';
+  var compFort=m.slice(0,5).every(function(v){return v<2;});
+  var sr=0,sx=0,nomePat='—';
+  if(padrao7){sx=10;sr=8;nomePat='XADREZ 7';}
+  else if(padrao5){sx=compFort?9:7;sr=compFort?7:5;nomePat='XADREZ';}
+  else if(padrao5inv){sx=8;sr=6;nomePat='XADREZ INV';}
+  return{score_rosa:sr,score_roxa:sx,label:'Xadrez',info:nomePat,padrao:nomePat};
+}
+// P22 — DECRESCENTE
+function calcPDecrescente(){
+  if(velas.length<2)return{score_rosa:0,score_roxa:0,label:'Decresc.',info:'Aguard.',ativo:false,casa:0};
+  var M2=velas[0].multiplier,M1=velas[1].multiplier;
+  var ativo=M2<M1;
+  if(!ativo)return{score_rosa:0,score_roxa:0,label:'Decresc.',info:'—',ativo:false,casa:0};
+  // Determinar casa atual na contagem
+  var casa=0;
+  for(var i=0;i<velas.length-2;i++){if(velas[i].multiplier<M1)casa++;else break;}
+  casa=Math.min(casa+1,9);
+  var sr=casa<=3?2:casa<=6?1:0,sx=casa<=3?2:casa<=6?1:0;
+  var info='Casa '+(casa<=9?casa:'9+')+'/9';
+  return{score_rosa:sr,score_roxa:sx,label:'Decresc.',info:info,ativo:true,casa:casa,ref:M2};
+}
+// P23 — CRESCENTE
+function calcPCrescente(){
+  if(velas.length<2)return{score_rosa:0,score_roxa:0,label:'Crescente',info:'Aguard.',ativo:false};
+  var M2=velas[0].multiplier,M1=velas[1].multiplier;
+  var ativo=M2>M1;
+  if(!ativo)return{score_rosa:0,score_roxa:0,label:'Crescente',info:'—',ativo:false};
+  var dif=Math.abs(M2-M1);
+  var sr=dif>2?5:dif>1?3:2,sx=dif>2?7:dif>1?5:2;
+  var janela=Math.floor(M2);janela=Math.max(1,Math.min(janela,9));
+  return{score_rosa:sr,score_roxa:sx,label:'Crescente',info:'Jan.1-'+janela,ativo:true,janela:janela,ref:M2,dif:dif.toFixed(2)};
+}
+// P24 — IGUAL
+function calcPIgual(){
+  if(velas.length<2)return{score_rosa:0,score_roxa:0,label:'Igual',info:'Aguard.',ativo:false};
+  var M2=velas[0].multiplier,M1=velas[1].multiplier;
+  var dif=Math.abs(M1-M2);
+  var ativo=dif<=0.50;
+  if(!ativo)return{score_rosa:0,score_roxa:0,label:'Igual',info:'—',ativo:false};
+  var sr=dif<=0.20?4:dif<=0.40?3:2,sx=dif<=0.20?6:dif<=0.40?4:2;
+  var casaPag=Math.floor(M2*10)%10;if(casaPag===0)casaPag=10;
+  return{score_rosa:sr,score_roxa:sx,label:'Igual',info:'Casa '+casaPag,ativo:true,casa:casaPag,dif:dif.toFixed(2)};
+}
+// P25 — GRAVIDADE
+function calcPGravidade(){
+  var contador=0,soma=0;
+  for(var i=0;i<velas.length;i++){if(velas[i].multiplier<2){contador++;soma+=velas[i].multiplier;}else break;}
+  var ativo=contador>=5;
+  var sr=0,sx=0,forca='—';
+  if(contador>=10){sx=10;sr=9;forca='EXTREMA';}
+  else if(contador>=7){sx=8;sr=6;forca='FORTE';}
+  else if(contador>=5){sx=5;sr=3;forca='MÉDIA';}
+  else if(contador>=3){sx=2;sr=1;forca='FRACA';}
+  var media=contador>0?soma/contador:0;
+  if(ativo&&media<1.5){sx+=2;sr+=1;forca='SUPER '+forca;}
+  return{score_rosa:sr,score_roxa:sx,label:'Gravidade',info:forca,ativo:ativo,contador:contador,forca:forca,mediaG:media.toFixed(2)};
+}
+// P26 — MEGATRON TEMPORAL
+function calcPMegatron(){
+  var now=new Date();
+  var h=now.getHours(),mi=now.getMinutes(),s=now.getSeconds();
+  // Janela do horário (0-9, 10-19, 20-29, 30-39, 40-49, 50-59)
+  var janelaN=Math.floor(mi/10);
+  var janelaMin=janelaN*10,janelaMax=janelaMin+9;
+  // Pegar última rosa e anterior
+  var rosas=velas.filter(function(c){return c._cor==='pink';});
+  var rosa=rosas[0],anterior=rosas[1];
+  var minPagante=6,resultado=26,confianca='baixa';
+  if(rosa&&anterior){
+    var mr=rosa.multiplier,ma=anterior.multiplier;
+    function somaDig(n){var s=0;String(Math.round(n*100)).split('').forEach(function(d){s+=parseInt(d)||0;});return s;}
+    var sr=somaDig(mr),sa=somaDig(ma),total=sr+sa;
+    var ult=total%10;if(ult===0)ult=10;
+    minPagante=ult;
+    resultado=total;
+    confianca=total>15?'alta':total>8?'média':'baixa';
+  }
+  var coincide=minPagante>=janelaMin&&minPagante<=janelaMax;
+  var sr=0,sx=0;
+  if(coincide){sx=9;sr=11;}
+  // Verificar confluência com outros padrões
+  var comp=calcCompressao(5),p13=calcP13(),p18=calcP18(),p5=calcP5();
+  var confl=parseFloat(comp.C||99)<=1.5||p13.score_roxa>0||p18.score_roxa>0||p5.score_roxa>0;
+  if(coincide&&confl){sx+=9;sr+=11;}
+  return{score_rosa:Math.min(sr,15),score_roxa:Math.min(sx,15),label:'Megatron',info:'Min:'+minPagante,ativo:coincide,minPagante:minPagante,janela:janelaMin+'-'+janelaMax,resultado:resultado,confianca:confianca};
+}
+
+// ── TODOS OS 26 PADRÕES ──
+function calcTodos26(){
+  return[calcP1(),calcP2(),calcP3(),calcP4(),calcP5(),calcP6(),calcP7(),calcP8(),calcP9(),calcP10(),
+         calcP11(),calcP12(),calcP13(),calcP14(),calcP15(),calcP16(),calcP17(),calcP18(),calcP19(),calcP20(),
+         calcPXadrez(),calcPDecrescente(),calcPCrescente(),calcPIgual(),calcPGravidade(),calcPMegatron()];
+}
+function calcTodos20(){return calcTodos26().slice(0,20);}
+
+// ── CONFLUÊNCIA TOTAL 26 PADRÕES ──
+function calcConf20(){
+  var pats=calcTodos26();
+  var totRoxa=pats.reduce(function(a,p){return a+p.score_roxa;},0);
+  var totRosa=pats.reduce(function(a,p){return a+p.score_rosa;},0);
+  var maxRoxa=200,maxRosa=160;
+  var pctRoxa=Math.min(Math.round(totRoxa/maxRoxa*100),100);
+  var pctRosa=Math.min(Math.round(totRosa/maxRosa*100),100);
+  var verdRoxa=pctRoxa>70?'v-alta':pctRoxa>55?'v-forte':pctRoxa>=40?'v-obs':'v-baixa';
+  var verdRosa=pctRosa>60?'v-alta':pctRosa>45?'v-forte':pctRosa>=30?'v-obs':'v-baixa';
+  var txtRoxa=pctRoxa>70?'🚀 ENTRAR (ROXA)':pctRoxa>55?'⚡ POSSÍVEL ROXA':pctRoxa>=40?'👀 OBSERVAR':'⏸ AGUARDAR';
+  var txtRosa=pctRosa>60?'🚀 ENTRAR AGORA':pctRosa>45?'🌸 FORTE':pctRosa>=30?'👀 OBSERVAR':'⏸ AGUARDAR';
+  return{pats:pats,totRoxa:totRoxa,totRosa:totRosa,pctRoxa:pctRoxa,pctRosa:pctRosa,verdRoxa:verdRoxa,verdRosa:verdRosa,txtRoxa:txtRoxa,txtRosa:txtRosa};
+}
+
+// ── CÁLCULOS BASE (para confluência rosa/roxa) ──
+function calcCompressao(n){
+  n=n||10;var ult=velas.slice(0,Math.min(n,velas.length));
+  if(ult.length<3)return{C:null,R:0,P:0,nivel:'—',niveis:[]};
+  var niveis=ult.map(function(c){return classeVela(c.multiplier);});
+  var C=niveis.reduce(function(a,b){return a+b;},0)/niveis.length;
+  var R=0;for(var i=0;i<velas.length;i++){if(velas[i].multiplier<2)R++;else break;}
+  var P=(R*0.12)+(1.5-Math.min(C,1.5));P=Math.max(0,Math.min(P,1.5));
+  var nivel=C<=1.4?'FORTE':C<=2.0?'NORMAL':'FRACO';
+  return{C:C.toFixed(2),R:R,P:P.toFixed(2),nivel:nivel,niveis:niveis};
+}
+function calcCiclos(){
+  var lp=velas.find(function(c){return c._cor==='pink';});
+  if(!lp)return{casas:0,ciclo:'—',proximo:7,prox_fib:7};
+  var casas=velas.indexOf(lp);
+  var ciclo=casas<=7?'CURTO(7)':casas<=13?'MÉDIO(13)':'LONGO(21)';
+  var prox_fib=[1,1,2,3,5,8,13,21].find(function(f){return f>casas;})||21;
+  return{casas:casas,ciclo:ciclo,prox_fib:prox_fib};
+}
+function calcSequencia(){
+  var seq=velas.slice(0,Math.min(20,velas.length)).map(function(c){return classeVela(c.multiplier);});
+  var s5=seq.slice(0,5),padroes={compressao_total:false,compressao_media:false,padrao_11213:false,escada:false,tres_medias:false,zigzag:false,compressao_extrema:false};
+  if(s5.length>=5&&s5.every(function(v){return v===1;}))padroes.compressao_total=true;
+  if(s5.length>=5&&[1,1,1,2,1].every(function(v,i){return s5[i]===v;}))padroes.compressao_media=true;
+  if(s5.length>=5&&[1,1,2,1,3].every(function(v,i){return s5[i]===v;}))padroes.padrao_11213=true;
+  if(s5.slice(0,3).length===3&&s5[0]<s5[1]&&s5[1]<s5[2])padroes.escada=true;
+  if(s5.slice(0,3).every(function(v){return v===2;}))padroes.tres_medias=true;
+  if(s5.length>=5&&[1,2,1,2,1].every(function(v,i){return s5[i]===v;}))padroes.zigzag=true;
+  if(velas.slice(0,5).every(function(c){return c.multiplier<1.15;}))padroes.compressao_extrema=true;
+  var ativo=Object.entries(padroes).find(function(e){return e[1];});
+  return{seq:seq,padroes:padroes,nomePadrao:ativo?ativo[0].replace(/_/g,' ').toUpperCase():'NENHUM',algumAtivo:!!ativo,niveis:seq};
+}
+function calcProbRosa(){
+  var comp=calcCompressao(10);if(!comp.C)return{prob:0,pct:0,cor:'baixa'};
+  var P=parseFloat(comp.P),pct=Math.min(Math.round(P*66),100);
+  return{prob:P,pct:pct,cor:pct<30?'baixa':pct<60?'media':pct<85?'alta':'critica',C:comp.C,R:comp.R};
+}
+function calcConfluenciaRosa(){
+  var comp=calcCompressao(),ciclos=calcCiclos(),seq=calcSequencia(),probR=calcProbRosa();
+  var hrRosa={};
+  velas.filter(function(c){return c._cor==='pink';}).forEach(function(c){var h=z(new Date(c.timestamp).getHours());hrRosa[h]=(hrRosa[h]||0)+1;});
+  var topRosa=Object.entries(hrRosa).sort(function(a,b){return b[1]-a[1];}).slice(0,5).map(function(x){return x[0];});
+  var hAtual=z(new Date().getHours()),q9=calcP1();
+  var itens=[
+    {l:'Compressão C≤1.4',on:parseFloat(comp.C||99)<=1.4,val:'C='+comp.C},
+    {l:'Seq baixas R≥6',on:comp.R>=6,val:'R='+comp.R},
+    {l:'Prob P elevada',on:probR.pct>=60,val:'P='+probR.pct+'%'},
+    {l:'Ciclo 7/13/21',on:[7,13,21].indexOf(ciclos.casas)>-1||(ciclos.casas>=5&&ciclos.casas<=8),val:ciclos.casas+'ª'},
+    {l:'Padrão seq ativo',on:seq.padroes.escada||seq.padroes.compressao_total||seq.padroes.compressao_extrema,val:seq.nomePadrao.substring(0,10)},
+    {l:'Hora pagadora',on:topRosa.indexOf(hAtual)>-1,val:hAtual+'h'},
+    {l:'Gatilho 4-7',on:q9.score_roxa>=6,val:'R='+comp.R}
+  ];
+  var score=itens.filter(function(i){return i.on;}).length;
+  var pct=Math.round(score/itens.length*100);
+  var sinal=score>=5?'enter':score>=3?'wait':'stop';
+  var txt=score>=5?'🚀 ENTRAR AGORA':score>=3?'👀 OBSERVAR':'⏸ AGUARDAR';
+  return{itens:itens,score:score,pct:pct,sinal:sinal,txt:txt};
+}
+function calcConfluenciaRoxa(){
+  var comp=calcCompressao(5),seq=calcSequencia(),ciclos=calcCiclos();
+  var hrRoxa={};
+  velas.filter(function(c){return c._cor==='purple';}).forEach(function(c){var h=z(new Date(c.timestamp).getHours());hrRoxa[h]=(hrRoxa[h]||0)+1;});
+  var topRoxa=Object.entries(hrRoxa).sort(function(a,b){return b[1]-a[1];}).slice(0,5).map(function(x){return x[0];});
+  var hAtual=z(new Date().getHours());
+  var ult5=velas.slice(0,5).map(function(c){return c.multiplier;}),zigzag=false;
+  if(ult5.length>=4){var pares=0;for(var i=0;i<ult5.length-1;i++){var a=ult5[i],b=ult5[i+1];if((a<2&&b>=2&&b<5)||(a>=2&&a<5&&b<2))pares++;}zigzag=pares>=3;}
+  var medSeq=0;for(var j=0;j<velas.length;j++){if(velas[j].multiplier>=2&&velas[j].multiplier<5)medSeq++;else break;}
+  var s5=velas.slice(0,5).map(function(c){return classeVela(c.multiplier);});
+  var pat11213=s5.length>=5&&[1,1,2,1,3].every(function(v,i){return s5[i]===v;});
+  var cVal=parseFloat(comp.C||0),compFraca=cVal>1.4&&cVal<=2.0;
+  var p10=calcP10();
+  var itens=[
+    {l:'Velas médias seq',on:medSeq>=2,val:medSeq+'x'},
+    {l:'Padrão 1-1-2-1-3',on:pat11213||seq.padroes.padrao_11213,val:pat11213?'✔':'—'},
+    {l:'Zig-zag detectado',on:zigzag,val:zigzag?'✔':'—'},
+    {l:'Ciclo 4-7 rodadas',on:ciclos.casas>=4&&ciclos.casas<=7,val:ciclos.casas+'ª'},
+    {l:'Hora pagadora roxa',on:topRoxa.indexOf(hAtual)>-1,val:hAtual+'h'},
+    {l:'Eco dígito ativo',on:calcP2().score_roxa>0,val:calcP2().eco+'x'},
+    {l:'Compressão fraca',on:compFraca,val:'C='+comp.C}
+  ];
+  var score=itens.filter(function(i){return i.on;}).length;
+  var pct=Math.round(score/itens.length*100);
+  var sinal=score>=5?'enter':score>=3?'wait':'stop';
+  var txt=score>=5?'🚀 ENTRAR (ROXA)':score>=3?'👀 OBSERVAR':'⏸ AGUARDAR';
+  return{itens:itens,score:score,pct:pct,sinal:sinal,txt:txt};
+}
+function calcQ11(){
+  var p1=calcP1(),p3=calcP3(),p4=calcP4(),p17=calcP17(),seq=calcSequencia();
+  var chk=[
+    {l:'Compressão P1 (≥5)',on:p1.score_roxa>=6},
+    {l:'Código Numérico P3',on:p3.score_roxa>=6},
+    {l:'Distribuição P4 >85%',on:p4.score_roxa>=9},
+    {l:'Padrão sequência ativo',on:seq.algumAtivo},
+    {l:'Zona exaustão P17',on:p17.score_roxa>=10}
+  ];
+  return{chk:chk,score:chk.filter(function(c){return c.on;}).length};
+}
+
+// ══════════════════════════════════════════
+// ATUALIZAR PAINEL
+// ══════════════════════════════════════════
+function atualizarTudo(){
+  if(!_('tela-app')||_('tela-app').style.display==='none')return;
+  var pats=calcTodos26(),nomes=['P1','P2','P3','P4','P5','P6','P7','P8','P9','P10','P11','P12','P13','P14','P15','P16','P17','P18','P19','P20','P21','P22','P23','P24','P25','P26'];
+
+  // Atualizar cada quad Q1-Q26
+  pats.forEach(function(p,i){
+    var el=_('info-'+(i+1));if(!el)return;
+    var corR=p.score_rosa>0?'var(--pink)':'var(--dim)',corX=p.score_roxa>0?'var(--purple)':'var(--dim)';
+    el.innerHTML='<span style="color:'+corR+'">R'+p.score_rosa+'</span>/<span style="color:'+corX+'">X'+p.score_roxa+'</span><br><span style="color:var(--dim);font-size:.38rem">'+p.info+'</span>';
+  });
+
+  // Painel conf20
+  var c20=calcConf20(),grade=_('conf20-grade');
+  if(grade){
+    var MODAL_IDS=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,101,102,103,104,105,106];
+    grade.innerHTML=c20.pats.map(function(p,i){
+      var ativo=p.score_rosa>0&&p.score_roxa>0?'ativo-ambos':p.score_roxa>0?'ativo-roxa':p.score_rosa>0?'ativo-rosa':'';
+      return'<div class="conf20-pat '+ativo+'" onclick="abrirModal('+MODAL_IDS[i]+')">'+
+        '<div class="conf20-pnum">P'+(i+1)+'</div>'+
+        '<div class="conf20-pscore">'+
+        (p.score_rosa>0?'<span class="conf20-sr">'+p.score_rosa+'</span>':'')+
+        (p.score_roxa>0?'<span class="conf20-sx">'+p.score_roxa+'</span>':'')+
+        (p.score_rosa===0&&p.score_roxa===0?'<span style="color:var(--dim);font-size:.42rem">—</span>':'')+
+        '</div></div>';
+    }).join('');
+  }
+  if(_('conf20-total-roxa'))_('conf20-total-roxa').textContent=c20.totRoxa;
+  if(_('conf20-total-rosa'))_('conf20-total-rosa').textContent=c20.totRosa;
+  var brx=_('conf20-bar-roxa');if(brx)brx.style.width=c20.pctRoxa+'%';
+  var brs=_('conf20-bar-rosa');if(brs)brs.style.width=c20.pctRosa+'%';
+  var prx=_('conf20-pct-roxa');if(prx){prx.textContent=c20.pctRoxa+'%';prx.style.color=c20.pctRoxa>70?'var(--pink)':c20.pctRoxa>55?'var(--green)':'var(--purple)';}
+  var prs=_('conf20-pct-rosa');if(prs){prs.textContent=c20.pctRosa+'%';prs.style.color=c20.pctRosa>60?'var(--pink)':c20.pctRosa>45?'var(--yellow)':'var(--pink)';}
+  var vrx=_('conf20-verd-roxa');if(vrx){vrx.className='conf20-veredicto '+c20.verdRoxa;vrx.textContent=c20.txtRoxa;}
+  var vrs=_('conf20-verd-rosa');if(vrs){vrs.className='conf20-veredicto '+c20.verdRosa;vrs.textContent=c20.txtRosa;}
+
+  // ── BADGE DA CASA ──
+  // Regras:
+  // ⏸ AGUARDAR      → menos de 3 confirmações
+  // 🟠 RECOLHENDO   → exatamente 3 confirmações (sinal apareceu, aguardando 4º)
+  // 🟢 PAGANDO       → 4+ confirmações rosa sem falhar
+  // 💜 PAGANDO ROXA  → 4+ confirmações roxa sem falhar
+  // ⚠ FALSO PAGTO   → houve ≥3 sinais mas próxima vela foi baixa (<2x) → reseta
+  // 🔴 EXAUSTÃO      → P17 ≥10 velas seguidas <2x
+  var badge=_('badge-casa');
+  var cRosaB=calcConfluenciaRosa();
+  var cRoxaB=calcConfluenciaRoxa();
+  var p17b=calcP17();
+  var scoreRosa=cRosaB.score;
+  var scoreRoxa=cRoxaB.score;
+  var melhor=Math.max(scoreRosa,scoreRoxa);
+
+  // Memória de sinal: detecta se houve sinal (≥3) E a próxima vela foi baixa
+  // Só marca FALSO se: havia sinal antes E agora escore caiu E última vela foi baixa
+  var falsoPagto=false;
+  if(velas.length>=2){
+    var v0=velas[0].multiplier;   // vela mais recente
+    var v1=velas[1].multiplier;   // vela anterior
+    // Falso pagamento: sinal estava ativo (v1 gerou ≥3 confirmações → badge estava em RECOLHENDO/PAGANDO)
+    // mas a vela seguinte (v0) foi baixa (<2x) E agora o score voltou para <3
+    // Usamos _sinalizouAntes como memória entre ciclos
+    if(window._scoreAnterior!==undefined&&window._scoreAnterior>=3&&melhor<3&&v0<2.0){
+      falsoPagto=true;
+    }
+    // Falso pagamento forte: estava em PAGANDO (≥4) mas vela foi <1.5x
+    if(window._scoreAnterior!==undefined&&window._scoreAnterior>=4&&v0<1.5){
+      falsoPagto=true;
+    }
+  }
+  // Salva score atual como anterior para próxima rodada
+  window._scoreAnterior=melhor;
+
+  // Aplica estado
+  if(p17b.score_roxa>=10){
+    badge.className='vm';
+    badge.innerHTML='🔴 EXAUSTÃO';
+    setNeon('vermelho');
+  } else if(falsoPagto){
+    badge.className='falso';
+    badge.innerHTML='⚠ FALSO PAGTO';
+    setNeon('vermelho');
+    // Reseta após 2 velas para não ficar travado
+    if(!window._falsoTimer){
+      window._falsoTimer=setTimeout(function(){
+        window._falsoTimer=null;
+        window._scoreAnterior=0;
+      },12000);
+    }
+  } else if(scoreRoxa>=4&&scoreRoxa>=scoreRosa){
+    badge.className='roxo';
+    badge.innerHTML='💜 PAGANDO ROXA';
+    setNeon('verde');
+    window._falsoTimer&&clearTimeout(window._falsoTimer);window._falsoTimer=null;
+  } else if(scoreRosa>=4){
+    badge.className='vd';
+    badge.innerHTML='🟢 PAGANDO';
+    setNeon('verde');
+    window._falsoTimer&&clearTimeout(window._falsoTimer);window._falsoTimer=null;
+  } else if(melhor===3){
+    badge.className='recolhendo';
+    badge.innerHTML='🟠 RECOLHENDO';
+    setNeon('amarelo');
+  } else {
+    badge.className='am';
+    badge.innerHTML='⏸ AGUARDAR';
+    setNeon('amarelo');
+  }
+
+  // Barra de status
+  var comp=calcCompressao(),ciclos=calcCiclos(),probR=calcProbRosa(),seq=calcSequencia();
+  if(_('txt-pos'))_('txt-pos').textContent=ciclos.casas+'ª';
+  if(_('txt-pat'))_('txt-pat').textContent=seq.nomePadrao.substring(0,10);
+  if(_('txt-comp'))_('txt-comp').textContent=comp.C||'—';
+  if(_('txt-seq'))_('txt-seq').textContent=comp.R;
+  if(_('txt-prob')){_('txt-prob').textContent=probR.pct+'%';_('txt-prob').style.color=probR.cor==='alta'||probR.cor==='critica'?'var(--pink)':probR.cor==='media'?'var(--yellow)':'var(--dim)';}
+
+  // Q11
+  var q11=calcQ11();
+  var corpo=_('corpo-q11');
+  if(q11.score>=3){
+    corpo.className='q11corpo expandido';
+    var itensHtml=q11.chk.map(function(c){return'<div class="item-al '+(c.on?'on':'off')+'">'+(c.on?'✅':'⭕')+' '+c.l+'</div>';}).join('');
+    var scoreHtml='<div class="barra-score"><span class="barra-lbl">0</span><div class="barra-trilha"><div class="barra-fill" style="width:'+(q11.score/5*100)+'%"></div></div><span class="barra-lbl">'+q11.score+'/5</span></div>';
+    corpo.innerHTML='<div class="alerta-titulo">⚠ ALERTA — POSSÍVEL VELA ROSA</div><div class="grade-al">'+itensHtml+'</div>'+scoreHtml+'<div class="alerta-rodape">🎯 ENTRADA NA PRÓXIMA VELA</div>';
+  } else {
+    corpo.className='q11corpo';
+    corpo.innerHTML='<span style="font-family:Share Tech Mono,monospace;font-size:.58rem;color:var(--pink);white-space:nowrap">⚠ Q-ALERT</span><div class="barra-trilha" style="flex:1"><div class="barra-fill" style="width:'+(q11.score/5*100)+'%"></div></div><span class="barra-lbl" style="white-space:nowrap;font-size:.55rem">'+q11.score+'/5</span><span style="font-family:Share Tech Mono,monospace;font-size:.52rem;color:var(--dim);white-space:nowrap">Aguardando padrões</span>';
+  }
+
+  // Confluência Rosa
+  var cRosa=calcConfluenciaRosa();
+  _('conf-rosa-score').textContent=cRosa.score+'/7';
+  _('crf-comp').innerHTML='<span style="color:'+(parseFloat(comp.C||99)<=1.4?'var(--green)':'var(--red)')+'">C='+comp.C+'</span>';
+  _('crf-seq').innerHTML='<span style="color:'+(comp.R>=6?'var(--green)':'var(--dim)')+'">R='+comp.R+'</span>';
+  _('crf-prob').innerHTML='<span style="color:'+(probR.pct>=60?'var(--green)':probR.pct>=40?'var(--yellow)':'var(--dim)')+'">'+probR.pct+'%</span>';
+  _('crf-ciclo').innerHTML='<span style="color:'+(cRosa.itens[3].on?'var(--green)':'var(--dim)')+'">'+ciclos.casas+'ª</span>';
+  _('crf-esc').innerHTML='<span style="color:'+(seq.algumAtivo?'var(--green)':'var(--dim)')+'">'+seq.nomePadrao.substring(0,8)+'</span>';
+  _('crf-hora').innerHTML='<span style="color:'+(cRosa.itens[5].on?'var(--green)':'var(--dim)')+'">'+z(new Date().getHours())+'h</span>';
+  _('crf-min').innerHTML='<span style="color:'+(cRosa.itens[6].on?'var(--green)':'var(--dim)')+'">R='+comp.R+'</span>';
+  _('crf-bar').style.width=cRosa.pct+'%';
+  var sRosa=_('crf-sinal');sRosa.className='conf-sinal '+cRosa.sinal;sRosa.textContent=cRosa.txt;
+  // Alerta entrada próxima vela na confluência rosa
+  var alertaRosa=_('conf-rosa-alerta');
+  if(alertaRosa){alertaRosa.style.display=cRosa.score>=3?'inline':'none';}
+  var cRoxa=calcConfluenciaRoxa();
+  // Alerta entrada próxima vela na confluência roxa
+  var alertaRoxa=_('conf-roxa-alerta');
+  if(alertaRoxa){alertaRoxa.style.display=cRoxa.score>=3?'inline':'none';}
+  _('conf-roxa-score').textContent=cRoxa.score+'/7';
+  _('crx-med').innerHTML='<span style="color:'+(cRoxa.itens[0].on?'var(--green)':'var(--dim)')+'">'+cRoxa.itens[0].val+'</span>';
+  _('crx-pat').innerHTML='<span style="color:'+(cRoxa.itens[1].on?'var(--green)':'var(--dim)')+'">'+cRoxa.itens[1].val+'</span>';
+  _('crx-zz').innerHTML='<span style="color:'+(cRoxa.itens[2].on?'var(--green)':'var(--dim)')+'">'+cRoxa.itens[2].val+'</span>';
+  _('crx-ciclo').innerHTML='<span style="color:'+(cRoxa.itens[3].on?'var(--green)':'var(--dim)')+'">'+cRoxa.itens[3].val+'</span>';
+  _('crx-hora').innerHTML='<span style="color:'+(cRoxa.itens[4].on?'var(--green)':'var(--dim)')+'">'+cRoxa.itens[4].val+'</span>';
+  _('crx-pos').innerHTML='<span style="color:'+(cRoxa.itens[5].on?'var(--green)':'var(--dim)')+'">'+cRoxa.itens[5].val+'</span>';
+  _('crx-comp').innerHTML='<span style="color:'+(cRoxa.itens[6].on?'var(--green)':'var(--dim)')+'">'+cRoxa.itens[6].val+'</span>';
+  _('crx-bar').style.width=cRoxa.pct+'%';
+  var sRoxa=_('crx-sinal');sRoxa.className='conf-sinal '+cRoxa.sinal;sRoxa.textContent=cRoxa.txt;
+  // ALERTA ENTRADA ROXA (igual ao da rosa)
+  var entRoxa=_('crx-entrada');
+  if(entRoxa){
+    if(cRoxa.score>=5){entRoxa.className='conf-entrada-roxa ativo';entRoxa.textContent='🎯 ENTRAR NA PRÓXIMA VELA ROXA';}
+    else if(cRoxa.score>=3){entRoxa.className='conf-entrada-roxa';entRoxa.style.borderColor='var(--yellow)';entRoxa.style.color='var(--yellow)';entRoxa.textContent='👀 OBSERVAR PRÓXIMA VELA';}
+    else{entRoxa.className='conf-entrada-roxa';entRoxa.style.borderColor='';entRoxa.style.color='';entRoxa.textContent='💜 AGUARDANDO CONFLUÊNCIA...';}
+  }
+}
+// ══════════════════════════════════════════
+// SOCKET
+// ══════════════════════════════════════════
+var SK=null;
+function setSocketStatus(estado,txt){
+  // estado: 'conectando' | 'conectado' | 'erro' | 'desconectado'
+  var cores={conectando:['var(--yellow)','var(--yellow)','#ffd60010'],conectado:['var(--green)','var(--green)','#00e67610'],erro:['var(--red)','var(--red)','#ff174410'],desconectado:['var(--dim)','var(--dim)','#0a1e2e']};
+  var c=cores[estado]||cores.desconectado;
+  var sp=_('sp-socket'),dot=_('dot-socket'),lbl=_('txt-socket'),barra=_('barra-sk-txt');
+  if(sp){sp.style.color=c[0];sp.style.borderColor=c[1];sp.style.background=c[2];}
+  if(dot)dot.style.background=c[1];
+  if(lbl)lbl.textContent=txt;
+  if(barra)barra.style.color=c[0];
+  if(barra)barra.textContent=(estado==='conectado'?'✅ ':'estado'==='erro'?'❌ ':'⏳ ')+txt;
+}
+function atualizarBarraVelas(){
+  var el=_('barra-sk-velas');if(el)el.textContent=velas.length+' velas recebidas';
+}
+function reconectarSocket(){
+  if(SK){try{SK.disconnect();}catch(e){}}
+  SK=null;
+  setSocketStatus('conectando','Reconectando...');
+  setTimeout(iniciarSocket,500);
+}
+function iniciarSocket(){
+  socketIniciado=true;
+  setSocketStatus('conectando','Conectando ao servidor...');
+  try{
+    SK=io('https://aviator-real-time-dashboard.onrender.com',{
+      transports:['polling','websocket'],
+      reconnection:true,
+      reconnectionDelay:3000,
+      reconnectionAttempts:Infinity,
+      timeout:20000
+    });
+
+    function processCandle(cd){
+      if(!cd||!cd.multiplier)return;
+      cd._cor=getCor(cd);
+      velas.unshift(cd);
+      if(velas.length>MAX_VELAS)velas.pop();
+      adicionarCard(cd);
+      atualizarTudo();
+      atualizarBarraVelas();
+    }
+    function processHistory(h){
+      if(!h||!h.length)return;
+      velas=h.map(function(cd){cd._cor=getCor(cd);return cd;}).slice(0,MAX_VELAS);
+      reconstruirGrade();
+      atualizarTudo();
+      atualizarBarraVelas();
+      setSocketStatus('conectado','Online — '+velas.length+' velas carregadas');
+    }
+
+    SK.on('connect',function(){
+      setSocketStatus('conectado','Conectado! Carregando histórico...');
+      SK.emit('requestHistory');
+    });
+    SK.on('disconnect',function(r){
+      setSocketStatus('desconectado','Desconectado ('+r+')');
+    });
+    SK.on('connect_error',function(e){
+      setSocketStatus('erro','Erro: '+e.message+' — clique ↺ para tentar novamente');
+    });
+
+    SK.on('history',function(h){processHistory(Array.isArray(h)?h:[]);});
+    SK.on('candle',function(cd){
+      processCandle(cd);
+      setSocketStatus('conectado','🕯 Nova vela: '+( cd&&cd.multiplier?cd.multiplier.toFixed(2)+'x':'—'));
+    });
+
+    SK.on('online',function(n){var el=_('qtd-online');if(el)el.textContent='👥 '+n+' online';});
+    SK.on('status',function(s){
+      if(s&&s.online){var el=_('qtd-online');if(el)el.textContent='👥 '+s.online+' online';}
+    });
+
+  }catch(e){
+    setSocketStatus('erro','Erro crítico: '+e.message);
+    console.warn('[MEGATRON] Socket erro:',e);
+  }
+}
+
+// ══════════════════════════════════════════
+// MODAIS
+// ══════════════════════════════════════════
+var TITULOS_MODAL={
+  1:'P1 — COMPRESSÃO',2:'P2 — ECO',3:'P3 — CÓDIGO NUMÉRICO',4:'P4 — DISTRIBUIÇÃO ESTAT.',
+  5:'P5 — VOLATILIDADE',6:'P6 — MÉDIA MÓVEL',7:'P7 — CICLO 7',8:'P8 — RECUPERAÇÃO PÓS PICO',
+  9:'P9 — VOL. DINÂMICA',10:'P10 — DISTÂNCIA DO PICO',11:'P11 — QUEBRA DE SEQUÊNCIA',
+  12:'P12 — TEMPO SEM ROXA',13:'P13 — CLUSTER DE BAIXOS',14:'P14 — PICO MÉDIO',
+  15:'P15 — GRADIENTE',16:'P16 — FREQUÊNCIA MÉDIOS',17:'P17 — ZONA DE EXAUSTÃO',
+  18:'P18 — ENTROPY SCORE',19:'P19 — MOMENTUM',20:'P20 — ANOMALIA ESTATÍSTICA',
+  21:'🚨 ALERTA CONFLUÊNCIA',22:'🌸 CONFLUÊNCIA ROSA',23:'💜 CONFLUÊNCIA ROXA',
+  101:'♟️ PADRÃO XADREZ',102:'📉 PADRÃO DECRESCENTE',103:'📈 PADRÃO CRESCENTE',
+  104:'⚖️ PADRÃO IGUAL',105:'🌌 PADRÃO GRAVIDADE',106:'🤖 PADRÃO MEGATRON'
+};
+var CORES_MODAL={
+  1:'var(--purple)',2:'var(--cyan)',3:'var(--green)',4:'var(--yellow)',5:'var(--pink)',
+  6:'var(--cyan)',7:'var(--purple)',8:'#ff9800',9:'var(--pink)',10:'var(--blue)',
+  11:'var(--green)',12:'var(--cyan)',13:'var(--yellow)',14:'var(--purple)',15:'var(--pink)',
+  16:'var(--cyan)',17:'var(--red)',18:'#ff9800',19:'var(--green)',20:'var(--pink)',
+  21:'var(--pink)',22:'var(--pink)',23:'var(--purple)',
+  101:'var(--cyan)',102:'var(--yellow)',103:'var(--green)',
+  104:'var(--purple)',105:'var(--pink)',106:'#00e5ff'
+};
+function abrirModal(n){
+  _('titulo-modal').textContent=TITULOS_MODAL[n]||'';
+  _('caixa-modal').style.setProperty('--mc',CORES_MODAL[n]||'var(--cyan)');
+  _('corpo-modal').innerHTML=conteudoModal(n);
+  _('fundo-modal').classList.add('aberto');
+}
+function fecharModal(){_('fundo-modal').classList.remove('aberto');}
+
+function patDetalhe(p,titulo,descRoxa,descRosa,extras){
+  var corR=p.score_rosa>0?'var(--pink)':'var(--dim)',corX=p.score_roxa>0?'var(--purple)':'var(--dim)';
+  return'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+    '<div class="ciclo-box '+(p.score_roxa>0?'ativo':'neutro')+'"><div class="ciclo-titulo">SCORE ROXA</div><div class="ciclo-valor" style="color:'+corX+'">'+p.score_roxa+'/10</div></div>'+
+    '<div class="ciclo-box '+(p.score_rosa>0?'ativo':'neutro')+'"><div class="ciclo-titulo">SCORE ROSA</div><div class="ciclo-valor" style="color:'+corR+'">'+p.score_rosa+'/10</div></div>'+
+    '</div>'+
+    '<div class="linha"><span class="ll">Condição Roxa</span><span class="lv" style="color:'+corX+'">'+descRoxa+'</span></div>'+
+    '<div class="linha"><span class="ll">Condição Rosa</span><span class="lv" style="color:'+corR+'">'+descRosa+'</span></div>'+
+    (extras||'');
+}
+
+function conteudoModal(n){
+  var pats=calcTodos20();
+  // P1–P20
+  if(n>=1&&n<=20){
+    var p=pats[n-1];
+    var extra='<hr class="div-sep">';
+    if(n===1)extra+='<div class="linha"><span class="ll">Velas &lt;2 nas últimas 10</span><span class="lv">'+p.c+'</span></div>'+seqDots(mults(10).map(function(v){return classeVela(v);}));
+    if(n===2)extra+='<div class="linha"><span class="ll">Valores 1.20–1.40 (últimas 10)</span><span class="lv">'+p.eco+'</span></div>';
+    if(n===3)extra+='<div class="linha"><span class="ll">Sequência 5 últimas</span><span class="lv">'+p.seq.slice(0,5).join('-')+'</span></div>'+seqDots(p.seq.slice(0,5));
+    if(n===4)extra+='<div class="linha"><span class="ll">% velas &lt;2 nas últimas 20</span><span class="lv">'+p.pct+'%</span></div>';
+    if(n===5)extra+='<div class="linha"><span class="ll">Desvio padrão 15 velas</span><span class="lv">σ='+p.d+'</span></div>';
+    if(n===6)extra+='<div class="linha"><span class="ll">MM5</span><span class="lv">'+p.mm5+'</span></div><div class="linha"><span class="ll">MM10</span><span class="lv">'+p.mm10+'</span></div>';
+    if(n===7)extra+='<div class="linha"><span class="ll">Distância desde pico &gt;10</span><span class="lv">'+p.dist+'ª casa</span></div>';
+    if(n===9)extra+='<div class="linha"><span class="ll">Desvio padrão 10 velas</span><span class="lv">σ10='+p.v10+'</span></div><div class="linha"><span class="ll">Desvio padrão 20 velas</span><span class="lv">σ20='+p.v20+'</span></div>';
+    if(n===10)extra+='<div class="linha"><span class="ll">Distância desde pico &gt;10</span><span class="lv">'+p.dist+'ª casa</span></div>';
+    if(n===12)extra+='<div class="linha"><span class="ll">Rodadas desde &gt;10</span><span class="lv">'+p.dist+'ª</span></div>';
+    if(n===13)extra+='<div class="linha"><span class="ll">Velas 1.10–1.40 nas últimas 10</span><span class="lv">'+p.cl+'</span></div>';
+    if(n===16)extra+='<div class="linha"><span class="ll">Valores 3x–5x nas últimas 10</span><span class="lv">'+p.med+'</span></div>';
+    if(n===17)extra+='<div class="linha"><span class="ll">Velas &lt;2 seguidas</span><span class="lv">'+p.seq+'</span></div>';
+    if(n===18)extra+='<div class="linha"><span class="ll">Entropia H</span><span class="lv">'+p.H+'</span></div>';
+    if(n===19)extra+='<div class="linha"><span class="ll">Momentum (M3−M10)</span><span class="lv">'+p.mom+'</span></div>';
+    var descRoxa={1:'≥5=6 | ≥6=8 | ≥7=10',2:'3 vals 1.20-1.40 → 7',3:'5×C1→8 | 1-1-2-1-3→6',4:'&gt;85%&lt;2 → 9',5:'σ&lt;0.8 → 7',6:'MM5&gt;MM10 → 6',7:'dist 7-9 → 6',8:'pico+3baixas → 7',9:'σ10&gt;σ20 → 7',10:'≥12=6 | ≥18=8 | ≥25=10',11:'estável+quebra → 6',12:'≥20 → 8',13:'≥6×1.1-1.4 → 9',14:'5-9x pós comp → 7',15:'4 crescentes → 6',16:'≥4×3-5x → 6',17:'≥10&lt;2 → 10',18:'H&lt;1 → 9',19:'mom&gt;0.5 → 7',20:'|v-μ|&gt;2σ → 8'}[n]||'—';
+    var descRosa={1:'≥7=6 | ≥8=8 | ≥9=10',2:'3 vals → 4',3:'5×C1→5',4:'&gt;85% → 6',5:'σ&lt;0.8 → 5',6:'MM5&gt;MM10 → 3',7:'dist 7-9 → 4',8:'pico+3baixas → 4',9:'σ10&gt;σ20 → 5',10:'≥30 → 8',11:'quebra → 3',12:'≥20 → 6',13:'≥6 → 7',14:'5-9x → 5',15:'4 cresc → 4',16:'≥4 → 4',17:'≥10 → 7',18:'H&lt;1 → 6',19:'mom&gt;0.5 → 4',20:'anomalia → 6'}[n]||'—';
+    return patDetalhe(p,n,descRoxa,descRosa,extra);
+  }
+  // Q21 ALERTA
+  if(n===21){
+    var q=calcQ11();
+    return'<div class="grade-al">'+q.chk.map(function(c){return'<div class="item-al '+(c.on?'on':'off')+'">'+(c.on?'✅':'⭕')+' '+c.l+'</div>';}).join('')+'</div>'+
+      '<div class="barra-score"><span class="barra-lbl">0</span><div class="barra-trilha"><div class="barra-fill" style="width:'+(q.score/5*100)+'%"></div></div><span class="barra-lbl">'+q.score+'/5</span></div>'+
+      (q.score>=3?'<div class="alerta-rodape" style="margin-top:12px">🎯 SCORE '+q.score+'/5 — ENTRAR</div>':'');
+  }
+  // Q22 ROSA
+  if(n===22){
+    var c=calcConfluenciaRosa(),comp=calcCompressao(),prob=calcProbRosa();
+    return'<div style="text-align:center;font-family:Orbitron,monospace;font-size:1.2rem;color:var(--pink);margin-bottom:12px">'+c.score+' / 7</div>'+
+      '<div class="grade-al">'+c.itens.map(function(i){return'<div class="item-al '+(i.on?'on':'off')+'">'+(i.on?'✅':'⭕')+' '+i.l+' <span style="color:var(--yellow);margin-left:auto">'+i.val+'</span></div>';}).join('')+'</div>'+
+      '<div class="barra-score" style="margin:10px 0"><span class="barra-lbl">0</span><div class="barra-trilha"><div class="barra-fill" style="width:'+c.pct+'%;background:linear-gradient(90deg,var(--pink),#ff88bb)"></div></div><span class="barra-lbl">'+c.pct+'%</span></div>'+
+      '<div class="conf-sinal '+c.sinal+'" style="font-size:.8rem">'+c.txt+'</div>'+
+      '<hr class="div-sep"><div class="linha"><span class="ll">R (velas baixas)</span><span class="lv">'+comp.R+'</span></div><div class="linha"><span class="ll">C (compressão)</span><span class="lv">'+comp.C+'</span></div><div class="linha"><span class="ll">P result.</span><span class="lv pk">'+prob.prob+'</span></div>';
+  }
+  // Q23 ROXA
+  if(n===23){
+    var c=calcConfluenciaRoxa(),seq=calcSequencia();
+    return'<div style="text-align:center;font-family:Orbitron,monospace;font-size:1.2rem;color:var(--purple);margin-bottom:12px">'+c.score+' / 7</div>'+
+      '<div class="grade-al">'+c.itens.map(function(i){return'<div class="item-al '+(i.on?'on':'off')+'" style="border-color:'+(i.on?'#b845ff50':'var(--border)')+'"><span style="color:var(--purple)">'+(i.on?'✅':'⭕')+'</span> '+i.l+' <span style="color:var(--yellow);margin-left:auto">'+i.val+'</span></div>';}).join('')+'</div>'+
+      '<div class="barra-score" style="margin:10px 0"><span class="barra-lbl">0</span><div class="barra-trilha"><div class="barra-fill" style="width:'+c.pct+'%;background:linear-gradient(90deg,var(--purple),#dd88ff)"></div></div><span class="barra-lbl">'+c.pct+'%</span></div>'+
+      '<div class="conf-sinal '+c.sinal+'" style="font-size:.8rem">'+c.txt+'</div>'+
+      '<div class="conf-entrada-roxa '+(c.score>=5?'ativo':'')+'" style="margin-top:8px">'+
+      (c.score>=5?'🎯 ENTRAR NA PRÓXIMA VELA ROXA':c.score>=3?'👀 OBSERVAR PRÓXIMA VELA':'💜 AGUARDANDO CONFLUÊNCIA...')+'</div>'+
+      '<hr class="div-sep"><div style="font-family:Orbitron,monospace;font-size:.6rem;color:var(--dim);margin-bottom:5px">SEQUÊNCIA ATUAL</div>'+seqDots(seq.niveis.slice(0,10));
+  }
+  // NOVOS PADRÕES 101-106
+  if(n===101){var p=calcPXadrez();return patDetalhe(p,101,'Padrão Xadrez detectado','Expansão provável','<hr class="div-sep"><div class="linha"><span class="ll">Padrão</span><span class="lv" style="color:var(--cyan)">'+p.padrao+'</span></div><div class="linha"><span class="ll">Score Roxa</span><span class="lv">'+p.score_roxa+'</span></div><div class="linha"><span class="ll">Score Rosa</span><span class="lv">'+p.score_rosa+'</span></div><p style="font-family:Share Tech Mono,monospace;font-size:.6rem;color:var(--dim);margin-top:8px">Alternância VELA/INVERTIDA nas últimas 5-7 velas indica expansão de volatilidade</p>');}
+  if(n===102){var p=calcPDecrescente();return patDetalhe(p,102,'Gatilho ativo: M2 &lt; M1','Acumulação de energia','<hr class="div-sep"><div class="linha"><span class="ll">Ativo</span><span class="lv" style="color:'+(p.ativo?'var(--green)':'var(--dim)')+'">'+( p.ativo?'✔ SIM':'— NÃO')+'</span></div><div class="linha"><span class="ll">Casa atual</span><span class="lv">'+p.casa+'/9</span></div><div class="linha"><span class="ll">Ref.</span><span class="lv">'+( p.ref||'—')+'x</span></div><p style="font-family:Share Tech Mono,monospace;font-size:.6rem;color:var(--dim);margin-top:8px">Casas 1-3: +2 | Casas 4-6: +1 | Casas 7-9: atenção</p>');}
+  if(n===103){var p=calcPCrescente();return patDetalhe(p,103,'Aceleração de volatilidade','Possível pico próximo','<hr class="div-sep"><div class="linha"><span class="ll">Ativo</span><span class="lv" style="color:'+(p.ativo?'var(--green)':'var(--dim)')+'">'+( p.ativo?'✔ SIM':'— NÃO')+'</span></div><div class="linha"><span class="ll">Janela</span><span class="lv">1 – '+(p.janela||4)+' velas</span></div><div class="linha"><span class="ll">Diferença</span><span class="lv">'+(p.dif||'—')+'</span></div><p style="font-family:Share Tech Mono,monospace;font-size:.6rem;color:var(--dim);margin-top:8px">Quanto maior a diferença entre M1 e M2, mais forte o sinal</p>');}
+  if(n===104){var p=calcPIgual();return patDetalhe(p,104,'Equilíbrio momentâneo do sistema','Ponto de liberação específico','<hr class="div-sep"><div class="linha"><span class="ll">Ativo</span><span class="lv" style="color:'+(p.ativo?'var(--green)':'var(--dim)')+'">'+( p.ativo?'✔ SIM':'— NÃO')+'</span></div><div class="linha"><span class="ll">Casa pagante</span><span class="lv" style="color:var(--yellow)">'+(p.casa||'—')+'</span></div><div class="linha"><span class="ll">Diferença</span><span class="lv">'+(p.dif||'—')+'</span></div><p style="font-family:Share Tech Mono,monospace;font-size:.6rem;color:var(--dim);margin-top:8px">|M1-M2| ≤ 0.50 → Casa pagante = último dígito de M2</p>');}
+  if(n===105){var p=calcPGravidade();return patDetalhe(p,105,'Compressão estatística ativa','Possível pico alto próximo','<hr class="div-sep"><div class="linha"><span class="ll">Força</span><span class="lv" style="color:var(--yellow)">'+p.forca+'</span></div><div class="linha"><span class="ll">Sequência</span><span class="lv">'+p.contador+' velas &lt;2x</span></div><div class="linha"><span class="ll">Média</span><span class="lv">'+p.mediaG+'x</span></div><p style="font-family:Share Tech Mono,monospace;font-size:.6rem;color:var(--dim);margin-top:8px">Quanto mais velas abaixo de 2x, maior a probabilidade de pico. Janela: 1-6 velas.</p>');}
+  if(n===106){var p=calcPMegatron();return'<div style="text-align:center;font-family:Orbitron,monospace;font-size:.9rem;color:var(--cyan);margin-bottom:10px">🤖 PADRÃO MEGATRON TEMPORAL</div>'+patDetalhe(p,106,'Minuto pagante ativo na janela','Confluência temporal detectada','<hr class="div-sep"><div class="linha"><span class="ll">Minuto pagante</span><span class="lv" style="color:var(--yellow)">'+p.minPagante+'</span></div><div class="linha"><span class="ll">Janela</span><span class="lv">'+p.janela+'</span></div><div class="linha"><span class="ll">Resultado soma</span><span class="lv">'+p.resultado+'</span></div><div class="linha"><span class="ll">Confiança</span><span class="lv" style="color:'+(p.confianca==='alta'?'var(--green)':p.confianca==='média'?'var(--yellow)':'var(--dim)')+'">'+p.confianca+'</span></div><p style="font-family:Share Tech Mono,monospace;font-size:.6rem;color:var(--dim);margin-top:8px">Soma dos dígitos da vela rosa atual + anterior. Coincidência com janela horária = +9 roxa / +11 rosa</p>');}
+  return'<p class="vazio">—</p>';
+}
+
+function seqDots(arr){
+  return'<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">'+arr.map(function(v){
+    var c=v===1?'#0d2035,#7ec8ff':v===2?'#1a0529,#d9aaff':v===3?'#001a00,#00e676':v===4?'#2d001a,#ff2d78':'#1a0a00,#ff9800';
+    var bg=c.split(',')[0],cl=c.split(',')[1];
+    return'<div style="width:20px;height:20px;border-radius:3px;display:flex;align-items:center;justify-content:center;background:'+bg+';border:1px solid '+cl+';color:'+cl+';font-family:Orbitron,monospace;font-size:.48rem;font-weight:700">'+v+'</div>';
+  }).join('')+'</div>';
+}
+
+document.getElementById('botao-entrar').onclick = function() {
+  var usuario = document.getElementById('campo-usuario').value.trim();
+  var senha = document.getElementById('campo-senha').value.trim();
+  var erro = document.getElementById('erro-login');
+  erro.textContent = '';
+  if (!usuario || !senha) { erro.textContent='Preencha email e senha.'; return; }
+  var nome = usuario.indexOf('@')>-1 ? usuario.split('@')[0] : usuario;
+  document.getElementById('tela-login').style.display = 'none';
+  document.getElementById('tela-app').style.display = 'block';
+  document.getElementById('nome-usuario').textContent = '👤 '+nome;
+  if (!socketIniciado) iniciarSocket();
+  setInterval(atualizarTudo, 1000);
+  atualizarTudo();
+};
+document.getElementById('campo-senha').onkeydown = function(e){ if(e.key==='Enter') document.getElementById('botao-entrar').onclick(); };
+document.getElementById('campo-usuario').onkeydown = function(e){ if(e.key==='Enter') document.getElementById('campo-senha').focus(); };
+document.getElementById('link-cadastro').onclick = function(){ document.getElementById('tela-login').style.display='none'; document.getElementById('tela-cadastro').style.display='block'; };
+document.getElementById('link-login-2').onclick = function(){ document.getElementById('tela-cadastro').style.display='none'; document.getElementById('tela-login').style.display='flex'; };
+document.getElementById('botao-sair').onclick = function(){
+  document.getElementById('tela-app').style.display='none';
+  document.getElementById('campo-usuario').value='';
+  document.getElementById('campo-senha').value='';
+  document.getElementById('erro-login').textContent='';
+  document.getElementById('tela-login').style.display='flex';
+};
+
+document.querySelectorAll('.plano-opt').forEach(function(el){
+  el.onclick = function(){
+    document.querySelectorAll('.plano-opt').forEach(function(p){ p.style.borderWidth='1px'; p.style.borderColor='var(--border)'; p.style.background='#03090f'; });
+    el.style.borderWidth='2px'; el.style.borderColor='var(--cyan)'; el.style.background='#001829';
+    planoSelecionado = parseInt(el.dataset.meses);
+  };
 });
 
-console.log("[MEGATRON BG] background.js v4.0 MV2 ativo");
+document.getElementById('botao-cadastrar').onclick = function(){
+  var nome=document.getElementById('cad-nome').value.trim(), tel=document.getElementById('cad-tel').value.trim();
+  var idade=document.getElementById('cad-idade').value.trim(), nasc=document.getElementById('cad-nasc').value;
+  var email=document.getElementById('cad-email').value.trim(), senha=document.getElementById('cad-senha').value;
+  var erro=document.getElementById('erro-cad'), ok=document.getElementById('ok-cad');
+  erro.textContent=''; ok.textContent='';
+  if (!nome||!tel||!idade||!nasc||!email||!senha){ erro.textContent='Preencha todos os campos.'; return; }
+  if (senha.length<6){ erro.textContent='Senha mínimo 6 caracteres.'; return; }
+  var plLabel = planoSelecionado===1?'1 Mês R$ 60':planoSelecionado===6?'6 Meses R$ 330':'12 Meses R$ 600';
+  var msg='🧠 NOVO CADASTRO MEGATRON\n\nNome: '+nome+'\nTelefone: '+tel+'\nIdade: '+idade+'\nNasc: '+nasc+'\nEmail: '+email+'\nPlano: '+plLabel+'\nData: '+new Date().toLocaleString('pt-BR');
+  window.open('https://wa.me/5562984696547?text='+encodeURIComponent(msg),'_blank');
+  window.open('mailto:marcosduarte356@gmail.com?subject=Novo+Cadastro+Megatron&body='+encodeURIComponent(msg),'_blank');
+  ok.textContent='✅ Enviado! Aguarde aprovação.';
+  setTimeout(function(){ document.getElementById('tela-cadastro').style.display='none'; document.getElementById('tela-login').style.display='flex'; }, 2500);
+};
+
+// ══════════════════════════════════════════
+// ÁREA DAS FIGURAS
+// ══════════════════════════════════════════
+var FIGURA_GRUPOS = {
+  'coroa':    ['coroa','estrela'],
+  'estrela':  ['estrela','coroa','circular'],
+  'circular': ['circular','estrela','seta'],
+  'seta':     ['seta','circular','quadrado'],
+  'amarela':  ['amarela','seta','quadrado'],
+  'quadrado': ['quadrado','amarela','seta']
+};
+var FIGURA_EMOJI = {
+  'coroa':'👑','estrela':'⭐','circular':'🔄','seta':'➡️','amarela':'⬆️','quadrado':'🟨'
+};
+var FIGURA_DESC = {
+  'coroa':   '👑 Coroa — Vela alta (≥8x). Pico do ciclo. Relacionada à estrela de reversão.',
+  'estrela': '⭐ Estrela — Possível reversão. Após coroa ou antes de reinício circular.',
+  'circular':'🔄 Circular — Reinício de padrão. Novo ciclo iniciando.',
+  'seta':    '➡️ Traço/Seta — Vela muito baixa (próxima de 1.00x). Compressão extrema.',
+  'amarela': '⬆️ Seta Amarela — Tentativa de subida. Acumulação de força.',
+  'quadrado':'🟨 Quadrado — Ponto de observação. Zona de atenção.'
+};
+var figuraAtual = null;
+function selecionarFigura(fig) {
+  document.querySelectorAll('.figura-btn').forEach(function(el){
+    el.classList.remove('selecionada','correspondente');
+  });
+  var infoEl = _('figura-info');
+  var g = _('grade-velas');
+  // Deselect tudo nas velas
+  if(g) g.querySelectorAll('.vela').forEach(function(v){v.classList.remove('selecionada','desfocada');});
+  if(figuraAtual === fig){ figuraAtual=null; if(infoEl)infoEl.style.display='none'; return; }
+  figuraAtual = fig;
+  // Marcar botão selecionado
+  var selEl = document.querySelector('.figura-btn[data-fig="'+fig+'"]');
+  if(selEl) selEl.classList.add('selecionada');
+  // Marcar correspondentes
+  var grupo = FIGURA_GRUPOS[fig] || [];
+  grupo.forEach(function(g2){
+    if(g2 === fig) return;
+    var el = document.querySelector('.figura-btn[data-fig="'+g2+'"]');
+    if(el) el.classList.add('correspondente');
+  });
+  // Destacar velas com o ícone correspondente
+  var emoji = FIGURA_EMOJI[fig];
+  if(g && emoji){
+    var count=0;
+    g.querySelectorAll('.vela').forEach(function(v){
+      var ico = v.querySelector('.vicone');
+      if(ico && ico.textContent.trim() === emoji){
+        v.classList.add('selecionada');
+        count++;
+      } else {
+        v.classList.add('desfocada');
+      }
+    });
+    if(infoEl){
+      infoEl.style.display='block';
+      infoEl.innerHTML='<span style="color:var(--yellow)">'+FIGURA_DESC[fig]+'</span><br>'
+        +'<span style="color:var(--dim)">'+count+' vela(s) encontrada(s) no histórico</span>';
+    }
+  }
+}
+
+setInterval(function(){
+  var n=new Date(), el=document.getElementById('relogio');
+  if(el) el.textContent=z(n.getHours())+':'+z(n.getMinutes())+':'+z(n.getSeconds());
+}, 1000);
+</script>
+</body>
+</html>
