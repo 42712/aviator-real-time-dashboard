@@ -556,9 +556,16 @@ function desvio(arr){var m=media(arr);return arr.length?Math.sqrt(arr.map(functi
 function getCor(cd){
   if(cd.color_rgb){
     var pt=cd.color_rgb.replace(/[^0-9,]/g,'').split(',').map(Number);
-    if(pt.length>=3){var r=pt[0],g=pt[1],b=pt[2];if(r>180&&g<80)return'pink';if(r>120&&b>100&&g<80)return'purple';}
+    if(pt.length>=3){
+      var r=pt[0],g=pt[1],b=pt[2];
+      if(r>180&&g<80)return'pink';
+      if(r>120&&b>100&&g<80)return'purple';
+    }
   }
-  return cd.multiplier>=10?'pink':cd.multiplier>=2?'purple':'blue';
+  var v=cd.multiplier;
+  if(v>=10)return'pink';
+  if(v>=2)return'purple';
+  return'blue';
 }
 
 // ── CLASSIFICAÇÃO ──
