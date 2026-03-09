@@ -1,16 +1,12 @@
 {
   "manifest_version": 2,
-  "name": "Megatron — Aviator Live Capture",
-  "version": "4.0",
-  "description": "Captura multiplicadores, cores e rodadas do Aviator em tempo real.",
+  "name": "Megatron Aviator Capture",
+  "version": "3.3",
+  "description": "Captura multiplicador e rodada do Aviator",
   "permissions": [
+    "tabs",
     "activeTab",
-    "storage",
-    "https://aviator-real-time-dashboard.onrender.com/*",
-    "https://*.spribegaming.com/*",
-    "https://*.sortenabet.bet.br/*",
-    "https://*.sortebet.bet.br/*",
-    "https://*.aposta.bet.br/*"
+    "https://aviator-real-time-dashboard.onrender.com/*"
   ],
   "background": {
     "scripts": ["background.js"],
@@ -18,20 +14,9 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://*.spribegaming.com/*",
-        "https://*.sortenabet.bet.br/*",
-        "https://*.sortebet.bet.br/*",
-        "https://*.aposta.bet.br/*",
-        "*://*/*aviator*",
-        "*://*/*Aviator*"
-      ],
+      "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "all_frames": true,
       "run_at": "document_idle"
     }
-  ],
-  "browser_action": {
-    "default_title": "Megatron Aviator"
-  }
+  ]
 }
