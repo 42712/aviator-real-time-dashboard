@@ -1,29 +1,25 @@
-// 
-//  MEGATRON  content.js v7.0 FINAL
-//  Site: sortenabet.bet.br/games/spribe/aviator
-//  Captura: multiplicador, cor RGB, rodada
-//  Anti-duplicata, retry, 4 mtodos de deteco
-// 
+// MEGATRON content.js v8.0
+// Site: sortenabet.bet.br/games/spribe/aviator
+// Captura: multiplicador, cor RGB, rodada
+// Anti-duplicata, retry, 4 metodos de deteccao
 (function () {
   "use strict";
 
   var SERVER      = "https://aviator-real-time-dashboard.onrender.com";
   var INTERVAL_MS = 500;
 
-  var lastMultiplier    = null;
-  var lastRound         = null;
-  var sending           = false;
-  var rodadaEnviada     = false;
-  var picoRodada        = 0;
-  var lastValidMult     = null;
-  var lastCrashTime     = 0;
-  var stableCount       = 0;
-  var ultimoEnvio       = 0;
-  var prevCrashed       = false;
+  var lastMultiplier = null;
+  var lastRound      = null;
+  var sending        = false;
+  var rodadaEnviada  = false;
+  var picoRodada     = 0;
+  var lastValidMult  = null;
+  var lastCrashTime  = 0;
+  var stableCount    = 0;
+  var ultimoEnvio    = 0;
+  var prevCrashed    = false;
 
-  // 
-  //  MULTIPLICADOR
-  // 
+  // -- MULTIPLICADOR --
   function getMultiplier() {
     var selectors = [
       'div[class*="multiplier"]', 'span[class*="multiplier"]',
@@ -48,7 +44,7 @@
         }
       } catch(e) {}
     }
-    // Fallback: qualquer elemento folha visvel com "1.23x"
+    // Fallback: qualquer elemento folha visivel com "1.23x"
     try {
       var all = document.querySelectorAll('span, div, p, strong, b, h1, h2, h3');
       for (var k = 0; k < all.length; k++) {
@@ -70,9 +66,7 @@
     return null;
   }
 
-  // 
-  //  COR RGB
-  // 
+  // -- COR RGB --
   function getColorRGB() {
     var targets = [
       '[class*="plane"]','[class*="bird"]','[class*="rocket"]',
@@ -95,7 +89,7 @@
         }
       } catch(e) {}
     }
-    // Fallback canvas  pega pixel central
+    // Fallback canvas
     try {
       var canvas = document.querySelector('canvas');
       if (canvas && canvas.width > 0) {
@@ -109,24 +103,20 @@
     return null;
   }
 
-  // 
-  //  RODADA
-  // 
+  // -- RODADA --
   function getRound() {
-
-    // ESTRATEGIA 1 (PRINCIPAL): numero isolado de 7 digitos em qualquer elemento
-    // Baseado na imagem: "3955209" aparece sozinho num bloco rosa embaixo da vela
     var todos = document.querySelectorAll('span, div, p, small, label, h4, h5, td, li, b, strong');
+
+    // Estrategia 1: numero de 7 digitos exatos isolado (ex: 3955209)
     for (var i = 0; i < todos.length; i++) {
       var el = todos[i];
       if (el.children.length > 0) continue;
       var text = (el.textContent || '').trim();
       if (!text) continue;
-      // Numero de 7 digitos isolado (ex: 3955209)
       if (/^\d{7}$/.test(text)) return text;
     }
 
-    // ESTRATEGIA 2: numero de 6-8 digitos isolado
+    // Estrategia 2: numero de 6 a 8 digitos isolado
     for (var j = 0; j < todos.length; j++) {
       var el2 = todos[j];
       if (el2.children.length > 0) continue;
@@ -134,7 +124,7 @@
       if (/^\d{6,8}$/.test(text2)) return text2;
     }
 
-    // ESTRATEGIA 3: ng-tns com numero 5+ digitos (seletor original)
+    // Estrategia 3: classe ng-tns com numero 5+ digitos
     var ngEls = document.querySelectorAll('[class*="ng-tns"]');
     for (var k = 0; k < ngEls.length; k++) {
       var el3 = ngEls[k];
@@ -143,7 +133,7 @@
       if (m3) return m3[1];
     }
 
-    // ESTRATEGIA 4: padroes textuais "Rodada XXXXX"
+    // Estrategia 4: padroes textuais
     var patterns = [
       /[Rr]odada\s*[#:]?\s*(\d{4,})/,
       /[Rr]ound\s*[#:]?\s*(\d{4,})/,
@@ -154,13 +144,13 @@
     for (var l = 0; l < todos.length; l++) {
       if (todos[l].children.length > 0) continue;
       var text4 = (todos[l].textContent || '').trim();
-      for (var p = 0; p < patterns.length; p++) {
-        var m4 = text4.match(patterns[p]);
+      for (var pp = 0; pp < patterns.length; pp++) {
+        var m4 = text4.match(patterns[pp]);
         if (m4 && m4[1] && m4[1].length >= 4) return m4[1];
       }
     }
 
-    // ESTRATEGIA 5: atributos data-
+    // Estrategia 5: atributos data-
     var dataEls = document.querySelectorAll('[data-round],[data-game-id],[data-id],[data-session]');
     for (var d = 0; d < dataEls.length; d++) {
       var v = dataEls[d].dataset.round || dataEls[d].dataset.gameId || dataEls[d].dataset.id;
@@ -170,9 +160,7 @@
     return lastRound || null;
   }
 
-  // 
-  //  CRASH
-  // 
+  // -- CRASH --
   function isCrashed() {
     var sels = [
       '[class*="crashed"]','[class*="fly-away"]','[class*="game-over"]',
@@ -187,14 +175,12 @@
     return /(flew away|voou|crashed|fim de rodada|round ended|game over|acabou)/i.test(txt);
   }
 
-  // 
-  //  ENVIA VELA (com retry automtico)
-  // 
+  // -- ENVIA VELA --
   function sendCandle(multiplier, color_rgb, round) {
     var agora = Date.now();
-    if (sending)        return;
-    if (rodadaEnviada)  return;
-    if (agora - ultimoEnvio < 3000) { console.log('[MEGATRON]  Muito recente'); return; }
+    if (sending)       return;
+    if (rodadaEnviada) return;
+    if (agora - ultimoEnvio < 3000) { console.log('[MEGATRON] Muito recente, aguardando...'); return; }
     if (!multiplier || multiplier < 1.01) return;
 
     sending       = true;
@@ -208,7 +194,7 @@
       round:      round || null,
     };
 
-    console.log('[MEGATRON]  Enviando: '+payload.multiplier+'x | rodada='+payload.round+' | cor='+payload.color_rgb);
+    console.log('[MEGATRON] Enviando: '+payload.multiplier+'x | rodada='+payload.round+' | cor='+payload.color_rgb);
 
     function tentarEnvio(n) {
       fetch(SERVER + '/api/candle', {
@@ -219,65 +205,71 @@
       })
       .then(function(r) {
         if (r.ok) {
-          console.log('[MEGATRON]  '+payload.multiplier+'x enviado! rodada='+payload.round);
+          console.log('[MEGATRON] OK! '+payload.multiplier+'x enviado | rodada='+payload.round);
           try { chrome.runtime.sendMessage({ type:'CANDLE_CAPTURED', data:{ multiplier:payload.multiplier, round:payload.round, color:payload.color_rgb } }); } catch(e) {}
           sending = false;
         } else {
-          console.warn('[MEGATRON]  HTTP '+r.status+' | tentativa '+n+'/3');
-          if (n < 3) setTimeout(function(){ tentarEnvio(n+1); }, 1500 * n);
+          console.warn('[MEGATRON] HTTP '+r.status+' | tentativa '+n+'/3');
+          if (n < 3) { setTimeout(function(){ tentarEnvio(n+1); }, 1500 * n); }
           else { rodadaEnviada = false; sending = false; }
         }
       })
       .catch(function(err) {
-        console.warn('[MEGATRON]  Tentativa '+n+'/3:', err.message);
-        if (n < 3) setTimeout(function(){ tentarEnvio(n+1); }, 1500 * n);
+        console.warn('[MEGATRON] Tentativa '+n+'/3 falhou:', err.message);
+        if (n < 3) { setTimeout(function(){ tentarEnvio(n+1); }, 1500 * n); }
         else { rodadaEnviada = false; sending = false; }
       });
     }
     tentarEnvio(1);
   }
 
-  // 
-  //  LOOP PRINCIPAL
-  // 
+  // -- LOOP PRINCIPAL --
   function loop() {
     var crashed = isCrashed();
     var mult    = getMultiplier();
     var round   = getRound();
 
     if (round) lastRound = round;
+
     if (mult !== null && mult > 1.0) {
-      if (mult > picoRodada) { picoRodada = mult; lastValidMult = mult; }
-      stableCount = (lastMultiplier !== null && Math.abs(mult - lastMultiplier) < 0.01)  stableCount + 1 : 0;
+      if (mult > picoRodada) {
+        picoRodada    = mult;
+        lastValidMult = mult;
+      }
+      if (lastMultiplier !== null && Math.abs(mult - lastMultiplier) < 0.01) {
+        stableCount = stableCount + 1;
+      } else {
+        stableCount = 0;
+      }
     }
 
-    // MTODO 1: crash por seletor CSS
+    // METODO 1: crash por seletor CSS
     if (!prevCrashed && crashed && !rodadaEnviada) {
-      var p1 = picoRodada > 1.01  picoRodada : (lastValidMult || mult || 1.0);
-      console.log('[MEGATRON]  CRASH! '+p1.toFixed(2)+'x | rodada='+(round||lastRound));
+      var p1 = (picoRodada > 1.01) ? picoRodada : (lastValidMult || mult || 1.0);
+      console.log('[MEGATRON] CRASH! '+p1.toFixed(2)+'x | rodada='+(round||lastRound));
       sendCandle(p1, getColorRGB(), round || lastRound);
       picoRodada = 0;
     }
 
-    // MTODO 2: queda do multiplicador (fallback Kiwi)
+    // METODO 2: queda do multiplicador (fallback Kiwi)
     else if (!rodadaEnviada && lastMultiplier !== null && lastMultiplier > 1.10 && mult !== null && mult < 1.05 && mult > 0) {
-      var p2 = picoRodada > 1.01  picoRodada : lastMultiplier;
-      console.log('[MEGATRON]  QUEDA! '+p2.toFixed(2)+'x | rodada='+(round||lastRound));
+      var p2 = (picoRodada > 1.01) ? picoRodada : lastMultiplier;
+      console.log('[MEGATRON] QUEDA! '+p2.toFixed(2)+'x | rodada='+(round||lastRound));
       sendCandle(p2, getColorRGB(), round || lastRound);
       picoRodada = 0;
     }
 
-    // MTODO 3: multiplicador estvel 5+ ciclos (travou no resultado)
+    // METODO 3: multiplicador estavel 5+ ciclos
     else if (!rodadaEnviada && stableCount >= 5 && picoRodada > 1.1) {
-      console.log('[MEGATRON]  ESTVEL! '+picoRodada.toFixed(2)+'x');
+      console.log('[MEGATRON] ESTAVEL! '+picoRodada.toFixed(2)+'x');
       sendCandle(picoRodada, getColorRGB(), round || lastRound);
       picoRodada  = 0;
       stableCount = 0;
     }
 
-    // RESET: nova rodada
+    // RESET: nova rodada detectada
     if (lastMultiplier !== null && lastMultiplier < 1.10 && mult !== null && mult > 1.10) {
-      console.log('[MEGATRON]  Nova rodada | '+(round||''));
+      console.log('[MEGATRON] Nova rodada | '+(round||''));
       rodadaEnviada = false;
       picoRodada    = 0;
       stableCount   = 0;
@@ -290,9 +282,7 @@
     setTimeout(loop, INTERVAL_MS);
   }
 
-  // 
-  //  RESPONDE TESTE DO POPUP
-  // 
+  // -- RESPONDE TESTE DO POPUP --
   try {
     chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
       if (msg && msg.type === 'TEST_CAPTURE') {
@@ -308,10 +298,8 @@
     });
   } catch(e) {}
 
-  // 
-  //  INICIA
-  // 
-  console.log('[MEGATRON]  v7.0 carregado em:', window.location.href);
+  // -- INICIA --
+  console.log('[MEGATRON] v8.0 carregado em:', window.location.href);
   fetch(SERVER + '/api/ping').catch(function(){});
 
   if (document.readyState === 'loading') {
