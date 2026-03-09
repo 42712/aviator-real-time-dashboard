@@ -766,31 +766,6 @@ function atualizarBarraVelas() {
   if (el) el.textContent = velas.length + ' velas recebidas';
 }
 
-// -- POLLING HTTP BACKUP --
-// Se socket demorar, busca via HTTP a cada 8s
-var _ultimaVelaTs = 0;
-var _pollingTimer = null;
-function pollingBackup() {
-  _pollingTimer = setInterval(function() {
-    // So busca se passou mais de 12s sem nova vela via socket
-    if (Date.now() - _ultimaVelaTs < 12000) return;
-    // Busca ultima vela via HTTP
-    fetch('https://aviator-real-time-dashboard.onrender.com/api/history')
-      .then(function(r){ return r.json(); })
-      .then(function(h) {
-        if (!h || !h.length) return;
-        // Verifica se a vela mais recente ja esta no array local
-        var nova = h[0];
-        if (!nova || !nova.multiplier) return;
-        if (velas.length > 0 && velas[0].timestamp === nova.timestamp) return;
-        // Tem vela nova -- atualiza tudo
-        processHistory(h);
-        setSocketStatus('conectado', 'HTTP sync: ' + velas.length + ' velas');
-      })
-      .catch(function(){});
-  }, 8000);
-}
-
 function reconectarSocket() {
   if (SK) { try { SK.disconnect(); } catch(e) {} }
   SK = null;
@@ -801,7 +776,6 @@ function reconectarSocket() {
 function processCandle(cd) {
   if (!cd || !cd.multiplier) return;
   cd._cor = getCor(cd);
-  _ultimaVelaTs = Date.now();
   velas.unshift(cd);
   if (velas.length > MAX_VELAS) velas.pop();
   adicionarCard(cd);
@@ -928,7 +902,7 @@ function selecionarFigura(fig){
   var selEl=document.querySelector('.fig-btn[data-fig="'+fig+'"]');if(selEl)selEl.classList.add('sel');
   (FIG_G[fig]||[]).forEach(function(g2){if(g2===fig)return;var el=document.querySelector('.fig-btn[data-fig="'+g2+'"]');if(el)el.classList.add('cor');});
   var emoji=FIG_E[fig];var count=0;
-  if(g&&emoji){g.querySelectorAll('.vela').forEach(function(v){var ico=v.querySelector('.vicone');if(ico&&ico.textContent.trim()===emoji){v.classList.add('selecionada');count++;}else{v.classList.add('desfocada');}});}
+  if(g&&emoji){g.querySelectorAll('.vela').forEach(function(v){var ico=v.querySelector('.vicone');if(ico&&ico.textContent.indexOf(emoji.charAt(0))>=0){v.classList.add('selecionada');count++;}else{v.classList.add('desfocada');}});}
   if(infoEl){infoEl.style.display='block';infoEl.innerHTML='<span style="color:var(--yellow)">'+FIG_D[fig]+'</span><br><span style="color:var(--dim2)">'+count+' vela(s) encontrada(s)</span>';}
 }
 
@@ -942,7 +916,7 @@ _('botao-entrar').onclick=function(){
   var nome=u.indexOf('@')>-1?u.split('@')[0]:u;
   _('tela-login').style.display='none';_('tela-app').style.display='block';
   _('nome-usuario').textContent='👤 '+nome;
-  if(!socketIniciado){ iniciarSocket(); pollingBackup(); }
+  if(!socketIniciado){ iniciarSocket(); }
   setInterval(atualizarTudo,1000);atualizarTudo();
 };
 _('campo-senha').onkeydown=function(e){if(e.key==='Enter')_('botao-entrar').onclick();};
