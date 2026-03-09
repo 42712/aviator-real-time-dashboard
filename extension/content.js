@@ -1,115 +1,189 @@
-// ═══════════════════════════════════════════════════════
-//  Megatron — content.js v5.0 DEFINITIVO
-//  Funciona no Kiwi Browser Android
-//  Lógica: rastreia PICO e envia quando volta pra 1.00x
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+//  Megatron — content.js v3.1 (CORRIGIDO)
+//  Captura: multiplicador, cor RGB, rodada
+//  Fix: detecção por queda de multiplicador (Kiwi)
+// ═══════════════════════════════════════════════
 (function () {
+  "use strict";
   const SERVER = "https://aviator-real-time-dashboard.onrender.com";
+  const INTERVAL_MS = 800;
 
-  let pico = 0;          // maior multiplicador desta rodada
-  let prevMult = null;   // último valor lido
-  let lastRound = null;  // última rodada detectada
-  let enviando = false;
-  let rodadaEnviada = false; // evita envio duplo da mesma rodada
+  let lastMultiplier = null;
+  let lastRound = null;
+  let sending = false;
+  let peak = 0;           // pico da rodada atual
+  let rodadaEnviada = false;
 
-  // ─── Lê o multiplicador da tela ───────────────────────
-  function getMult() {
-    // Percorre todos os elementos folha (sem filhos) procurando padrão "1.23x" ou "1.23"
-    const all = document.querySelectorAll("div, span, p, td, li");
-    for (let el of all) {
-      // Pula elementos com filhos — só texto puro
+  // ── Extrai o multiplicador do DOM ──
+  function getMultiplier() {
+    // Seletores específicos do Aviator/Spribe
+    const selectors = [
+      '[class*="multiplier"]',
+      '[class*="coefficient"]',
+      '[class*="crash-coeff"]',
+      '[class*="current-multiplier"]',
+      '[data-cy="current-multiplier"]',
+      '.jet-game__coefficient',
+      '.paycoeff',
+      '.multiplier-value',
+    ];
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (el) {
+        const txt = el.textContent.replace(/[^0-9.]/g, "").trim();
+        const v = parseFloat(txt);
+        if (!isNaN(v) && v >= 1) return v;
+      }
+    }
+    // Fallback: qualquer elemento folha com formato "1.23x" ou "1.23"
+    const all = document.querySelectorAll("div, span, p");
+    for (const el of all) {
       if (el.children.length > 0) continue;
-      const raw = (el.innerText || el.textContent || "").trim();
-      // Aceita formatos: "1.23x" ou "1.23" ou "1,23x"
-      const clean = raw.replace(",", ".").replace(/[^\d.]/g, "");
-      if (!clean) continue;
-      const v = parseFloat(clean);
-      if (!isNaN(v) && v >= 1.0 && v <= 999.99) {
-        // Confirma que o texto original tinha no mínimo um ponto/vírgula + 2 decimais
-        if (/\d+[.,]\d{2}/.test(raw)) return v;
+      const txt = el.textContent.trim();
+      if (/^\d+[.,]\d{2}x?$/.test(txt)) {
+        const v = parseFloat(txt.replace(",", "."));
+        if (!isNaN(v) && v >= 1 && v <= 10000) return v;
       }
     }
     return null;
   }
 
-  // ─── Lê o número da rodada ────────────────────────────
-  function getRound() {
-    // Estratégia 1: texto contendo "Rodada" ou "Round" seguido de número
-    const tudo = document.querySelectorAll("span, div, p, label");
-    for (let el of tudo) {
-      const t = (el.innerText || el.textContent || "").trim();
-      const m = t.match(/[Rr]o(?:dada|und)[^\d]*(\d{4,})/);
-      if (m) return m[1];
-    }
-    // Estratégia 2: classe ng-tns com número grande isolado
-    const ng = document.querySelectorAll('[class*="ng-tns"]');
-    for (let el of ng) {
-      if (el.children.length > 0) continue;
-      const t = (el.innerText || el.textContent || "").trim();
-      const m = t.match(/^(\d{5,})$/);
-      if (m) return m[1];
+  // ── Extrai a cor RGB do avião/cursor ──
+  function getColorRGB() {
+    const colorSelectors = [
+      '[class*="plane"]',
+      '[class*="bird"]',
+      '[class*="rocket"]',
+      '[class*="jet"]',
+      '[class*="craft"]',
+      '[class*="aviator"]',
+    ];
+    for (const sel of colorSelectors) {
+      const el = document.querySelector(sel);
+      if (!el) continue;
+      const style = window.getComputedStyle(el);
+      const bg = style.backgroundColor || style.color;
+      if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") {
+        return bg;
+      }
     }
     return null;
   }
 
-  // ─── Envia a vela para o servidor ─────────────────────
-  async function enviarVela(mult, round) {
-    if (enviando) return;
-    enviando = true;
+  // ── Extrai o número da rodada ──
+  function getRound() {
+    // Prioridade 1: texto "Rodada XXXXXX" ou "Round XXXXXX"
+    const allEls = document.querySelectorAll("span, div, p");
+    for (const el of allEls) {
+      if (el.children.length > 0) continue;
+      const txt = el.textContent.trim();
+      const match = txt.match(/[Rr]o(?:dada|und)[^\d]*(\d{4,})/);
+      if (match) return match[1];
+    }
+    // Prioridade 2: elemento ng-tns com número grande isolado
+    const ngEls = document.querySelectorAll('[class*="ng-tns"]');
+    for (const el of ngEls) {
+      if (el.children.length > 0) continue;
+      const txt = el.textContent.trim();
+      const match = txt.match(/^(\d{5,})$/);
+      if (match) return match[1];
+    }
+    // Prioridade 3: atributos data-
+    const dataEls = document.querySelectorAll('[data-round], [data-game-id], [data-id]');
+    for (const el of dataEls) {
+      const v = el.dataset.round || el.dataset.gameId || el.dataset.id;
+      if (v && /^\d{4,}$/.test(v)) return v;
+    }
+    return null;
+  }
+
+  // ── Detecta se o jogo crashou ──
+  function isCrashed() {
+    const crashSelectors = [
+      '[class*="crashed"]',
+      '[class*="fly-away"]',
+      '[class*="game-over"]',
+      '[class*="round-end"]',
+    ];
+    for (const sel of crashSelectors) {
+      if (document.querySelector(sel)) return true;
+    }
+    const body = document.body.textContent;
+    if (/(flew away|voou|crashed|fim de rodada)/i.test(body)) return true;
+    return false;
+  }
+
+  // ── Envia vela ao servidor ──
+  async function sendCandle(multiplier, color_rgb, round) {
+    if (sending) return;
+    sending = true;
     try {
-      const r = await fetch(SERVER + "/api/candle", {
+      const resp = await fetch(SERVER + "/api/candle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ multiplier: mult, round: round || null })
+        body: JSON.stringify({ multiplier, color_rgb, round }),
       });
-      if (r.ok) {
-        console.log("[MEGATRON] ✅ Enviado: " + mult + "x | rodada=" + round);
-        try { chrome.runtime.sendMessage({ type: "CANDLE_CAPTURED", data: { multiplier: mult, round } }); } catch (_) {}
+      if (resp.ok) {
+        console.log("[MEGATRON] ✅ Enviado: " + multiplier + "x | rodada=" + round + " | rgb=" + color_rgb);
+        try { chrome.runtime.sendMessage({ type: "CANDLE_CAPTURED", data: { multiplier, round } }); } catch (_) {}
       } else {
-        console.warn("[MEGATRON] ⚠ Servidor:", r.status);
+        console.warn("[MEGATRON] ⚠ Servidor:", resp.status);
       }
-    } catch (e) {
-      console.warn("[MEGATRON] ❌", e.message);
+    } catch (err) {
+      console.warn("[MEGATRON] ❌ Erro:", err.message);
     } finally {
-      enviando = false;
+      sending = false;
     }
   }
 
-  // ─── Loop principal 800ms ─────────────────────────────
+  // ── Loop principal ──
+  let prevCrashed = false;
+
   function loop() {
-    const mult  = getMult();
-    const round = getRound();
+    const crashed  = isCrashed();
+    const mult     = getMultiplier();
+    const round    = getRound();
 
     if (round) lastRound = round;
+    if (mult !== null && mult > peak) peak = mult;
 
-    if (mult !== null) {
-      // Atualiza pico da rodada atual
-      if (mult > pico) pico = mult;
-
-      // Detecta início de nova rodada: multiplicador caiu para ~1.00
-      // (estava acima de 1.05 e agora voltou pra base)
-      const novaRodada = (prevMult !== null && prevMult > 1.05 && mult < 1.03);
-
-      if (novaRodada && !rodadaEnviada && pico > 1.0) {
-        const velaPico = parseFloat(pico.toFixed(2));
-        console.log("[MEGATRON] 🎯 VELA FECHADA: " + velaPico + "x | rodada=" + lastRound);
-        enviarVela(velaPico, lastRound);
-        rodadaEnviada = true;
-        pico = 0; // reset pico
-      }
-
-      // Quando sobe acima de 1.05 novamente = nova rodada começou
-      if (prevMult !== null && prevMult < 1.03 && mult > 1.05) {
-        rodadaEnviada = false; // libera envio para próxima rodada
-      }
-
-      prevMult = mult;
+    // MÉTODO 1: detecta crash via seletor CSS (quando funciona)
+    if (!prevCrashed && crashed && mult !== null && !rodadaEnviada) {
+      const roundId = round || lastRound || null;
+      rodadaEnviada = true;
+      sendCandle(mult, getColorRGB(), roundId);
+      console.log("[MEGATRON] 🎯 Crash detectado! " + mult + "x | rodada=" + roundId);
+      peak = 0;
     }
 
-    setTimeout(loop, 800);
+    // MÉTODO 2: detecta por queda do multiplicador (fallback Kiwi)
+    // Multiplicador estava alto (>1.05) e agora voltou pra base (<1.03)
+    if (lastMultiplier !== null && lastMultiplier > 1.05 && mult !== null && mult < 1.03 && !rodadaEnviada) {
+      const velaPico = parseFloat(peak.toFixed(2));
+      const roundId  = round || lastRound || null;
+      rodadaEnviada = true;
+      sendCandle(velaPico, getColorRGB(), roundId);
+      console.log("[MEGATRON] 🎯 Queda detectada! " + velaPico + "x | rodada=" + roundId);
+      peak = 0;
+    }
+
+    // Reseta flag quando nova rodada começa (mult subindo de volta)
+    if (lastMultiplier !== null && lastMultiplier < 1.03 && mult !== null && mult > 1.05) {
+      rodadaEnviada = false;
+    }
+
+    prevCrashed = crashed;
+    lastMultiplier = mult;
+
+    setTimeout(loop, INTERVAL_MS);
   }
 
-  // Inicia após 3s (espera página carregar)
-  setTimeout(loop, 3000);
-  console.log("[MEGATRON] content.js v5.0 ativo em:", location.href);
+  // ── Inicia após página carregar ──
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () { setTimeout(loop, 2000); });
+  } else {
+    setTimeout(loop, 2000);
+  }
+
+  console.log("[MEGATRON] ✅ Content script v3.1 carregado em:", window.location.href);
 })();
