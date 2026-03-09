@@ -1,544 +1,167 @@
-// ═══════════════════════════════════════════════
-//  MEGATRON — content.js v5.2 (CORRIGIDO)
-//  CORREÇÕES: Seletores melhorados, captura de cor funcionando,
-//  detecção de crash aprimorada para Kiwi Browser
-// ═══════════════════════════════════════════════
-(function () {
-  "use strict";
+// content.js - Versão otimizada para Kiwi Browser
+(function() {
+  'use strict';
   
-  const SERVER      = "https://aviator-real-time-dashboard.onrender.com";
-  const INTERVAL_MS = 500; // Reduzido para 500ms para captura mais rápida
-
+  const SERVER = "https://aviator-real-time-dashboard.onrender.com";
+  
   let lastMultiplier = null;
-  let lastRound      = null;
-  let sending        = false;
-  let rodadaEnviada  = false;
-  let picoRodada     = 0;
-  let crashDetected  = false;
-  let ultimoEnvio    = 0;
-  let debugMode      = true; // Ativa logs detalhados
-
-  // ── FUNÇÃO DE DEBUG ──
-  function logDebug(...args) {
-    if (debugMode) {
-      console.log("[MEGATRON DEBUG]", ...args);
-    }
-  }
-
-  // ── MULTIPLICADOR MELHORADO ──
+  let sending = false;
+  let lastRound = null;
+  
+  // FUNÇÃO PARA CAPTURAR MULTIPLICADOR
   function getMultiplier() {
-    // Seletores específicos para o site atual (sortenabet.bet.br)
-    const selectors = [
-      // Seletores específicos do Spribe/Aviator
-      'div[class*="multiplier"]',
-      'span[class*="multiplier"]',
-      'p[class*="multiplier"]',
-      'div[class*="coefficient"]',
-      'span[class*="coefficient"]',
-      '[class*="crash-coeff"]',
-      '[class*="current-multiplier"]',
-      '[data-cy="current-multiplier"]',
-      '.jet-game__coefficient',
-      '.paycoeff',
-      '.multiplier-value',
-      // Seletores genéricos
-      '.crash-multiplier',
-      '.coefficient',
-      '.multiplier',
-      '.game-multiplier',
-      // Elementos com texto de multiplicador
-      'div:not([style*="display:none"]):not([style*="hidden"])'
-    ];
-
-    // Primeiro tenta seletores específicos
-    for (const sel of selectors) {
-      try {
-        const elements = document.querySelectorAll(sel);
-        for (const el of elements) {
-          if (!el || el.children.length > 0) continue;
-          const text = el.textContent || el.innerText || '';
-          if (!text) continue;
-          
-          // Procura por padrões como "1.23x", "2.45", etc
-          const match = text.match(/(\d+[.,]\d+)\s*x?/i);
-          if (match) {
-            const v = parseFloat(match[1].replace(',', '.'));
-            if (!isNaN(v) && v >= 1.0 && v <= 1000) {
-              logDebug("Multiplier found via selector", sel, ":", v);
-              return v;
-            }
-          }
-        }
-      } catch (e) {
-        // Ignora erros de seletor
-      }
-    }
-
-    // Fallback: procurar em qualquer elemento visível
-    try {
-      const allElements = document.querySelectorAll('span, div, p, h1, h2, h3, strong, b');
-      for (const el of allElements) {
-        if (el.children.length > 0) continue;
-        const text = (el.textContent || '').trim();
-        if (!text) continue;
-        
-        // Procura por números como "1.23x", "2,45x", "12.5", etc
-        const match = text.match(/^(\d+[.,]\d+)\s*x?$/i) || 
-                     text.match(/(\d+[.,]\d{2})\s*x?$/i) ||
-                     text.match(/^(\d+[.,]\d{1,2})$/);
-        
-        if (match) {
-          const v = parseFloat(match[1].replace(',', '.'));
-          if (!isNaN(v) && v >= 1.0 && v <= 1000) {
-            // Verifica se o elemento está visível
-            const style = window.getComputedStyle(el);
-            if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
-              logDebug("Multiplier found via text:", text, "->", v);
-              return v;
-            }
-          }
-        }
-      }
-    } catch (e) {
-      // Ignora erros
-    }
-
-    return null;
-  }
-
-  // ── COR RGB MELHORADA ──
-  function getColorRGB() {
-    // Elementos que podem conter a cor do avião/plano de fundo
-    const targets = [
-      // Elementos do avião
-      '[class*="plane"]',
-      '[class*="bird"]',
-      '[class*="rocket"]',
-      '[class*="jet"]',
-      '[class*="craft"]',
-      '[class*="fly"]',
-      '[class*="flight"]',
-      // Elementos de canvas (onde o jogo é renderizado)
-      'canvas',
-      // Elementos de gráfico
-      '[class*="graph"]',
-      '[class*="chart"]',
-      '[class*="canvas"]',
-      // Elementos de fundo
-      '[class*="background"]',
-      '[class*="bg"]',
-      // Elementos de traço
-      '[class*="trace"]',
-      '[class*="line"]',
-      // Elementos específicos do Aviator
-      '[class*="aviator"]',
-      '[class*="game-container"]'
-    ];
-
-    for (const sel of targets) {
-      try {
-        const el = document.querySelector(sel);
-        if (!el) continue;
-
-        // Tenta diferentes propriedades de cor
-        const style = window.getComputedStyle(el);
-        const props = [
-          style.backgroundColor,
-          style.color,
-          style.fill,
-          style.stroke,
-          style.borderColor,
-          style.boxShadow ? style.boxShadow.match(/rgb[a]?\([^)]+\)/)?.[0] : null
-        ].filter(Boolean);
-
-        for (const prop of props) {
-          if (prop && prop !== 'rgba(0, 0, 0, 0)' && 
-              prop !== 'transparent' && 
-              !prop.includes('0, 0, 0, 0')) {
-            
-            // Converte rgb para rgba se necessário
-            if (prop.startsWith('rgb(')) {
-              const rgba = prop.replace('rgb(', 'rgba(').replace(')', ', 1)');
-              logDebug("Color found:", rgba, "from", sel);
-              return rgba;
-            }
-            
-            if (prop.startsWith('rgba(')) {
-              logDebug("Color found:", prop, "from", sel);
-              return prop;
-            }
-          }
-        }
-      } catch (e) {
-        // Ignora erros
-      }
-    }
-
-    // Fallback: tentar capturar cor do canvas
-    try {
-      const canvas = document.querySelector('canvas');
-      if (canvas && canvas.width > 0 && canvas.height > 0) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          // Pega cor do centro do canvas
-          const x = Math.floor(canvas.width / 2);
-          const y = Math.floor(canvas.height / 2);
-          const pixel = ctx.getImageData(x, y, 1, 1).data;
-          if (pixel[3] > 0) { // Se não for transparente
-            const color = `rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, ${pixel[3]/255})`;
-            logDebug("Canvas color:", color);
-            return color;
-          }
-        }
-      }
-    } catch (e) {
-      // Ignora erros de canvas
-    }
-
-    return null;
-  }
-
-  // ── RODADA MELHORADA ──
-  function getRound() {
-    // Lista de possíveis padrões para número da rodada
-    const patterns = [
-      /[Rr]odada\s*[#:]?\s*(\d+)/,
-      /[Rr]ound\s*[#:]?\s*(\d+)/,
-      /[Gg]ame\s*[#:]?\s*(\d+)/,
-      /[Ii][Dd]\s*[#:]?\s*(\d+)/,
-      /#(\d{5,})/,
-      /ID:\s*(\d{5,})/
-    ];
-
-    // Procura em todos os spans e divs
-    const elements = document.querySelectorAll('span, div, p, small, label, h4, h5');
-    for (const el of elements) {
-      if (el.children.length > 0) continue;
-      const text = (el.textContent || '').trim();
-      if (!text) continue;
-
-      for (const pattern of patterns) {
-        const match = text.match(pattern);
-        if (match && match[1] && match[1].length >= 4) {
-          logDebug("Round found:", match[1]);
-          return match[1];
-        }
-      }
-
-      // Número isolado com 6+ dígitos
-      if (/^\d{6,}$/.test(text)) {
-        logDebug("Round found (isolated):", text);
-        return text;
-      }
-    }
-
-    // Procura em atributos data-
-    const dataElements = document.querySelectorAll('[data-round], [data-game-id], [data-id], [data-session]');
-    for (const el of dataElements) {
-      const val = el.dataset.round || el.dataset.gameId || el.dataset.id || el.dataset.session;
-      if (val && /^\d+$/.test(val) && val.length >= 4) {
-        logDebug("Round found in data attr:", val);
-        return val;
-      }
-    }
-
-    // Procura em URLs/imagens
-    const imgs = document.querySelectorAll('img[src*="round"], img[src*="game"]');
-    for (const img of imgs) {
-      const src = img.src || '';
-      const match = src.match(/(\d{5,})/);
+    // Seletores específicos para o Aviator
+    const elements = document.querySelectorAll(
+      'div[class*="multiplier"], span[class*="multiplier"], ' +
+      '[class*="coefficient"], .multiplier-value, .paycoeff'
+    );
+    
+    for (let el of elements) {
+      let text = el.textContent || el.innerText || '';
+      let match = text.match(/(\d+[.,]\d+)/);
       if (match) {
-        logDebug("Round found in img src:", match[1]);
-        return match[1];
+        let val = parseFloat(match[1].replace(',', '.'));
+        if (val >= 1.0 && val <= 1000) return val;
       }
     }
-
-    return lastRound || null;
+    
+    // Fallback: qualquer texto com número
+    let all = document.querySelectorAll('span, div, p');
+    for (let el of all) {
+      if (el.children.length) continue;
+      let text = el.textContent.trim();
+      if (/^\d+[.,]\d{2}x?$/.test(text)) {
+        let val = parseFloat(text.replace(/[^0-9.]/g, ''));
+        if (val >= 1.0) return val;
+      }
+    }
+    
+    return null;
   }
-
-  // ── CRASH DETECTION MELHORADA ──
+  
+  // FUNÇÃO PARA CAPTURAR COR
+  function getColor() {
+    // Tenta encontrar o elemento do avião
+    let plane = document.querySelector(
+      '[class*="plane"], [class*="bird"], [class*="rocket"], canvas'
+    );
+    
+    if (plane) {
+      let style = window.getComputedStyle(plane);
+      return style.backgroundColor || style.color || 'rgba(255,45,120,1)';
+    }
+    
+    return 'rgba(255,45,120,1)'; // cor padrão rosa
+  }
+  
+  // FUNÇÃO PARA CAPTURAR RODADA
+  function getRound() {
+    // Procura por "Rodada XXXXX"
+    let text = document.body.textContent;
+    let match = text.match(/[Rr]odada\s*:?\s*(\d+)/) || 
+                text.match(/[Rr]ound\s*:?\s*(\d+)/);
+    
+    if (match) return match[1];
+    
+    // Procura por número de 6+ dígitos
+    let all = document.querySelectorAll('span, div');
+    for (let el of all) {
+      if (el.children.length) continue;
+      let txt = el.textContent.trim();
+      if (/^\d{6,}$/.test(txt)) return txt;
+    }
+    
+    return null;
+  }
+  
+  // FUNÇÃO PARA DETECTAR CRASH
   function isCrashed() {
-    // Verifica elementos de estado "crashed"
-    const crashSelectors = [
-      '[class*="crashed"]',
-      '[class*="fly-away"]',
-      '[class*="game-over"]',
-      '[class*="round-end"]',
-      '[class*="finished"]',
-      '[class*="ended"]',
-      '.game-over',
-      '.round-ended',
-      '[data-state="crashed"]',
-      '[data-state="ended"]'
-    ];
-
-    for (const sel of crashSelectors) {
-      if (document.querySelector(sel)) {
-        logDebug("Crash detected via selector:", sel);
-        return true;
-      }
+    // Verifica se tem texto de crash
+    let text = document.body.textContent;
+    if (/flew away|voou|crashed|fim de rodada/i.test(text)) {
+      return true;
     }
-
-    // Verifica texto de "flew away"
-    const text = document.body.textContent || '';
-    const crashTexts = [
-      /flew away/i,
-      /voou/i,
-      /crashed/i,
-      /fim de rodada/i,
-      /round ended/i,
-      /game over/i,
-      /acabou/i
-    ];
-
-    for (const pattern of crashTexts) {
-      if (pattern.test(text)) {
-        logDebug("Crash detected via text pattern:", pattern);
-        return true;
-      }
+    
+    // Verifica se tem elemento de game over
+    if (document.querySelector('[class*="crashed"], [class*="game-over"]')) {
+      return true;
     }
-
-    // Verifica se o multiplicador parou de subir e está mostrando resultado final
-    if (lastMultiplier !== null) {
-      const current = getMultiplier();
-      if (current !== null && lastMultiplier !== null) {
-        // Se o multiplicador não mudou por 3 ciclos e é o mesmo do último pico
-        if (Math.abs(current - lastMultiplier) < 0.01 && current === picoRodada) {
-          if (window._stableCount === undefined) window._stableCount = 0;
-          window._stableCount++;
-          if (window._stableCount >= 3) {
-            window._stableCount = 0;
-            logDebug("Crash detected via stability");
-            return true;
-          }
-        } else {
-          window._stableCount = 0;
-        }
-      }
-    }
-
+    
     return false;
   }
-
-  // ── ENVIA VELA (COM RETRY) ──
-  async function sendCandle(multiplier, color_rgb, round) {
-    const agora = Date.now();
+  
+  // FUNÇÃO PARA ENVIAR VELA
+  async function sendCandle(mult, color, round) {
+    if (sending) return;
+    if (!mult || mult < 1.01) return;
     
-    // Evita envios duplicados muito próximos
-    if (agora - ultimoEnvio < 2000) {
-      logDebug("Ignorando envio duplicado (muito próximo)");
-      return;
-    }
-
-    if (sending) {
-      logDebug("Já está enviando...");
-      return;
-    }
-    
-    if (rodadaEnviada) {
-      logDebug("Rodada já foi enviada");
-      return;
-    }
-
-    if (!multiplier || multiplier < 1.01) {
-      logDebug("Multiplicador inválido:", multiplier);
-      return;
-    }
-
     sending = true;
-    rodadaEnviada = true;
-    ultimoEnvio = agora;
-
-    // Garante que a cor seja uma string válida
-    const corFinal = color_rgb || 'rgba(255, 45, 120, 1)'; // Cor padrão rosa se não conseguir capturar
-
-    const payload = { 
-      multiplier: parseFloat(multiplier.toFixed(2)), 
-      color_rgb: corFinal, 
-      round: round || 'unknown',
-      timestamp: new Date().toISOString()
-    };
-
-    logDebug("Tentando enviar candle:", payload);
-
-    // Tenta enviar até 3 vezes
-    for (let tentativa = 1; tentativa <= 3; tentativa++) {
-      try {
-        const resp = await fetch(`${SERVER}/api/candle`, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify(payload),
-          mode: 'cors'
+    
+    try {
+      let response = await fetch(SERVER + '/api/candle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          multiplier: parseFloat(mult.toFixed(2)),
+          color_rgb: color,
+          round: round || 'unknown',
+          timestamp: new Date().toISOString()
+        })
+      });
+      
+      if (response.ok) {
+        console.log('[MEGATRON] ✅ Vela enviada:', mult.toFixed(2) + 'x');
+        chrome.runtime.sendMessage({ 
+          type: "CANDLE_CAPTURED", 
+          data: { multiplier: mult, round: round } 
         });
-
-        if (resp.ok) {
-          const result = await resp.json();
-          console.log(`[MEGATRON] ✅ Vela enviada: ${multiplier.toFixed(2)}x | rodada=${round || '?'} | cor=${corFinal}`);
-          
-          // Notifica background
-          try {
-            chrome.runtime.sendMessage({ 
-              type: "CANDLE_CAPTURED", 
-              data: { multiplier, round, color: corFinal } 
-            });
-          } catch (e) {
-            // Ignora erro se background não responder
-          }
-          
-          sending = false;
-          return; // Sucesso
-        } else {
-          console.warn(`[MEGATRON] ⚠ Tentativa ${tentativa}/3 falhou:`, resp.status);
-          if (tentativa < 3) await new Promise(r => setTimeout(r, 1000 * tentativa));
-        }
-      } catch (err) {
-        console.warn(`[MEGATRON] ❌ Erro na tentativa ${tentativa}/3:`, err.message);
-        if (tentativa < 3) await new Promise(r => setTimeout(r, 1000 * tentativa));
       }
+    } catch (err) {
+      console.log('[MEGATRON] Erro ao enviar:', err.message);
+    } finally {
+      sending = false;
     }
-
-    // Se todas as tentativas falharem, libera para tentar de novo
-    console.error("[MEGATRON] ❌ Todas as tentativas falharam");
-    rodadaEnviada = false;
-    sending = false;
   }
-
-  // ── LOOP PRINCIPAL (CORRIGIDO) ──
-  let prevCrashed = false;
-  let lastValidMultiplier = null;
-  let lastCrashTime = 0;
-
-  function loop() {
-    const crashed = isCrashed();
-    const mult = getMultiplier();
-    const round = getRound();
-
-    // Atualiza último round
-    if (round) {
-      lastRound = round;
-    }
-
-    // Atualiza pico da rodada
-    if (mult !== null && mult > 1.0) {
-      if (mult > picoRodada) {
-        picoRodada = mult;
-        lastValidMultiplier = mult;
-      }
-    }
-
-    // DETECÇÃO DE CRASH POR SELETOR
-    if (!prevCrashed && crashed && !rodadaEnviada) {
-      const roundId = round || lastRound || null;
-      const pico = picoRodada > 1.01 ? parseFloat(picoRodada.toFixed(2)) : (lastValidMultiplier || 1.0);
-      const cor = getColorRGB();
-      
-      console.log(`[MEGATRON] 🎯 CRASH DETECTADO! Pico: ${pico}x | rodada=${roundId}`);
-      
-      // Só envia se não tiver enviado recentemente
-      if (Date.now() - lastCrashTime > 5000) {
-        sendCandle(pico, cor, roundId);
-        lastCrashTime = Date.now();
-      }
-      
+  
+  // LOOP PRINCIPAL
+  let picoRodada = 0;
+  let rodadaEnviada = false;
+  let crashed = false;
+  
+  setInterval(() => {
+    let mult = getMultiplier();
+    let round = getRound();
+    let crashNow = isCrashed();
+    
+    if (round) lastRound = round;
+    if (mult && mult > picoRodada) picoRodada = mult;
+    
+    // Detecta crash
+    if (!crashed && crashNow && !rodadaEnviada) {
+      console.log('[MEGATRON] CRASH! Pico:', picoRodada);
+      sendCandle(picoRodada, getColor(), round || lastRound);
+      rodadaEnviada = true;
       picoRodada = 0;
     }
-
-    // DETECÇÃO DE QUEDA DE MULTIPLICADOR (FALLBACK)
-    if (!rodadaEnviada && 
-        lastMultiplier !== null && 
-        lastMultiplier > 1.1 && 
-        mult !== null && 
-        mult < 1.05 && 
-        mult > 0) {
-      
-      const roundId = round || lastRound || null;
-      const pico = picoRodada > 1.01 ? parseFloat(picoRodada.toFixed(2)) : parseFloat(lastMultiplier.toFixed(2));
-      
-      console.log(`[MEGATRON] 🎯 QUEDA DETECTADA! ${pico}x | rodada=${roundId}`);
-      
-      if (Date.now() - lastCrashTime > 5000) {
-        sendCandle(pico, getColorRGB(), roundId);
-        lastCrashTime = Date.now();
-      }
-      
+    
+    // Detecta queda brusca (fallback)
+    if (!rodadaEnviada && lastMultiplier && lastMultiplier > 1.5 && mult && mult < 1.1) {
+      console.log('[MEGATRON] QUEDA! Pico:', picoRodada);
+      sendCandle(picoRodada, getColor(), round || lastRound);
+      rodadaEnviada = true;
       picoRodada = 0;
     }
-
-    // DETECÇÃO DE FIM DE RODADA POR ESTABILIDADE
-    if (!rodadaEnviada && 
-        lastMultiplier !== null && 
-        mult !== null && 
-        Math.abs(mult - lastMultiplier) < 0.01 && 
-        mult > 1.0 && 
-        lastMultiplier > 1.0) {
-      
-      if (window._stableCount === undefined) window._stableCount = 0;
-      window._stableCount++;
-      
-      if (window._stableCount >= 5 && picoRodada > 1.1) {
-        console.log(`[MEGATRON] 🎯 FIM DE RODADA (estável)! ${picoRodada.toFixed(2)}x`);
-        
-        if (Date.now() - lastCrashTime > 5000) {
-          sendCandle(picoRodada, getColorRGB(), round || lastRound);
-          lastCrashTime = Date.now();
-        }
-        
-        picoRodada = 0;
-        window._stableCount = 0;
-      }
-    } else {
-      window._stableCount = 0;
-    }
-
-    // RESET PARA NOVA RODADA
-    if (lastMultiplier !== null && 
-        lastMultiplier < 1.1 && 
-        mult !== null && 
-        mult > 1.1) {
-      
-      console.log("[MEGATRON] 🔄 NOVA RODADA detectada | " + (round || "?"));
+    
+    // Nova rodada
+    if (lastMultiplier && lastMultiplier < 1.1 && mult && mult > 1.5) {
       rodadaEnviada = false;
       picoRodada = 0;
-      lastValidMultiplier = null;
     }
-
-    // Atualiza estados
-    prevCrashed = crashed;
-    lastMultiplier = mult;
-
-    // Log periódico para debug
-    if (Math.random() < 0.05) { // ~5% das vezes
-      logDebug("Status - Mult:", mult, "Crashed:", crashed, "Round:", round, "Pico:", picoRodada);
-    }
-
-    setTimeout(loop, INTERVAL_MS);
-  }
-
-  // ── INICIALIZAÇÃO ──
-  function init() {
-    console.log("[MEGATRON] 🚀 Iniciando v5.2 em:", window.location.href);
     
-    // Aguarda a página carregar completamente
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
-        console.log("[MEGATRON] DOM carregado, iniciando loop em 3s");
-        setTimeout(loop, 3000);
-      });
-    } else {
-      console.log("[MEGATRON] DOM já carregado, iniciando loop em 3s");
-      setTimeout(loop, 3000);
-    }
-
-    // Tenta enviar um ping inicial para o servidor
-    setTimeout(() => {
-      fetch(`${SERVER}/api/ping`).catch(() => {});
-    }, 5000);
-  }
-
-  // Inicia
-  init();
-
+    crashed = crashNow;
+    lastMultiplier = mult;
+    
+  }, 800); // Verifica a cada 800ms
+  
+  console.log('[MEGATRON] Content script carregado');
 })();
