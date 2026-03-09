@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -6,7 +7,6 @@
 <title>MEGATRON v4</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
-<style>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#03060c;--panel:#070f1a;--border:#102030;--cyan:#00e5ff;--pink:#ff2d78;--purple:#b845ff;--blue:#2979ff;--green:#00e676;--yellow:#ffd600;--red:#ff1744;--text:#c8e0f5;--dim:#3a6a8a;--orange:#ff6d00}
@@ -89,10 +89,10 @@ body.na{border-color:var(--yellow);box-shadow:inset 0 0 40px #ffd60012,0 0 60px 
 .q21{--ac:#ff6d00}.q22{--ac:var(--cyan)}.q23{--ac:var(--yellow)}.q24{--ac:var(--green)}.q25{--ac:var(--purple)}.q26{--ac:var(--pink)}
 
 /* Q11 ALERTA */
-.q-alert{--ac:var(--pink);margin-bottom:6px}
+.q-alert{--ac:var(--pink);margin-bottom:6px;aspect-ratio:unset!important;height:auto!important}
 .q-alert::before{background:var(--pink);box-shadow:0 0 10px var(--pink)}
-.q11corpo{padding:4px 8px;transition:padding .3s}
-.q11corpo.expandido{padding:9px 11px}
+.q11corpo{padding:5px 10px;transition:padding .3s;display:flex;align-items:center;gap:8px;min-height:30px}
+.q11corpo.expandido{padding:9px 11px;display:block;min-height:unset}
 .alerta-titulo{font-family:"Orbitron",monospace;font-size:.72rem;font-weight:900;color:var(--pink);text-shadow:0 0 14px var(--pink);text-align:center;letter-spacing:2px;animation:piscaap 1.5s infinite}
 @keyframes piscaap{0%,100%{opacity:1}50%{opacity:.5}}
 .grade-al{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-top:7px}
@@ -1062,7 +1062,7 @@ function atualizarTudo(){
     corpo.innerHTML='<div class="alerta-titulo">⚠ ALERTA — POSSÍVEL VELA ROSA</div><div class="grade-al">'+itensHtml+'</div>'+scoreHtml+'<div class="alerta-rodape">🎯 ENTRADA NA PRÓXIMA VELA</div>';
   } else {
     corpo.className='q11corpo';
-    corpo.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div class="barra-trilha" style="flex:1"><div class="barra-fill" style="width:'+(q11.score/5*100)+'%"></div></div><span class="barra-lbl" style="font-size:.55rem;color:var(--dim)">'+q11.score+'/5 — Aguardando padrões</span></div>';
+    corpo.innerHTML='<span style="font-family:Share Tech Mono,monospace;font-size:.58rem;color:var(--pink);white-space:nowrap">⚠ Q-ALERT</span><div class="barra-trilha" style="flex:1"><div class="barra-fill" style="width:'+(q11.score/5*100)+'%"></div></div><span class="barra-lbl" style="white-space:nowrap;font-size:.55rem">'+q11.score+'/5</span><span style="font-family:Share Tech Mono,monospace;font-size:.52rem;color:var(--dim);white-space:nowrap">Aguardando padrões</span>';
   }
 
   // Confluência Rosa
@@ -1128,26 +1128,18 @@ function iniciarSocket(){
     SK.on('connect',function(){
       console.log('[MEGATRON] Conectado:',SK.id);
       SK.emit('requestHistory');
-      SK.emit('getHistory');
-      SK.emit('history');
-      SK.emit('subscribe');
     });
     SK.on('disconnect',function(r){console.warn('[MEGATRON] Desconectado:',r);});
-    SK.on('connect_error',function(e){console.warn('[MEGATRON] Erro conexão:',e.message);});
+    SK.on('connect_error',function(e){console.warn('[MEGATRON] Erro:',e.message);});
 
-    // Escutar todos os nomes possíveis de evento
-    ['history','historyData','data','candles','allCandles','init'].forEach(function(ev){
-      SK.on(ev,function(h){console.log('[MEGATRON] evento:',ev,h&&h.length);processHistory(Array.isArray(h)?h:(h&&h.data?h.data:[]));});
-    });
-    ['candle','newCandle','round','result','crash','roundResult','update','new_candle','new_round'].forEach(function(ev){
-      SK.on(ev,function(cd){console.log('[MEGATRON] candle evento:',ev,cd);processCandle(Array.isArray(cd)?cd[0]:cd);});
-    });
+    // Servidor emite 'history' (array) e 'candle' (objeto)
+    SK.on('history',function(h){processHistory(Array.isArray(h)?h:[]);});
+    SK.on('candle',function(cd){processCandle(cd);});
 
     SK.on('online',function(n){var el=_('qtd-online');if(el)el.textContent='👥 '+n+' online';});
-    SK.on('status',function(s){if(s&&s.online){var el=_('qtd-online');if(el)el.textContent='👥 '+s.online+' online';}});
-
-    // Escutar qualquer evento desconhecido (debug)
-    SK.onAny&&SK.onAny(function(ev,data){console.log('[MEGATRON] onAny:',ev,data);});
+    SK.on('status',function(s){
+      if(s&&s.online){var el=_('qtd-online');if(el)el.textContent='👥 '+s.online+' online';}
+    });
 
   }catch(e){console.warn('[MEGATRON v5] Socket erro:',e);}
 }
