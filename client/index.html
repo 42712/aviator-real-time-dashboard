@@ -240,8 +240,8 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;background:rep
 .vela.pink{border-color:#6a0030;box-shadow:0 0 8px #ff2d7830}
 .vela.selecionada{box-shadow:0 0 0 2px var(--yellow),0 0 12px #ffd60030;z-index:1}
 .vela.desfocada{opacity:.25}
-.vnum{font-family:"Orbitron",monospace;font-size:.28rem;color:var(--dim2)}
-.vicone{font-size:.55rem;line-height:1}
+.vnum{font-family:"Orbitron",monospace;font-size:.28rem;color:var(--dim2);opacity:.7}
+.vicone{font-size:.6rem;line-height:1}
 .vval{font-family:"Orbitron",monospace;font-weight:900;line-height:1}
 .vela.blue .vval{font-size:.62rem;color:#7ec8ff}
 .vela.purple .vval{font-size:.62rem;color:#d9aaff}
@@ -563,7 +563,11 @@ function iconeVela(cd){var v=cd.multiplier;if(v>=10)return'👑';if(v>=5)return'
 function criarCard(cd,num){
   var cor=cd._cor,el=document.createElement('div');
   el.className='vela '+cor;
-  el.innerHTML='<div class="vnum">'+z(num)+'</div><div class="vicone">'+iconeVela(cd)+'</div>'+
+  el.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center">'+
+      '<div class="vnum">'+z(num)+'</div>'+
+      '<div class="vicone">'+iconeVela(cd)+'</div>'+
+    '</div>'+
     '<div class="vval">'+fmt(cd.multiplier)+'</div>'+
     '<div class="vsoma">Σ=<b>'+somaDigitos(cd.multiplier)+'</b></div>'+
     '<div class="vtempo">'+fmtT(cd.timestamp)+'</div>'+
