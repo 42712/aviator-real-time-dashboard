@@ -1,4 +1,6 @@
-// Megatron — background.js v3.0 (MV2 Kiwi Browser)
+// ═══════════════════════════════════════════════
+//  Megatron — background.js v3.1 (MV2 Kiwi Browser)
+// ═══════════════════════════════════════════════
 var SERVER = "https://aviator-real-time-dashboard.onrender.com";
 
 // Ping a cada 4 min para manter Render acordado
@@ -6,7 +8,7 @@ setInterval(function() {
   fetch(SERVER + "/api/ping")
     .then(function(r) { return r.json(); })
     .then(function(d) { console.log("[MEGATRON] Ping OK | online:", d.online); })
-    .catch(function() { console.log("[MEGATRON] Servidor dormindo, aguardando..."); });
+    .catch(function() { console.log("[MEGATRON] Servidor dormindo..."); });
 }, 4 * 60 * 1000);
 
 setInterval(function() {
@@ -14,11 +16,11 @@ setInterval(function() {
 }, 30000);
 
 chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
-  if (msg.type === "CANDLE") {
-    console.log("[MEGATRON] Vela:", msg.multiplier + "x | rodada=" + msg.round);
+  if (msg.type === "CANDLE_CAPTURED") {
+    console.log("[MEGATRON BG] Vela:", msg.data.multiplier + "x | rodada=" + msg.data.round);
   }
   sendResponse({ ok: true });
   return true;
 });
 
-console.log("[MEGATRON] Background ativo no Kiwi Browser");
+console.log("[MEGATRON] Background MV2 ativo no Kiwi Browser");
