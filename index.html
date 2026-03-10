@@ -79,7 +79,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;background:rep
 /* ── Socket bar ── */
 #barra-socket{display:flex;align-items:center;justify-content:space-between;padding:4px 14px;background:#020810;border-bottom:1px solid var(--border);font-family:"Share Tech Mono",monospace;font-size:.57rem;gap:8px;flex-wrap:wrap}
 #barra-sk-txt{color:var(--dim2);flex:1}
-#barra-sk-velas{color:var(--dim2)}
+#barra-sk-velas{color:var(--dim2)}#barra-sk-rodada{transition:all .3s}#rodada-live{color:#ffd600;font-weight:700}
 .btn-recon{background:none;border:1px solid var(--border2);color:var(--dim2);padding:1px 7px;border-radius:3px;font-family:"Share Tech Mono",monospace;font-size:.52rem;cursor:pointer;transition:all .15s}
 .btn-recon:hover{border-color:var(--cyan);color:var(--cyan)}
 
@@ -363,7 +363,8 @@ hr.div-sep{border:none;border-top:1px solid var(--border);margin:10px 0}
 
   <div id="barra-socket">
     <span id="barra-sk-txt">⏳ Aguardando...</span>
-    <span id="barra-sk-velas">0 velas</span>
+    <span id="barra-sk-rodada" style="font-family:'Share Tech Mono',monospace;font-size:.57rem;color:#ffd600;display:none">🎯 #<span id="rodada-live">—</span></span>
+    <span id="barra-sk-velas">0 velas recebidas</span>
     <button class="btn-recon" onclick="reconectarSocket()">↺ RECONECTAR</button>
   </div>
 
@@ -606,6 +607,20 @@ function adicionarCard(cd){
   var g=_('grade-velas');if(!g)return;
   if(filtroAtual!=='todas'&&filtroAtual!==cd._cor)return;
   g.insertBefore(criarCard(cd,velas.length),g.firstChild);
+  // Atualiza rodada ao vivo na barra
+  if(cd.round){
+    var rodLive=_('rodada-live');
+    var rodBar=_('barra-sk-rodada');
+    if(rodLive){
+      var rod=String(cd.round);
+      rodLive.textContent=rod.length>10?'…'+rod.slice(-8):rod;
+    }
+    if(rodBar){
+      rodBar.style.display='inline';
+      rodBar.style.animation='none';
+      setTimeout(function(){rodBar.style.animation='pulse .4s 3';},10);
+    }
+  }
   while(g.children.length>MAX_VELAS)g.removeChild(g.lastChild);
   if(_('hist-contador'))_('hist-contador').textContent=velas.length+' / '+MAX_VELAS;
 }
@@ -749,7 +764,17 @@ function setSocketStatus(estado,txt){
   if(dot){dot.style.background=c[0];}
   if(bsk){bsk.style.color=c[0];bsk.textContent=(estado==='conectado'?'✅ ':estado==='erro'?'❌ ':'⏳ ')+txt;}
 }
-function atualizarBarraVelas(){var el=_('barra-sk-velas');if(el)el.textContent=velas.length+' velas recebidas';}
+function atualizarBarraVelas(){
+  var el=_('barra-sk-velas');
+  if(el)el.textContent=velas.length+' velas';
+  // Mostra rodada da última vela se tiver
+  if(velas.length>0&&velas[0].round){
+    var rodLive=_('rodada-live');
+    var rodBar=_('barra-sk-rodada');
+    if(rodLive){var r=String(velas[0].round);rodLive.textContent=r.length>10?'…'+r.slice(-8):r;}
+    if(rodBar)rodBar.style.display='inline';
+  }
+}
 function reconectarSocket(){if(SK){try{SK.disconnect();}catch(e){}}SK=null;setSocketStatus('conectando','Reconectando...');setTimeout(iniciarSocket,800);}
 
 function processCandle(cd){
@@ -764,11 +789,30 @@ function processCandle(cd){
 }
 function processHistory(h){
   if(!h||!h.length)return;
-  velas=h.map(function(cd){if(!cd.timestamp)cd.timestamp=new Date().toISOString();cd._cor=getCor(cd);return cd;}).slice(0,MAX_VELAS);
-  reconstruirGrade();
+  var novas=h.map(function(cd){if(!cd.timestamp)cd.timestamp=new Date().toISOString();cd._cor=getCor(cd);return cd;});
+  if(velas.length===0){
+    // Primeira carga — monta tudo
+    velas=novas.slice(0,MAX_VELAS);
+    reconstruirGrade();
+  } else {
+    // Já tem velas — só adiciona as que ainda não existem (por round ou timestamp)
+    var keys=new Set(velas.map(function(c){return c.round||c.timestamp;}));
+    var faltando=novas.filter(function(c){return !keys.has(c.round||c.timestamp);});
+    if(faltando.length>0){
+      // Adiciona novas no array e na grade sem apagar as existentes
+      faltando.forEach(function(cd){
+        velas.push(cd);
+        if(filtroAtual==='todas'||filtroAtual===cd._cor){
+          var g=_('grade-velas');
+          if(g)g.appendChild(criarCard(cd,velas.length));
+        }
+      });
+      if(velas.length>MAX_VELAS)velas=velas.slice(0,MAX_VELAS);
+    }
+  }
   atualizarTudo();
   atualizarBarraVelas();
-  setSocketStatus('conectado','Online — '+velas.length+' velas carregadas');
+  setSocketStatus('conectado','Online — '+velas.length+' velas');
 }
 
 function iniciarSocket(){
