@@ -205,7 +205,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;background:rep
 .fig-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 8px;background:#040e1a;border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:all .2s;min-width:44px}
 .fig-btn:hover{border-color:var(--cyan);background:#061525}
 .fig-btn.sel{border-color:var(--yellow);background:#1a1400;box-shadow:0 0 8px #ffd60030}
-.fig-btn.cor{border-color:var(--cyan);background:#061525;animation:pulse .9s infinite}
+.fig-btn.cor{border-color:var(--cyan);background:#061525;animation:pulse .9s infinite}.fig-btn[data-fig="compressao"] .fig-ico{color:#55d4ff;font-size:1rem;font-weight:900}
 .fig-ico{font-size:.85rem}
 .fig-nom{font-family:"Share Tech Mono",monospace;font-size:.4rem;color:var(--dim2);text-align:center;letter-spacing:.5px}
 .fig-btn.sel .fig-nom,.fig-btn.cor .fig-nom{color:var(--text)}
@@ -481,11 +481,12 @@ hr.div-sep{border:none;border-top:1px solid var(--border);margin:10px 0}
     <div class="figuras-wrap">
       <div class="fig-tit">🔍 ANÁLISE DE FIGURAS</div>
       <div class="figuras-grade">
-        <div class="fig-btn" data-fig="coroa" onclick="selecionarFigura('coroa')"><span class="fig-ico">👑</span><span class="fig-nom">COROA</span></div>
-        <div class="fig-btn" data-fig="estrela" onclick="selecionarFigura('estrela')"><span class="fig-ico">⭐</span><span class="fig-nom">ESTRELA</span></div>
-        <div class="fig-btn" data-fig="circular" onclick="selecionarFigura('circular')"><span class="fig-ico">🔄</span><span class="fig-nom">CIRCULAR</span></div>
+        <div class="fig-btn" data-fig="compressao" onclick="selecionarFigura('compressao')"><span class="fig-ico">⇄</span><span class="fig-nom">COMPRESS.</span></div>
         <div class="fig-btn" data-fig="seta" onclick="selecionarFigura('seta')"><span class="fig-ico">➡️</span><span class="fig-nom">SETA</span></div>
         <div class="fig-btn" data-fig="amarela" onclick="selecionarFigura('amarela')"><span class="fig-ico">⬆️</span><span class="fig-nom">AMARELA</span></div>
+        <div class="fig-btn" data-fig="circular" onclick="selecionarFigura('circular')"><span class="fig-ico">🔄</span><span class="fig-nom">CIRCULAR</span></div>
+        <div class="fig-btn" data-fig="estrela" onclick="selecionarFigura('estrela')"><span class="fig-ico">⭐</span><span class="fig-nom">ESTRELA</span></div>
+        <div class="fig-btn" data-fig="coroa" onclick="selecionarFigura('coroa')"><span class="fig-ico">👑</span><span class="fig-nom">COROA</span></div>
         <div class="fig-btn" data-fig="quadrado" onclick="selecionarFigura('quadrado')"><span class="fig-ico">🟨</span><span class="fig-nom">QUADRADO</span></div>
       </div>
       <div id="figura-info"></div>
@@ -816,9 +817,9 @@ function conteudoModal(n){
 // ══════════════════════════════════════════
 //  FIGURAS
 // ══════════════════════════════════════════
-var FIG_G={'coroa':['coroa','estrela'],'estrela':['estrela','coroa','circular'],'circular':['circular','estrela','seta'],'seta':['seta','circular','quadrado'],'amarela':['amarela','seta','quadrado'],'quadrado':['quadrado','amarela','seta']};
-var FIG_E={'coroa':'👑','estrela':'⭐','circular':'🔄','seta':'➡️','amarela':'⬆️','quadrado':'🟨'};
-var FIG_D={'coroa':'👑 Coroa — Vela alta (≥10x). Pico do ciclo.','estrela':'⭐ Estrela — Possível reversão. Após coroa.','circular':'🔄 Circular — Reinício de padrão.','seta':'➡️ Seta — Vela muito baixa (≈1.00x).','amarela':'⬆️ Amarela — Tentativa de subida.','quadrado':'🟨 Quadrado — Zona de atenção.'};
+var FIG_G={'compressao':['compressao','seta','amarela'],'seta':['seta','compressao','amarela'],'amarela':['amarela','seta','circular'],'circular':['circular','amarela','estrela'],'estrela':['estrela','circular','coroa'],'coroa':['coroa','estrela'],'quadrado':['quadrado','amarela','seta']};
+var FIG_E={'compressao':'⇄','seta':'➡️','amarela':'⬆️','circular':'🔄','estrela':'⭐','coroa':'👑','quadrado':'🟨'};
+var FIG_D={'compressao':'⇄ Compressão — Vela baixa (<2x). Zona de acumulo.','seta':'➡️ Seta — Vela muito baixa (≈1.00x).','amarela':'⬆️ Amarela — Tentativa de subida (1.5-2x).','circular':'🔄 Circular — Vela roxa (2-5x). Reinício.','estrela':'⭐ Estrela — Vela forte (5-10x). Possível reversão.','coroa':'👑 Coroa — Vela alta (≥10x). Pico do ciclo.','quadrado':'🟨 Quadrado — Zona de atenção.'};
 var figAtual=null;
 function selecionarFigura(fig){
   document.querySelectorAll('.fig-btn').forEach(function(el){el.classList.remove('sel','cor');});
