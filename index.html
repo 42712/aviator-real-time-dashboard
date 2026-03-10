@@ -231,10 +231,10 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;background:rep
 .vela::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;z-index:2}
 .vela.blue::before{background:linear-gradient(90deg,#0088ff,#00e5ff,#0088ff)}
 .vela.purple::before{background:linear-gradient(90deg,#aa00ff,#e040fb,#aa00ff)}
-.vela.pink::before{background:linear-gradient(90deg,#ff0055,#ff2d78,#ff6fa3,#ff2d78,#ff0055)}
+.vela.pink::before{background:linear-gradient(90deg,#ff1493,#ff69b4,#ffb6c1,#ff69b4,#ff1493)}
 .vela.blue{background:linear-gradient(160deg,#010f20 0%,#021e3f 100%);border:1px solid #1a6aaa;box-shadow:0 0 8px #00aaff30,inset 0 0 20px #00aaff08}
 .vela.purple{background:linear-gradient(160deg,#0a0018 0%,#180035 100%);border:1px solid #9933cc;box-shadow:0 0 10px #b845ff40,inset 0 0 20px #b845ff10}
-.vela.pink{background:linear-gradient(160deg,#180008 0%,#30001a 100%);border:1px solid #dd1a55;box-shadow:0 0 16px #ff2d7860,0 0 30px #ff2d7820,inset 0 0 20px #ff2d7815}
+.vela.pink{background:linear-gradient(160deg,#1a0018 0%,#2e0028 100%);border:1px solid #ff1493;box-shadow:0 0 16px #ff149370,0 0 30px #ff149930,inset 0 0 20px #ff149918}
 .vela.selecionada{box-shadow:0 0 0 2px var(--yellow),0 0 20px #ffd60060;z-index:1}
 .vela.desfocada{opacity:.15}
 
@@ -242,19 +242,19 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;background:rep
 .vnum{font-family:"Orbitron",monospace;font-size:.28rem;color:var(--dim2);line-height:1}
 
 /* Ícone */
-.vicone{font-size:.52rem;line-height:1}
+.vicone{font-size:.52rem;line-height:1}.vela.blue .vicone{color:#55d4ff;font-size:.60rem;font-weight:900}.vela.blue .vicone{color:#55d4ff;font-size:.58rem}
 
 /* Valor multiplicador — MAIOR */
 .vval{font-family:"Orbitron",monospace;font-weight:900;line-height:1}
 .vela.blue .vval{font-size:.66rem;color:#55d4ff;text-shadow:0 0 8px #00e5ff}
 .vela.purple .vval{font-size:.66rem;color:#e070ff;text-shadow:0 0 8px #cc44ff}
-.vela.pink .vval{font-size:.76rem;color:#ff4488;text-shadow:0 0 12px #ff2d78,0 0 24px #ff2d7870}
+.vela.pink .vval{font-size:.76rem;color:#ff69b4;text-shadow:0 0 12px #ff1493,0 0 24px #ff149370}
 
 /* Soma dos dígitos — MAIOR E MAIS COLORIDA */
 .vsoma{font-family:"Orbitron",monospace;font-size:.54rem;font-weight:900;line-height:1;text-align:center}
 .vela.blue .vsoma{color:#44ccff;text-shadow:0 0 8px #00e5ff90}
 .vela.purple .vsoma{color:#dd66ff;text-shadow:0 0 10px #cc44ffaa}
-.vela.pink .vsoma{color:#ff3380;text-shadow:0 0 12px #ff2d78,0 0 25px #ff2d7870}
+.vela.pink .vsoma{color:#ff85c2;text-shadow:0 0 12px #ff1493,0 0 25px #ff149370}
 
 /* Horário — VISÍVEL */
 .vtempo{font-family:"Share Tech Mono",monospace;font-size:.38rem;color:var(--cyan);display:block;text-align:center;opacity:.9;line-height:1}
@@ -554,7 +554,7 @@ function getCor(cd){
   return'blue';
 }
 function classeVela(v){if(v<2)return 1;if(v<5)return 2;if(v<10)return 3;if(v<=50)return 4;return 5;}
-function iconeVela(cd){var v=cd.multiplier;if(v>=10)return'👑';if(v>=5)return'⭐';if(v>=2)return'🔄';if(v>=1.5)return'⬆️';return'➡️';}
+function iconeVela(cd){var v=cd.multiplier;if(v>=10)return'👑';if(v>=5)return'⭐';if(v>=2)return'🔄';if(v>=1.5)return'⬆️';return'⇄';}
 
 // ── CARD VELA — CORRIGIDO v5.1 ──
 function criarCard(cd,num){
