@@ -163,9 +163,9 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;background:rep
 .conf-sinal.enter{border:1px solid var(--green);color:var(--green);background:#00140510;animation:pulse 1s infinite}
 .conf-sinal.wait{border:1px solid var(--yellow);color:var(--yellow);background:#1a0a0008}
 .conf-sinal.stop{border:1px solid #ff174430;color:var(--red);background:#1a000008}
-.conf-alerta{display:none;margin-top:5px;padding:5px 8px;border-radius:4px;text-align:center;font-family:"Orbitron",monospace;font-size:.6rem;font-weight:700;letter-spacing:1px}
-.card-conf.rosa .conf-alerta{border:1px solid var(--pink);color:var(--pink);background:#1a000e;animation:pulse 1s infinite}
-.card-conf.roxa .conf-alerta{border:1px solid var(--purple);color:var(--purple);background:#0d0020;animation:pulse 1s infinite}
+.conf-alerta{display:none;margin-top:5px;padding:7px 10px;border-radius:6px;text-align:center;font-family:"Orbitron",monospace;font-size:.65rem;font-weight:900;letter-spacing:2px}
+.card-conf.rosa .conf-alerta{border:2px solid var(--pink);color:#fff;background:linear-gradient(90deg,#3a0020,#1a000e);box-shadow:0 0 16px #ff149360;animation:pulse 1s infinite}
+.card-conf.roxa .conf-alerta{border:2px solid var(--purple);color:#fff;background:linear-gradient(90deg,#1a0035,#0d0020);box-shadow:0 0 16px #b845ff60;animation:pulse 1s infinite}
 
 /* ═══════════ CONF 26 PADRÕES ═══════════ */
 .conf26-wrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px}
@@ -205,7 +205,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;background:rep
 .fig-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 8px;background:#040e1a;border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:all .2s;min-width:44px}
 .fig-btn:hover{border-color:var(--cyan);background:#061525}
 .fig-btn.sel{border-color:var(--yellow);background:#1a1400;box-shadow:0 0 8px #ffd60030}
-.fig-btn.cor{border-color:var(--cyan);background:#061525;animation:pulse .9s infinite}.fig-btn[data-fig="compressao"] .fig-ico{color:#55d4ff;font-size:1rem;font-weight:900}
+.fig-btn.cor{border-color:var(--cyan);background:#061525;animation:pulse .9s infinite}
 .fig-ico{font-size:.85rem}
 .fig-nom{font-family:"Share Tech Mono",monospace;font-size:.4rem;color:var(--dim2);text-align:center;letter-spacing:.5px}
 .fig-btn.sel .fig-nom,.fig-btn.cor .fig-nom{color:var(--text)}
@@ -234,7 +234,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;background:rep
 .vela.pink::before{background:linear-gradient(90deg,#ff1493,#ff69b4,#ffb6c1,#ff69b4,#ff1493)}
 .vela.blue{background:linear-gradient(160deg,#010f20 0%,#021e3f 100%);border:1px solid #1a6aaa;box-shadow:0 0 8px #00aaff30,inset 0 0 20px #00aaff08}
 .vela.purple{background:linear-gradient(160deg,#0a0018 0%,#180035 100%);border:1px solid #9933cc;box-shadow:0 0 10px #b845ff40,inset 0 0 20px #b845ff10}
-.vela.pink{background:linear-gradient(160deg,#1a0018 0%,#2e0028 100%);border:1px solid #ff1493;box-shadow:0 0 16px #ff149370,0 0 30px #ff149930,inset 0 0 20px #ff149918}
+.vela.pink{background:linear-gradient(160deg,#1a0018 0%,#2e0028 100%);border:1px solid #ff1493;box-shadow:0 0 16px #ff149370,0 0 30px #ff149930,inset 0 0 20px #ff149918}.vela.pink.mega{border-color:#ffd700;box-shadow:0 0 30px #ffd70080,0 0 60px #ffd70030,inset 0 0 30px #ffd70020;animation:megapulse 1s ease-in-out infinite}@keyframes megapulse{0%,100%{box-shadow:0 0 30px #ffd70080,0 0 60px #ffd70030}50%{box-shadow:0 0 60px #ffd700cc,0 0 100px #ffd70060}}
 .vela.selecionada{box-shadow:0 0 0 2px var(--yellow),0 0 20px #ffd60060;z-index:1}
 .vela.desfocada{opacity:.15}
 
@@ -242,7 +242,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;background:rep
 .vnum{font-family:"Orbitron",monospace;font-size:.28rem;color:var(--dim2);line-height:1}
 
 /* Ícone */
-.vicone{font-size:.52rem;line-height:1}.vela.blue .vicone{color:#55d4ff;font-size:.60rem;font-weight:900}.vela.blue .vicone{color:#55d4ff;font-size:.58rem}
+.vicone{font-size:.52rem;line-height:1}.vicone{font-size:.52rem;line-height:1}
 
 /* Valor multiplicador — MAIOR */
 .vval{font-family:"Orbitron",monospace;font-weight:900;line-height:1}
@@ -481,7 +481,7 @@ hr.div-sep{border:none;border-top:1px solid var(--border);margin:10px 0}
     <div class="figuras-wrap">
       <div class="fig-tit">🔍 ANÁLISE DE FIGURAS</div>
       <div class="figuras-grade">
-        <div class="fig-btn" data-fig="compressao" onclick="selecionarFigura('compressao')"><span class="fig-ico">⇄</span><span class="fig-nom">COMPRESS.</span></div>
+        <div class="fig-btn" data-fig="compressao" onclick="selecionarFigura('compressao')"><span class="fig-ico">🔀</span><span class="fig-nom">COMPRESS.</span></div>
         <div class="fig-btn" data-fig="seta" onclick="selecionarFigura('seta')"><span class="fig-ico">➡️</span><span class="fig-nom">SETA</span></div>
         <div class="fig-btn" data-fig="amarela" onclick="selecionarFigura('amarela')"><span class="fig-ico">⬆️</span><span class="fig-nom">AMARELA</span></div>
         <div class="fig-btn" data-fig="circular" onclick="selecionarFigura('circular')"><span class="fig-ico">🔄</span><span class="fig-nom">CIRCULAR</span></div>
@@ -543,24 +543,35 @@ function setNeon(t){document.body.className=t==='verde'?'nv':t==='vermelho'?'nr'
 
 // ── COR DAS VELAS ──
 function getCor(cd){
+  var v=cd.multiplier;
+  // Cor por multiplicador é a principal (mais confiável)
+  if(v>=10)return'pink';
+  if(v>=2)return'purple';
+  // Tenta usar RGB como complemento para valores intermediários
   if(cd.color_rgb){
     var pt=cd.color_rgb.replace(/[^0-9,]/g,'').split(',').map(Number);
     if(pt.length>=3){var r=pt[0],g=pt[1],b=pt[2];
-      if(r>150&&g<100&&b<100)return'pink';
-      if(r>80&&b>100&&g<100)return'purple';}
+      // RGB rosa/vermelho forte
+      if(r>180&&g<120&&b<150)return'pink';
+      // RGB roxo/azul-roxo
+      if(b>120&&r>80&&g<120)return'purple';}
   }
-  var v=cd.multiplier;
-  if(v>=10)return'pink';
-  if(v>=2)return'purple';
   return'blue';
 }
 function classeVela(v){if(v<2)return 1;if(v<5)return 2;if(v<10)return 3;if(v<=50)return 4;return 5;}
-function iconeVela(cd){var v=cd.multiplier;if(v>=10)return'👑';if(v>=5)return'⭐';if(v>=2)return'🔄';if(v>=1.5)return'⬆️';return'⇄';}
+function iconeVela(cd){var v=cd.multiplier;if(v>=10)return'👑';if(v>=5)return'⭐';if(v>=2)return'🔄';if(v>=1.5)return'⬆️';return'🔀';}
 
 // ── CARD VELA — CORRIGIDO v5.1 ──
 function criarCard(cd,num){
+  // Badge mega para velas >=1000x
+  if(cd.multiplier>=1000){
+    setTimeout(function(){
+      var badge=_('badge-casa');
+      if(badge){badge.className='roxo';badge.innerHTML='🏆 CASA — '+cd.multiplier.toFixed(2)+'x!';}
+    },100);
+  }
   var cor=cd._cor,el=document.createElement('div');
-  el.className='vela '+cor;
+  el.className='vela '+cor+(cd.multiplier>=1000?' mega':'');
 
   // Horário formatado
   var hora = fmtHora(cd.timestamp);
@@ -717,14 +728,14 @@ function atualizarTudo(){
   cRosa.itens.forEach(function(it,i){if(_(cvs[i]))_(cvs[i]).innerHTML='<span style="color:'+(it.on?'var(--green)':'var(--dim2)')+'">'+it.val+'</span>';});
   if(_('crf-bar'))_('crf-bar').style.width=cRosa.pct+'%';
   var sR=_('crf-sinal');if(sR){sR.className='conf-sinal '+cRosa.sinal;sR.textContent=cRosa.txt;}
-  var aR=_('conf-rosa-alerta');if(aR)aR.style.display=cRosa.score>=3?'block':'none';
+  var aR=_('conf-rosa-alerta');if(aR){aR.style.display=cRosa.score>=2?'block':'none';if(cRosa.score>=5)aR.style.animation='pulse .6s infinite';else aR.style.animation='pulse 1.2s infinite';}
   var cRoxa=calcConfRoxa();
   if(_('conf-roxa-score'))_('conf-roxa-score').textContent=cRoxa.score+'/7';
   var cvx=['crx-med','crx-pat','crx-zz','crx-ciclo','crx-hora','crx-pos','crx-comp'];
   cRoxa.itens.forEach(function(it,i){if(_(cvx[i]))_(cvx[i]).innerHTML='<span style="color:'+(it.on?'var(--green)':'var(--dim2)')+'">'+it.val+'</span>';});
   if(_('crx-bar'))_('crx-bar').style.width=cRoxa.pct+'%';
   var sX=_('crx-sinal');if(sX){sX.className='conf-sinal '+cRoxa.sinal;sX.textContent=cRoxa.txt;}
-  var aX=_('conf-roxa-alerta');if(aX)aX.style.display=cRoxa.score>=3?'block':'none';
+  var aX=_('conf-roxa-alerta');if(aX){aX.style.display=cRoxa.score>=2?'block':'none';if(cRoxa.score>=5)aX.style.animation='pulse .6s infinite';else aX.style.animation='pulse 1.2s infinite';}
 }
 
 // ══════════════════════════════════════════
@@ -818,8 +829,8 @@ function conteudoModal(n){
 //  FIGURAS
 // ══════════════════════════════════════════
 var FIG_G={'compressao':['compressao','seta','amarela'],'seta':['seta','compressao','amarela'],'amarela':['amarela','seta','circular'],'circular':['circular','amarela','estrela'],'estrela':['estrela','circular','coroa'],'coroa':['coroa','estrela'],'quadrado':['quadrado','amarela','seta']};
-var FIG_E={'compressao':'⇄','seta':'➡️','amarela':'⬆️','circular':'🔄','estrela':'⭐','coroa':'👑','quadrado':'🟨'};
-var FIG_D={'compressao':'⇄ Compressão — Vela baixa (<2x). Zona de acumulo.','seta':'➡️ Seta — Vela muito baixa (≈1.00x).','amarela':'⬆️ Amarela — Tentativa de subida (1.5-2x).','circular':'🔄 Circular — Vela roxa (2-5x). Reinício.','estrela':'⭐ Estrela — Vela forte (5-10x). Possível reversão.','coroa':'👑 Coroa — Vela alta (≥10x). Pico do ciclo.','quadrado':'🟨 Quadrado — Zona de atenção.'};
+var FIG_E={'compressao':'🔀','seta':'➡️','amarela':'⬆️','circular':'🔄','estrela':'⭐','coroa':'👑','quadrado':'🟨'};
+var FIG_D={'compressao':'🔀 Compressão — Vela baixa (<2x). Zona de acumulo.','seta':'➡️ Seta — Vela muito baixa (≈1.00x).','amarela':'⬆️ Amarela — Tentativa de subida (1.5-2x).','circular':'🔄 Circular — Vela roxa (2-5x). Reinício.','estrela':'⭐ Estrela — Vela forte (5-10x). Possível reversão.','coroa':'👑 Coroa — Vela alta (≥10x). Pico do ciclo.','quadrado':'🟨 Quadrado — Zona de atenção.'};
 var figAtual=null;
 function selecionarFigura(fig){
   document.querySelectorAll('.fig-btn').forEach(function(el){el.classList.remove('sel','cor');});
