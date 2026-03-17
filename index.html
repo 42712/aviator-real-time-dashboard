@@ -359,7 +359,7 @@ body { background:var(--bg); color:#cce4ff; font-family:'Rajdhani',sans-serif; m
 .vc.roxo .vs { color:#bb66ff; }
 .vc.roxo .vh { color:rgba(200,145,255,0.88); }
 .vc.roxo .vi { color:#cc99ff; }
-.vp { position:absolute; top:4px; left:6px; font-family:'Orbitron',sans-serif; font-size:0.4rem; color:rgba(80,130,180,0.38); letter-spacing:0.3px; }
+.vp { position:absolute; top:4px; left:6px; font-family:'Orbitron',sans-serif; font-size:0.55rem; font-weight:600; color:rgba(120,180,240,0.75); letter-spacing:0.5px; }
 .vi  { font-size:0.72rem; line-height:1; margin-top:3px; }
 .vm  { font-family:'Orbitron',sans-serif; font-weight:700; font-size:1rem; line-height:1; }
 .vs  { font-family:'Rajdhani',sans-serif; font-weight:600; font-size:0.7rem; letter-spacing:0.3px; }
@@ -1313,7 +1313,7 @@ function engine() {
   if (!v1) return;
 
   // ── P1 · MEGATRON ──────────────────────────────────────
-  // 1 único sinal, avisa 60s antes do minuto alvo
+  // 1 único sinal, avisa 30s antes do minuto alvo da faixa seguinte
   if (c0==='rosa') {
     _velasPadroes.set(v0.round||v0.timestamp, 'megatron');
     const soma   = v0.multiplier + v1.multiplier;
