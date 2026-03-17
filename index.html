@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -398,6 +397,10 @@ body { background:var(--bg); color:#cce4ff; font-family:'Rajdhani',sans-serif; m
 .fl,.fr { font-family:'Orbitron',sans-serif; font-size:0.5rem; color:#243545; letter-spacing:1px; }
 @keyframes vin { from { opacity:0; transform:scale(0.83) translateY(-5px); } to { opacity:1; transform:scale(1) translateY(0); } }
 .vn { animation:vin 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+@keyframes confettiCair {
+  0%   { transform:translateY(-10px) rotate(0deg);   opacity:1; }
+  100% { transform:translateY(100vh) rotate(720deg); opacity:0; }
+}
 .banner-pagou { border:2px solid #00ff88 !important; box-shadow:0 0 50px rgba(0,255,136,0.6), 0 0 100px rgba(0,200,100,0.25) !important; animation:pagouPulse 0.6s ease-in-out 4 !important; }
 @keyframes pagouPulse { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(0) scale(1.04)} }
 @media(max-width:900px){ .grid { grid-template-columns:repeat(6,1fr); } }
@@ -539,7 +542,7 @@ body { background:var(--bg); color:#cce4ff; font-family:'Rajdhani',sans-serif; m
 const SRV = "https://aviator-real-time-dashboard-1.onrender.com";
 
 // ── Credenciais (mesmas do painel de login original) ──
-const USUARIOS = { admin:'admin123', joao:'joao123', maria:'maria123', pedro:'pedro123' };
+const USUARIOS = { admin:'admin123', diego:'Diego123', teste:'teste123', teste1:'teste1123' };
 
 // ════════════════════════════════════════════════════════════
 //  LOGIN
@@ -654,6 +657,33 @@ document.addEventListener('keydown', e => {
 // ════════════════════════════════════════════════════════════
 //  BIPE — Web Audio API
 // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+//  CONFETES — festim ao acertar
+// ════════════════════════════════════════════════════════════
+function _lancarConfetes() {
+  const cores = ['#00ff88','#ff2d78','#00e5ff','#ffcc00','#b44bff','#ff8800'];
+  const wrap  = document.getElementById('bannersWrap');
+  for (let i = 0; i < 40; i++) {
+    const c = document.createElement('div');
+    const cor = cores[Math.floor(Math.random()*cores.length)];
+    const x   = Math.random()*100;
+    const dur = 1.5 + Math.random()*2;
+    const tam = 6 + Math.random()*8;
+    c.style.cssText = `
+      position:fixed; z-index:9999; pointer-events:none;
+      left:${x}vw; top:-10px;
+      width:${tam}px; height:${tam}px;
+      background:${cor};
+      border-radius:${Math.random()>0.5?'50%':'2px'};
+      animation:confettiCair ${dur}s ease-in forwards;
+      animation-delay:${Math.random()*0.8}s;
+      opacity:1;
+    `;
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(), (dur+1)*1000);
+  }
+}
+
 // ════════════════════════════════════════════════════════════
 //  SISTEMA DE ÁUDIO — bipes de alerta
 //  AudioContext é desbloqueado no primeiro clique/toque
@@ -1130,6 +1160,26 @@ const _estados = {};
 //   Vela anterior ao alvo ABRE  → dispara alerta (velasContadas == casaAlvo - 1)
 //   Vela alvo FECHA             → fecha alerta (velasContadas == casaAlvo)
 function verificarCasas(corVela) {
+  // ── Megatron: verifica se o minuto alvo chegou ──
+  if (_megaAlvoMinuto !== null && _megaAlvoHora !== null) {
+    const agora = new Date();
+    const minAtual = agora.getMinutes();
+    const hrAtual  = agora.getHours();
+
+    // Estamos no minuto alvo?
+    if (hrAtual === _megaAlvoHora && minAtual === _megaAlvoMinuto) {
+      if (corVela === 'rosa' || corVela === 'roxo') {
+        // ✅ MEGATRON ACERTOU — banner parabéns
+        const stFake = { tipo:'megatron', cls:'pk', fase:'casa1', casa1:0, casa2:0 };
+        _bannerPagouMegatron();
+        _fecharBanner('p-mega');
+        if (_megaAtivoTimer) clearTimeout(_megaAtivoTimer);
+        _megaAlvoMinuto = null;
+        _megaAlvoHora   = null;
+      }
+    }
+  }
+
   for (const id in _estados) {
     const st = _estados[id];
     if (!st || st.fase==='aguardando') continue;
@@ -1182,6 +1232,25 @@ function verificarCasas(corVela) {
   }
 }
 
+function _bannerPagouMegatron() {
+  const agora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const wrap  = document.getElementById('bannersWrap');
+  const bn    = document.createElement('div');
+  bn.className = 'banner pk banner-pagou';
+  bn.innerHTML = `
+    <div class="b-pre" style="color:#00ff88;opacity:1;letter-spacing:3px;">✅ PADRÃO ACERTOU!</div>
+    <div class="b-hora" style="color:#00ff88;text-shadow:0 0 20px #00ff8888;font-size:1.1rem;">PARABÉNS 🎉</div>
+    <div class="b-msg" style="color:#aaffcc;">Padrão Megatron<br>
+      <span style="font-size:0.68rem;opacity:0.72">Pagou às ${agora}</span>
+    </div>`;
+  wrap.appendChild(bn);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>bn.classList.add('show')));
+  tocarBipe('gn');
+  // Confetes / festim
+  _lancarConfetes();
+  setTimeout(()=>{ bn.classList.remove('show'); setTimeout(()=>bn.remove(),400); }, 5000);
+}
+
 function _bannerPagou(id, st) {
   // Remove banner de sinal ativo
   _fecharBanner(id);
@@ -1199,9 +1268,8 @@ function _bannerPagou(id, st) {
     <div class="b-msg" style="color:#aaffcc;">${nome}${st.tipo!=='vala'?' — Casa '+(st.fase==='casa2'?st.casa2:st.casa1):''}<br><span style="font-size:0.68rem;opacity:0.72">Pagou às ${agora}</span></div>`;
   wrap.appendChild(bn);
   requestAnimationFrame(()=>requestAnimationFrame(()=>bn.classList.add('show')));
-  // Toca bipe verde
   tocarBipe('gn');
-  // Some após 5s
+  _lancarConfetes();
   setTimeout(()=>{
     bn.classList.remove('show');
     setTimeout(()=>bn.remove(), 400);
@@ -1331,18 +1399,34 @@ function engine() {
     const delay = dAlvo.getTime() - Date.now() - 30000;
 
     if (_preTimers['mega']) clearTimeout(_preTimers['mega']);
-    // Marca o timestamp desta vela rosa para verificar confluência
+    if (_megaAtivoTimer)  clearTimeout(_megaAtivoTimer);
+
     const tsRosaAtual = ts0;
-    if (delay>=0) {
-      _preTimers['mega'] = setTimeout(()=>{
-        // Verifica se saiu outra vela rosa depois desta (cancelaria o sinal)
-        const rosaNova = _megaUltimaRosa && (_megaUltimaRosa.timestamp||0) > tsRosaAtual;
-        if (!rosaNova) {
-          dispara(1,'p-mega','megatron',0,horaFinal,1,'pk');
-        }
-      }, delay);
-    } else if (dAlvo.getTime()-Date.now()>0) {
+
+    const ativarMega = () => {
+      // Cancela se saiu rosa nova depois
+      const rosaNova = _megaUltimaRosa && (_megaUltimaRosa.timestamp||0) > tsRosaAtual;
+      if (rosaNova) return;
+
+      // Registra o alvo para monitorar
+      _megaAlvoMinuto = mFinal;
+      _megaAlvoHora   = dAlvo.getHours();
+
       dispara(1,'p-mega','megatron',0,horaFinal,1,'pk');
+
+      // Monitora: quando o minuto alvo chegar, verifica se saiu rosa/roxa
+      // Fecha o banner após 2 minutos (janela do minuto alvo)
+      _megaAtivoTimer = setTimeout(()=>{
+        _fecharBanner('p-mega');
+        _megaAlvoMinuto = null;
+        _megaAlvoHora   = null;
+      }, 120000); // 2 minutos de janela
+    };
+
+    if (delay>=0) {
+      _preTimers['mega'] = setTimeout(ativarMega, delay);
+    } else if (dAlvo.getTime()-Date.now()>0) {
+      ativarMega();
     }
   }
 
@@ -1529,7 +1613,10 @@ function _pararSimMult(multFinal) {
 }
 
 // MEGATRON: rastreia última vela rosa
-let _megaUltimaRosa = null;
+let _megaUltimaRosa   = null;
+let _megaAlvoMinuto   = null;  // minuto alvo calculado
+let _megaAlvoHora     = null;  // hora alvo
+let _megaAtivoTimer   = null;  // timer para encerrar o sinal
 
 // ════════════════════════════════════════════════════════════
 //  FIGURAS AUTOMÁTICAS conforme o fluxo do gráfico
