@@ -21,7 +21,8 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
-const CLIENT = path.join(__dirname, "..", "client");
+// Serve index.html da mesma pasta do server.js
+const CLIENT = __dirname;
 app.use(express.static(CLIENT));
 app.get("/", (req, res) => res.sendFile(path.join(CLIENT, "index.html")));
 
