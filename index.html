@@ -134,6 +134,18 @@ body { background:var(--bg); color:#cce4ff; font-family:'Rajdhani',sans-serif; m
   backdrop-filter:blur(12px);
 }
 .logo { font-family:'Orbitron',sans-serif; font-weight:900; font-size:1.1rem; letter-spacing:4px; color:var(--ciano); filter:drop-shadow(0 0 8px rgba(0,220,255,0.45)); }
+/* Badge de status no header */
+#statusBadge {
+  font-family:'Orbitron',sans-serif; font-size:0.48rem; font-weight:700;
+  letter-spacing:1px; padding:4px 12px; border-radius:20px;
+  border:1.5px solid; transition:all 0.5s; white-space:nowrap;
+  animation:badgePulse 2s ease-in-out infinite;
+}
+@keyframes badgePulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+#statusBadge.verde  { color:#00ff88; border-color:#00ff88; background:rgba(0,255,136,0.1);  box-shadow:0 0 12px rgba(0,255,136,0.3); }
+#statusBadge.amarelo{ color:#ffcc00; border-color:#ffcc00; background:rgba(255,200,0,0.1);  box-shadow:0 0 12px rgba(255,200,0,0.3); }
+#statusBadge.vermelho{color:#ff3344; border-color:#ff3344; background:rgba(255,50,60,0.1);  box-shadow:0 0 12px rgba(255,50,60,0.3); }
+#statusBadge.rosa   { color:#ff2d78; border-color:#ff2d78; background:rgba(255,45,120,0.1); box-shadow:0 0 12px rgba(255,45,120,0.3); }
 .hdr-r { display:flex; align-items:center; gap:10px; }
 .dot { width:8px; height:8px; border-radius:50%; background:#333; transition:all 0.3s; }
 .dot.on { background:var(--verde); box-shadow:0 0 8px var(--verde); animation:blink 1.8s ease-in-out infinite; }
@@ -447,6 +459,7 @@ body { background:var(--bg); color:#cce4ff; font-family:'Rajdhani',sans-serif; m
 
   <header class="header">
     <div class="logo">⚡ MEGATRON</div>
+    <div id="statusBadge" class="vermelho">SINAL ALEATÓRIO</div>
     <div class="hdr-r">
       <div class="dot" id="dot"></div>
       <span class="slbl" id="slbl">CONECTANDO</span>
@@ -1155,29 +1168,120 @@ function _tempoMedioVela() {
 // ════════════════════════════════════════════════════════════
 const _estados = {};
 
+// ── Rastreador de performance dos padrões ──
+// Guarda os últimos 10 resultados de cada padrão
+const _performance = {
+  mega:  [], // true=acertou, false=errou
+  outros: [] // padrões Igual/Dec/Cre/Xadrex/Vala
+};
+
+function _registrarAcerto(tipo) {
+  const arr = tipo === 'megatron' ? _performance.mega : _performance.outros;
+  arr.push({ acertou: true, tentativa: 1, ts: Date.now() });
+  if (arr.length > 20) arr.shift();
+  _atualizarBadge();
+}
+
+function _registrarErro(tipo, tentativa) {
+  const arr = tipo === 'megatron' ? _performance.mega : _performance.outros;
+  arr.push({ acertou: tentativa === 2, tentativa, ts: Date.now() });
+  if (arr.length > 20) arr.shift();
+  _atualizarBadge();
+}
+
+function _atualizarBadge() {
+  const badge = document.getElementById('statusBadge');
+  if (!badge) return;
+
+  // Pega últimos 5 resultados de cada grupo
+  const megaR   = _performance.mega.slice(-5);
+  const outrosR = _performance.outros.slice(-5);
+
+  const megaAcertou1   = megaR.length > 0   && megaR.every(r => r.acertou && r.tentativa === 1);
+  const megaAcertou    = megaR.length > 0   && megaR.some(r => r.acertou);
+  const outrosAcertou1 = outrosR.length > 0 && outrosR.every(r => r.acertou && r.tentativa === 1);
+  const outrosAcertou2 = outrosR.length > 0 && outrosR.every(r => r.acertou && r.tentativa <= 2);
+  const outrosErrou    = outrosR.length > 0 && outrosR.every(r => !r.acertou);
+
+  let cls, msg, titulo;
+
+  // 🟢 VERDE — todos os padrões acertando na 1ª tentativa + Megatron pagando
+  if (megaAcertou1 && outrosAcertou1) {
+    cls = 'verde'; msg = '✅ PAGANDO'; titulo = '✅ MEGATRON · PAGANDO';
+  }
+  // 🟡 AMARELO — padrões só acertando na 2ª tentativa
+  else if (outrosAcertou2 && !outrosAcertou1) {
+    cls = 'amarelo'; msg = '⚠️ PAGANDO NA 2ª CASA'; titulo = '⚠️ MEGATRON · 2ª CASA';
+  }
+  // 🩷 ROSA — apenas Megatron funcionando
+  else if (megaAcertou && outrosErrou) {
+    cls = 'rosa'; msg = '🩷 APENAS MEGATRON'; titulo = '🩷 APENAS MEGATRON';
+  }
+  // 🔴 VERMELHO — nenhum padrão funcionando
+  else if (outrosErrou && !megaAcertou) {
+    cls = 'vermelho'; msg = '🔴 SINAL ALEATÓRIO'; titulo = '🔴 SINAL ALEATÓRIO';
+  }
+  // Estado neutro — poucos dados ainda
+  else {
+    cls = 'vermelho'; msg = 'ANALISANDO...'; titulo = 'MEGATRON · ANALISANDO';
+    return;
+  }
+
+  badge.className = `statusBadge ${cls}`;
+  badge.id = 'statusBadge';
+  badge.textContent = msg;
+
+  // Atualiza título da aba
+  document.title = titulo;
+
+  // Favicon colorido via canvas
+  _atualizarFavicon(cls);
+}
+
+function _atualizarFavicon(estado) {
+  try {
+    const cores = { verde:'#00ff88', amarelo:'#ffcc00', vermelho:'#ff3344', rosa:'#ff2d78' };
+    const cor = cores[estado] || '#333';
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    // Fundo escuro
+    ctx.fillStyle = '#070a14';
+    ctx.fillRect(0, 0, 32, 32);
+    // Círculo colorido
+    ctx.beginPath();
+    ctx.arc(16, 16, 12, 0, Math.PI * 2);
+    ctx.fillStyle = cor;
+    ctx.fill();
+    // Letra M
+    ctx.fillStyle = '#070a14';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('M', 16, 16);
+    // Aplica favicon
+    let link = document.querySelector("link[rel~='icon']");
+    if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
+    link.href = canvas.toDataURL();
+  } catch(e) {}
+}
+
 // Chamado a cada nova vela — verifica casas ativas
 // Lógica:
 //   Vela anterior ao alvo ABRE  → dispara alerta (velasContadas == casaAlvo - 1)
 //   Vela alvo FECHA             → fecha alerta (velasContadas == casaAlvo)
 function verificarCasas(corVela) {
-  // ── Megatron: verifica se o minuto alvo chegou ──
-  if (_megaAlvoMinuto !== null && _megaAlvoHora !== null) {
-    const agora = new Date();
+  // ── Megatron: verifica todos os alvos ativos ──
+  if (_megaAlvos.length > 0 && (corVela === 'rosa' || corVela === 'roxo')) {
+    const agora    = new Date();
     const minAtual = agora.getMinutes();
     const hrAtual  = agora.getHours();
-
-    // Estamos no minuto alvo?
-    if (hrAtual === _megaAlvoHora && minAtual === _megaAlvoMinuto) {
-      if (corVela === 'rosa' || corVela === 'roxo') {
-        // ✅ MEGATRON ACERTOU — banner parabéns
-        const stFake = { tipo:'megatron', cls:'pk', fase:'casa1', casa1:0, casa2:0 };
-        _bannerPagouMegatron();
-        _fecharBanner('p-mega');
-        if (_megaAtivoTimer) clearTimeout(_megaAtivoTimer);
-        _megaAlvoMinuto = null;
-        _megaAlvoHora   = null;
-      }
-    }
+    const acertou  = _megaAlvos.filter(a => a.hora === hrAtual && a.minuto === minAtual);
+    acertou.forEach(a => {
+      _registrarAcerto('megatron');
+      _bannerPagouMegatron(a.id);
+      _megaAlvos = _megaAlvos.filter(x => x.id !== a.id);
+    });
   }
 
   for (const id in _estados) {
@@ -1198,7 +1302,8 @@ function verificarCasas(corVela) {
       // Vela ALVO fechou → avalia resultado
       if (st.velasContadas >= alvo) {
         if (corVela==='rosa' || corVela==='roxo') {
-          // ✅ Pagou
+          // ✅ Pagou na 1ª tentativa
+          _registrarAcerto(st.tipo);
           _bannerPagou(id, st);
           _limparEstado(id);
         } else {
@@ -1222,8 +1327,10 @@ function verificarCasas(corVela) {
       // Vela ALVO da casa2 fechou → encerra (pagou ou não)
       if (st.velasContadas >= alvoRel) {
         if (corVela==='rosa' || corVela==='roxo') {
+          _registrarErro(st.tipo, 2); // acertou mas na 2ª
           _bannerPagou(id, st);
         } else {
+          _registrarErro(st.tipo, 3); // não acertou
           _fecharBanner(id);
         }
         _limparEstado(id);
@@ -1232,7 +1339,8 @@ function verificarCasas(corVela) {
   }
 }
 
-function _bannerPagouMegatron() {
+function _bannerPagouMegatron(megaId) {
+  if (megaId) _fecharBanner(megaId);
   const agora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   const wrap  = document.getElementById('bannersWrap');
   const bn    = document.createElement('div');
@@ -1246,7 +1354,6 @@ function _bannerPagouMegatron() {
   wrap.appendChild(bn);
   requestAnimationFrame(()=>requestAnimationFrame(()=>bn.classList.add('show')));
   tocarBipe('gn');
-  // Confetes / festim
   _lancarConfetes();
   setTimeout(()=>{ bn.classList.remove('show'); setTimeout(()=>bn.remove(),400); }, 5000);
 }
@@ -1382,7 +1489,8 @@ function engine() {
   if (!v1) return;
 
   // ── P1 · MEGATRON ──────────────────────────────────────
-  // 1 único sinal, avisa 30s antes do minuto alvo da faixa seguinte
+  // CADA vela rosa gera uma entrada obrigatória e independente
+  // Não cancela por rosa nova — cada sinal tem ID próprio
   if (c0==='rosa') {
     _velasPadroes.set(v0.round||v0.timestamp, 'megatron');
     const soma   = v0.multiplier + v1.multiplier;
@@ -1398,34 +1506,28 @@ function engine() {
     const horaFinal = `${String(dAlvo.getHours()).padStart(2,'0')}:${String(mFinal).padStart(2,'0')}`;
     const delay = dAlvo.getTime() - Date.now() - 30000;
 
-    if (_preTimers['mega']) clearTimeout(_preTimers['mega']);
-    if (_megaAtivoTimer)  clearTimeout(_megaAtivoTimer);
+    // ID único por vela rosa — permite múltiplos sinais simultâneos
+    const megaId   = 'p-mega-' + (v0.round || ts0);
+    const megaTimer= 'mega-'   + (v0.round || ts0);
 
-    const tsRosaAtual = ts0;
+    if (_preTimers[megaTimer]) clearTimeout(_preTimers[megaTimer]);
 
     const ativarMega = () => {
-      // Cancela se saiu rosa nova depois
-      const rosaNova = _megaUltimaRosa && (_megaUltimaRosa.timestamp||0) > tsRosaAtual;
-      if (rosaNova) return;
+      // Registra alvo para monitorar parabéns
+      _megaAlvos.push({ minuto: mFinal, hora: dAlvo.getHours(), id: megaId });
 
-      // Registra o alvo para monitorar
-      _megaAlvoMinuto = mFinal;
-      _megaAlvoHora   = dAlvo.getHours();
+      dispara(1, megaId, 'megatron', 0, horaFinal, 1, 'pk');
 
-      dispara(1,'p-mega','megatron',0,horaFinal,1,'pk');
-
-      // Monitora: quando o minuto alvo chegar, verifica se saiu rosa/roxa
-      // Fecha o banner após 2 minutos (janela do minuto alvo)
-      _megaAtivoTimer = setTimeout(()=>{
-        _fecharBanner('p-mega');
-        _megaAlvoMinuto = null;
-        _megaAlvoHora   = null;
-      }, 120000); // 2 minutos de janela
+      // Fecha o banner desta entrada após 2 minutos
+      setTimeout(()=>{
+        _fecharBanner(megaId);
+        _megaAlvos = _megaAlvos.filter(a => a.id !== megaId);
+      }, 120000);
     };
 
-    if (delay>=0) {
-      _preTimers['mega'] = setTimeout(ativarMega, delay);
-    } else if (dAlvo.getTime()-Date.now()>0) {
+    if (delay >= 0) {
+      _preTimers[megaTimer] = setTimeout(ativarMega, delay);
+    } else if (dAlvo.getTime() - Date.now() > 0) {
       ativarMega();
     }
   }
@@ -1613,10 +1715,8 @@ function _pararSimMult(multFinal) {
 }
 
 // MEGATRON: rastreia última vela rosa
-let _megaUltimaRosa   = null;
-let _megaAlvoMinuto   = null;  // minuto alvo calculado
-let _megaAlvoHora     = null;  // hora alvo
-let _megaAtivoTimer   = null;  // timer para encerrar o sinal
+let _megaUltimaRosa = null;
+let _megaAlvos      = []; // array de alvos ativos: [{minuto, hora, id}]
 
 // ════════════════════════════════════════════════════════════
 //  FIGURAS AUTOMÁTICAS conforme o fluxo do gráfico
